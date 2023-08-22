@@ -120,13 +120,33 @@
         </div>
     </section>
 
-    <section id="section-container contacts">
+    <section id="section-container contacts" class="contacts">
         <div>
-            <h2>Contact Me</h2>
-            <p>You can reach me at <a href="mailto:ericng8766@gmail.com">ericng8766@gmail.com</a></p>
+            <h2>Hiring interns?</h2>
+            <p>I am currently on the lookout for internships and opportunities that not only allow me to contribute effectively as a team member but also foster my personal growth and development for the future. </p>
+            <p>Please feel free to get in touch for any inquiries or just to say hello. I'm excited to embark on a journey of learning and progress.</p>
+        </div>
+        <div class="contact-form">
+            <!-- <form action="send_email.php" method="post">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" required>
+    
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+    
+                <label for="message">Message</label>
+                <textarea id="message" name="message" required></textarea>
+    
+                <button type="submit" name="submit">Submit</button>
+            </form> -->
+            <form method="post" action="send_email.php">
+                <textarea name="message"></textarea>
+                <input type="submit">
+            </form>
         </div>
     </section>
 
+    <!-- <div class="form-container"><p style="margin-left: 2px;">Email</p><input type="text" id="input-email" placeholder="example@gmail.com"><p style="margin-left: 2px;">Name</p><input type="text" id="input-name" placeholder="Bryan Soong"><p style="margin-left: 2px;">Message </p><textarea type="text" id="input-message" placeholder="Message"></textarea><button class="submit-btn">Submit</button></div> -->
     <section id="footer">
         <p class="footer--copyright">Designed & built by Eric Ng</p>
     </section>   

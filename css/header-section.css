@@ -3,7 +3,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    background-color: #f2f2f2; 
+    background-color: #d6f1fd; 
 }
 
 .header-nav {
@@ -14,6 +14,12 @@
 .header-nav-item {
     margin: 0;
     padding: 5px 10px;
+    font-weight: 1000;
+    transition: transform 0.3s ease;
+}
+
+.header-nav-item:hover {
+    transform: scale(1.2);
 }
 
 .header-nav-item a {
