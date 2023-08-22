@@ -1,0 +1,11 @@
+#footer {
+    justify-content: space-between;
+    align-items: center;
+    padding: 80px;
+    background-color: #d5f2ff; 
+}
+
+.footer {
+    text-align: center; 
+    font-weight: 1000;
+}
