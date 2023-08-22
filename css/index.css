@@ -1,5 +1,5 @@
 body {
-    background-color: #fffddf;
+    background-color: #fffee0;
   }
 
 ::-webkit-scrollbar {
@@ -7,17 +7,17 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1; 
+    background: #fffee0; 
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #3ea0f3; 
+    background: #FAC898; 
     border-radius: 25px;
     transition: 0.1s ease-in;
 }
   
 ::-webkit-scrollbar-thumb:hover {
-    background: #5ab0fc; 
+    background: #ffb774; 
 }
 
 body {

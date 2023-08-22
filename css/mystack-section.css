@@ -29,7 +29,7 @@
 
 .img-container:hover {
     filter: none;
-    transform: scale(1.5);
+    transform: scale(1.3);
 }
 
 .img-container img {
