@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Web portfolio of Eric Ng">
     <title>Eric Ng - Portfolio</title>
+    <link rel="icon" type="image/png" href="img/dog_color.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quattrocento&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/mystack-section.css">
     <link rel="stylesheet" type="text/css" href="css/index.css">
+    <link rel="stylesheet" type="text/css" href="css/header-section.css">
+    <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
 </head>
 <body>
 
@@ -22,12 +25,18 @@
                 </svg>
             </a>
         </header>
+        <nav class="header-nav">
+            <p class="header-nav-item"><a href="#section-container about-me">ABOUT ME</a></p>
+            <p class="header-nav-item"><a href="#section-container projects">PROJECTS</a></p>
+            <p class="header-nav-item"><a href="#section-container contacts">CONTACTS</a></p>
+        </nav>
     </section>
+    
 
     <section id="hero">
         <div>
             <h1>HELLO</h1>
-            <p>I am Ng Min Chern Eric, a STUDENT////</p>
+            <p>I am Ng Min Chern Eric, <span class="typing">web designer</span></p>
         </div>
     </section>
 
@@ -109,7 +118,9 @@
                 <p>made ELK</p>
             </div>
         </div>
+    </section>
 
+    <section id="section-container contacts">
         <div>
             <h2>Contact Me</h2>
             <p>You can reach me at <a href="mailto:ericng8766@gmail.com">ericng8766@gmail.com</a></p>
@@ -119,6 +130,6 @@
     <section id="footer">
         <p class="footer--copyright">Designed & built by Eric Ng</p>
     </section>   
-
+    <script src="js/script.js"></script>
 </body>
 </html>
