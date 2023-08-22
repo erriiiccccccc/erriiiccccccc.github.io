@@ -1,0 +1,51 @@
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3ea0f3; 
+    border-radius: 25px;
+    transition: 0.1s ease-in;
+}
+  
+::-webkit-scrollbar-thumb:hover {
+    background: #5ab0fc; 
+}
+
+body {
+    margin: 0;
+    overflow-x: hidden;
+}
+
+h1, h2 {
+    margin: 0;
+    font-family: 'Quattrocento', serif;
+    font-weight: 1000;
+}
+
+p {
+    margin: 0;
+    font-family: 'Quattrocento', serif;
+    font-weight: 300;
+    line-height: 1.5;
+}
+
+@font-face {
+    font-family: 'Quattrocento', serif;
+    src: url('fonts/Quattrocento-Regular.ttf');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Quattrocento', serif;
+    src: url('fonts/Quattrocento-Regular.ttf');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}

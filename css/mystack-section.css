@@ -1,0 +1,39 @@
+.section-container-my-stack {
+    text-align: center; /* Center the content horizontally */
+    margin-bottom: 40px; /* Add spacing at the bottom */
+}
+
+.section-title {
+    margin-bottom: 15px;
+    align-self: flex-start; /* Align the title to the left */
+}
+
+.section-container-my-stack h2 {
+    margin-bottom: 15px; /* Add spacing below the heading */
+}
+
+.img-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Add spacing between images */
+    max-width: 400px; /* Set a maximum width for the row */
+    margin: 0 auto; /* Center the row */
+    align-self: flex-start; /* Align the icons row to the left */
+}
+
+.img-container {
+    filter: grayscale(100%); /* Apply grayscale filter */
+    transition: filter 0.3s ease, transform 0.2s ease; /* Add smooth transition effect */
+    flex: 0 calc(16.666% - 20px);
+}
+
+.img-container:hover {
+    filter: none; /* Remove grayscale filter on hover */
+    transform: scale(1.5);
+}
+
+.img-container img {
+    display: block;
+    margin: 0 auto; /* Center the image horizontally */
+}
+
