@@ -1,4 +1,4 @@
-.animation-container {
+/* .animation-container {
     font-family: 'Quattrocento', serif;
     font-weight: bold;
     display: flex;
@@ -7,5 +7,23 @@
     max-width: 200px;
     max-height: 100%;
     font-size: 2rem;
-  }
-  
+  } */
+
+.greeting-container {
+    text-align: center;
+}
+
+#greeting {
+    font-size: 3rem;
+    animation: changeGreeting 2s infinite;
+}
+
+@keyframes changeGreeting {
+    0%, 100% {
+        opacity: 0;
+    }
+    30%, 90% {
+        opacity: 1;
+    }
+}
+

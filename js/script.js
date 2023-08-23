@@ -7,24 +7,29 @@ var typed = new Typed(".typing",{
 })
 
 /* ============================== language animation ============================ */
-const helloText = document.getElementById("hello-text");
-const languages = [
-  "Hola.",
-  "Bonjour.",
-  "Guten Tag.",
-  "Salve.",
-  "您好.",
-  "こんにちは.",
-  "안녕하세요.",
-  "olá.",
-  "namaste.",
+const greetings = [
+    "Hola.",
+    "Bonjour.",
+    "Guten Tag.",
+    "Salve.",
+    "您好.",
+    "こんにちは.",
+    "안녕하세요.",
+    "olá.",
+    "Namaste.",
+    "Ciao.",
+    "G'day.",
+    "Salam.",
+    "Ahoy."
 ];
 
-let currentIndex = 0;
+const greetingElement = document.getElementById("greeting");
 
-function cycleLanguages() {
-  helloText.textContent = languages[currentIndex];
-  currentIndex = (currentIndex + 1) % languages.length;
+let index = 0;
+
+function changeGreeting() {
+    greetingElement.textContent = greetings[index];
+    index = (index + 1) % greetings.length;
 }
 
-setInterval(cycleLanguages, 2000);
+setInterval(changeGreeting, 2000);
