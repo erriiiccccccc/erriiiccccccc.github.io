@@ -221,21 +221,16 @@
     
         const greetingElement = document.getElementById("greeting");
         let index = 0;
-    
+
         function changeGreeting() {
             greetingElement.textContent = greetings[index];
             index = (index + 1) % greetings.length;
         }
-    
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", function() {
-                changeGreeting();
-                setInterval(changeGreeting, 5000);
-            });
-        } else {
+
+        window.onload = function() {
             changeGreeting();
             setInterval(changeGreeting, 5000);
-        }
+        };
     </script>
     <script src="js/script.js"></script>
 </body>
