@@ -1,14 +1,3 @@
-/* .animation-container {
-    font-family: 'Quattrocento', serif;
-    font-weight: bold;
-    display: flex;
-    justify-content: left;
-    align-items: left;
-    max-width: 200px;
-    max-height: 100%;
-    font-size: 2rem;
-  } */
-
 .greeting-container {
     text-align: center;
     height: 90px;
@@ -23,7 +12,7 @@
     0%, 100% {
         opacity: 0;
     }
-    70%, 90% {
+    60%, 90% {
         opacity: 1;
     }
 }

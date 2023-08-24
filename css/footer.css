@@ -4,22 +4,8 @@
     padding: 50px;
     background-color: #d5f2ff; 
     text-align: center; 
-    font-weight: 1000;
-}
-
-.social-media a{
-    display: inline-block;
-
-}
-
-.social-media {
-    display: flex;
-    justify-content: center;
-    gap: 20px; 
-    margin-bottom: 10px;
 }
 
 .footer {
-    margin-top: 40px; 
-    font-weight: bold;
+    font-weight: bolder;
 }
