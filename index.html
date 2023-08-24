@@ -172,7 +172,7 @@
 
         <p class="footer">Designed & built by Eric Ng</p>
     </section>
-<!-- 
+    
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const greetings = [
@@ -201,36 +201,6 @@
 
             setInterval(changeGreeting, 5000);
         });
-    </script> -->
-    <script>
-        const greetings = [
-                "Hola.",
-                "您好.",
-                "Bonjour.",
-                "Guten Tag.",
-                "Salve.",
-                "こんにちは.",
-                "안녕하세요.",
-                "olá.",
-                "Namaste.",
-                "Ciao.",
-                "G'day.",
-                "Salam.",
-                "Ahoy."
-        ];
-    
-        const greetingElement = document.getElementById("greeting");
-        let index = 0;
-
-        function changeGreeting() {
-            greetingElement.textContent = greetings[index];
-            index = (index + 1) % greetings.length;
-        }
-
-        window.onload = function() {
-            changeGreeting();
-            setInterval(changeGreeting, 5000);
-        };
     </script>
     <script src="js/script.js"></script>
 </body>
