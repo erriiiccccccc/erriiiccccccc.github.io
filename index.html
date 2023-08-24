@@ -12,6 +12,7 @@
     <link rel="stylesheet" type="text/css" href="css/mystack.css">
     <link rel="stylesheet" type="text/css" href="css/index.css">
     <link rel="stylesheet" type="text/css" href="css/hero.css">
+    <link rel="preload" href="css/hero.css" as="style">
     <link rel="stylesheet" type="text/css" href="css/header.css">
     <link rel="stylesheet" type="text/css" href="css/footer.css">
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
@@ -36,7 +37,7 @@
     
     <section id="hero">
         <div class="greeting-container">
-            <h1 id="greeting">Hello.󠁧</h1>
+            <h1 id="greeting">Hello.</h1>
         </div>
         <div>
             <p>I am Ng Min Chern Eric, <span class="typing"></span></p>
@@ -144,5 +145,34 @@
         <p class="footer">Designed & built by Eric Ng</p>
     </section>   
     <script src="js/script.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const greetings = [
+                "Hola.",
+                "Bonjour.",
+                "Guten Tag.",
+                "Salve.",
+                "您好.",
+                "こんにちは.",
+                "안녕하세요.",
+                "olá.",
+                "Namaste.",
+                "Ciao.",
+                "G'day.",
+                "Salam.",
+                "Ahoy."
+            ];
+
+            const greetingElement = document.getElementById("greeting");
+            let index = 0;
+
+            function changeGreeting() {
+                greetingElement.textContent = greetings[index];
+                index = (index + 1) % greetings.length;
+            }
+
+            setInterval(changeGreeting, 4000);
+        });
+    </script>
 </body>
 </html>

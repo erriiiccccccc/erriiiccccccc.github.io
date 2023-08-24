@@ -7,29 +7,30 @@ var typed = new Typed(".typing",{
 })
 
 /* ============================== language animation ============================ */
-const greetings = [
-    "Hola.",
-    "Bonjour.",
-    "Guten Tag.",
-    "Salve.",
-    "您好.",
-    "こんにちは.",
-    "안녕하세요.",
-    "olá.",
-    "Namaste.",
-    "Ciao.",
-    "G'day.",
-    "Salam.",
-    "Ahoy."
-];
+document.addEventListener("DOMContentLoaded", function() {
+    const greetings = [
+        "Hola.",
+        "Bonjour.",
+        "Guten Tag.",
+        "Salve.",
+        "您好.",
+        "こんにちは.",
+        "안녕하세요.",
+        "olá.",
+        "Namaste.",
+        "Ciao.",
+        "G'day.",
+        "Salam.",
+        "Ahoy."
+    ];
 
-const greetingElement = document.getElementById("greeting");
+    const greetingElement = document.getElementById("greeting");
+    let index = 0;
 
-let index = 0;
+    function changeGreeting() {
+        greetingElement.textContent = greetings[index];
+        index = (index + 1) % greetings.length;
+    }
 
-function changeGreeting() {
-    greetingElement.textContent = greetings[index];
-    index = (index + 1) % greetings.length;
-}
-
-setInterval(changeGreeting, 2000);
+    setInterval(changeGreeting, 3999);
+});
