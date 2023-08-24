@@ -9,7 +9,10 @@
 }
 
 @keyframes changeGreeting {
-    0%, 100% {
+    0%, 20% {
+        opacity: 0;
+    }
+    30%, 100% {
         opacity: 0;
     }
     70%, 90% {
