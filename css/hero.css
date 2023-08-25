@@ -18,65 +18,51 @@
 
 .slider{
     box-sizing: border-box;
-    animation: slider 50s linear infinite
+    animation: slider 20s linear infinite
 }
 
 @keyframes slider{
     0% { margin-top: -1300px; }
 
-    /* First phrase: "Hello." */
     3.57% { margin-top: -1300px; }
     7.14% { margin-top: -1100px; }
     
-    /* Second phrase: "Hola." */
     10.71% { margin-top: -1100px; }
     14.28% { margin-top: -900px; }
     
-    /* Third phrase: "您好." */
     17.85% { margin-top: -900px; }
     21.42% { margin-top: -700px; }
     
-    /* Fourth phrase: "Bonjour." */
     25% { margin-top: -700px; }
     28.57% { margin-top: -500px; }
     
-    /* Fifth phrase: "Guten Tag." */
     32.14% { margin-top: -500px; }
     35.71% { margin-top: -300px; }
     
-    /* Sixth phrase: "Salve." */
     39.28% { margin-top: -300px; }
     42.85% { margin-top: -100px; }
     
-    /* Seventh phrase: "こんにちは." */
     46.42% { margin-top: -100px; }
     50% { margin-top: 100px; }
     
-    /* Eighth phrase: "안녕하세요." */
     53.57% { margin-top: 100px; }
     57.14% { margin-top: 300px; }
     
-    /* Ninth phrase: "olá." */
     60.71% { margin-top: 300px; }
     64.28% { margin-top: 500px; }
     
-    /* Tenth phrase: "Namaste." */
     67.85% { margin-top: 500px; }
     71.42% { margin-top: 700px; }
     
-    /* Eleventh phrase: "Ciao." */
     75% { margin-top: 700px; }
     78.57% { margin-top: 900px; }
     
-    /* Twelfth phrase: "G'day." */
     82.14% { margin-top: 900px; }
     85.71% { margin-top: 1100px; }
     
-    /* Thirteenth phrase: "Salam." */
     89.28% { margin-top: 1100px; }
     92.85% { margin-top: 1300px; }
     
-    /* Fourteenth phrase: "Ahoy." */
     96.42% { margin-top: 1300px; }
     100% { margin-top: 1500px; }
 }
