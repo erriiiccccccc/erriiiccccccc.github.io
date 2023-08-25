@@ -1,7 +1,7 @@
 .container-footer {
     justify-content: space-between;
     align-items: center;
-    padding: 50px;
+    padding: 3.125rem;
     background-color: #d5f2ff; 
     text-align: center; 
 }

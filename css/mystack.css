@@ -1,29 +1,29 @@
 .section-container-my-stack {
-    margin-bottom: 40px; 
+    margin-bottom: 2.5rem; /* 40px / 16px = 2.5rem */
 }
 
 .section-title {
-    margin-bottom: 15px;
-    align-self: flex-start; 
+    margin-bottom: 0.9375rem; /* 15px / 16px = 0.9375rem */
+    align-self: flex-start;
 }
 
 .section-container-my-stack h2 {
-    margin-bottom: 15px; 
+    margin-bottom: 0.9375rem; /* 15px / 16px = 0.9375rem */
 }
 
 .img-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    max-width: 400px;
-    margin: 0 auto; 
-    align-self: flex-start; 
+    gap: 1.25rem; /* 20px / 16px = 1.25rem */
+    max-width: 25rem; /* 400px / 16px = 25rem */
+    margin: 0 auto;
+    align-self: flex-start;
 }
 
 .img-container {
-    filter: grayscale(100%); 
-    transition: filter 0.3s ease, transform 0.2s ease; 
-    flex: 0 calc(16.666% - 20px);
+    filter: grayscale(100%);
+    transition: filter 0.3s ease, transform 0.2s ease;
+    flex: 0 calc(16.666% - 1.25rem); /* 20px / 16px = 1.25rem */
 }
 
 .img-container:hover {
@@ -33,6 +33,5 @@
 
 .img-container img {
     display: block;
-    margin: 0 auto; 
+    margin: 0 auto;
 }
-

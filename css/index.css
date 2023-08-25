@@ -4,8 +4,9 @@ font-family: 'Press Start 2P', cursive;
 font-family: 'Quattrocento', serif;
 font-family: 'Teko', sans-serif; */
 
+/* Scrollbar styles */
 ::-webkit-scrollbar {
-    width: 10px;
+    width: 0.625rem; /* 10px / 16px = 0.625rem */
 }
 
 ::-webkit-scrollbar-track {
@@ -14,7 +15,7 @@ font-family: 'Teko', sans-serif; */
 
 ::-webkit-scrollbar-thumb {
     background: #FAC898; 
-    border-radius: 25px;
+    border-radius: 1.5625rem; /* 25px / 16px = 1.5625rem */
     transition: 0.1s ease-in;
 }
   
@@ -22,6 +23,7 @@ font-family: 'Teko', sans-serif; */
     background: #ffb774; 
 }
 
+/* General styles */
 body {
     background-color: #fffee0;
     margin: 0;
@@ -31,15 +33,15 @@ body {
 h1 {
     font-family: 'Press Start 2P', cursive;
     text-align: center;
-    font-size: 30px;
-    padding-bottom: 10px;
+    font-size: 1.875rem; /* 30px / 16px = 1.875rem */
+    padding-bottom: 0.625rem; /* 10px / 16px = 0.625rem */
 }
 
 h2 {
     font-family: 'Oswald', sans-serif;
     font-weight: 1000;
     text-align: center;
-    font-size: 40px;
+    font-size: 2.5rem; /* 40px / 16px = 2.5rem */
 }
 
 h3 { 
@@ -47,26 +49,35 @@ h3 {
     font-family: 'Teko', sans-serif;
     font-weight: 1000;
     text-align: center;
-    font-size: 40px;
+    font-size: 2.5rem; /* 40px / 16px = 2.5rem */
 }
 
 p {
     margin: 0;
     font-family: 'Oswald', serif;
-    font-size: 20px;
+    font-size: 1.25rem; /* 20px / 16px = 1.25rem */
     text-align: center;
 }
 
 #back-to-top-button {
     display: none;
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px;
+    bottom: 1.25rem; /* 20px / 16px = 1.25rem */
+    right: 1.25rem; /* 20px / 16px = 1.25rem */
+    padding: 0.625rem; /* 10px / 16px = 0.625rem */
     border: none;
-    border-radius: 50%;
+    border-radius: 3.125rem; /* 50px / 16px = 3.125rem */
     cursor: pointer;
     animation: fadeIn 0.3s ease-in-out, fadeOut 0.3s ease-in-out; 
+}
+
+#back-to-top-button:hover {
+    background-color: #8d8d8d;
+}
+
+#back-to-top-button svg {
+    width: 1.5rem; /* 24px / 16px = 1.5rem */
+    height: 1.5rem; /* 24px / 16px = 1.5rem */
 }
 
 @keyframes fadeIn {
@@ -85,13 +96,4 @@ p {
     to {
         opacity: 0;
     }
-}
-
-#back-to-top-button:hover {
-    background-color: #8d8d8d;
-}
-
-#back-to-top-button svg {
-    width: 24px;
-    height: 24px;
 }

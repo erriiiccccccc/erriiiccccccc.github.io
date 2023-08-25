@@ -4,11 +4,10 @@
 }
 
 .title {
-    font-family: 'Quattrocento', serif;
-    font-size: 70px;
-    line-height: 100px;
+    font-size: 4.375rem; /* 70px / 16px = 4.375rem */
+    line-height: 6.25rem; /* 100px / 16px = 6.25rem */
     font-weight: bold;
-    height: 100px;
+    height: 6.25rem; /* 100px / 16px = 6.25rem */
     text-align: center;
     display: flex;
     justify-content: center;
@@ -21,48 +20,48 @@
     animation: slider 30s linear infinite
 }
 
-@keyframes slider{
-    0% { margin-top: -1300px; }
+@keyframes slider {
+    0% { margin-top: -81.25rem; } /* Assuming 1rem = 16px */
 
-    5.72% { margin-top: -1300px; }
-    7.15% { margin-top: -1100px; }
+    5.72% { margin-top: -81.25rem; }
+    7.15% { margin-top: -68.75rem; }
     
-    12.87% { margin-top: -1100px; }
-    14.3% { margin-top: -900px; }
+    12.87% { margin-top: -68.75rem; }
+    14.3% { margin-top: -56.25rem; }
     
-    20.02% { margin-top: -900px; }
-    21.45% { margin-top: -700px; }
+    20.02% { margin-top: -56.25rem; }
+    21.45% { margin-top: -43.75rem; }
     
-    27.17% { margin-top: -700px; }
-    28.6% { margin-top: -500px; }
+    27.17% { margin-top: -43.75rem; }
+    28.6% { margin-top: -31.25rem; }
     
-    34.32% { margin-top: -500px; }
-    35.75% { margin-top: -300px; }
+    34.32% { margin-top: -31.25rem; }
+    35.75% { margin-top: -18.75rem; }
     
-    41.47% { margin-top: -300px; }
-    42.9% { margin-top: -100px; }
+    41.47% { margin-top: -18.75rem; }
+    42.9% { margin-top: -6.25rem; }
     
-    48.62% { margin-top: -100px; }
-    50.05% { margin-top: 100px; }
+    48.62% { margin-top: -6.25rem; }
+    50.05% { margin-top: 6.25rem; }
     
-    55.77% { margin-top: 100px; }
-    57.2% { margin-top: 300px; }
+    55.77% { margin-top: 6.25rem; }
+    57.2% { margin-top: 18.75rem; }
     
-    62.92% { margin-top: 300px; }
-    64.35% { margin-top: 500px; }
+    62.92% { margin-top: 18.75rem; }
+    64.35% { margin-top: 31.25rem; }
     
-    70.07% { margin-top: 500px; }
-    71.5% { margin-top: 700px; }
+    70.07% { margin-top: 31.25rem; }
+    71.5% { margin-top: 43.75rem; }
     
-    77.22% { margin-top: 700px; }
-    78.65% { margin-top: 900px; }
+    77.22% { margin-top: 43.75rem; }
+    78.65% { margin-top: 56.25rem; }
     
-    84.37% { margin-top: 900px; }
-    85.8% { margin-top: 1100px; }
+    84.37% { margin-top: 56.25rem; }
+    85.8% { margin-top: 68.75rem; }
     
-    91.52% { margin-top: 1100px; }
-    92.95% { margin-top: 1300px; }
+    91.52% { margin-top: 68.75rem; }
+    92.95% { margin-top: 81.25rem; }
     
-    98.67% { margin-top: 1300px; }
-    100% { margin-top: 1500px; }
+    98.67% { margin-top: 81.25rem; }
+    100% { margin-top: 93.75rem; }
 }

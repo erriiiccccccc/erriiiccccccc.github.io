@@ -1,22 +1,23 @@
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: #d5f2ff; 
-}
 /* .title h1 {
     text-align: center;
 } */
 
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 1.25rem; /* 10px / 16px = 0.625rem, 20px / 16px = 1.25rem */
+    background-color: #d5f2ff;
+}
+
 .header-nav {
     display: flex;
-    gap: 20px;
+    gap: 1.25rem; /* 20px / 16px = 1.25rem */
 }
 
 .header-nav-item {
     margin: 0;
-    padding: 5px 10px;
+    padding: 0.3125rem 0.625rem; /* 5px / 16px = 0.3125rem, 10px / 16px = 0.625rem */
     font-weight: 1000;
     transition: transform 0.3s ease;
 }
@@ -31,5 +32,5 @@
 }
 
 section {
-    padding: 20px;
+    padding: 1.25rem; /* 20px / 16px = 1.25rem */
 }
