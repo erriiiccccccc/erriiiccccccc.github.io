@@ -60,6 +60,17 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+/* ============================== hamburger animation ============================ */
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const headerNav = document.querySelector('.header-nav');
+
+    mobileMenuToggle.addEventListener('click', function() {
+        headerNav.classList.toggle('active');
+    });
+});
+
+
 /* ============================== language animation ============================ */
 // document.addEventListener("DOMContentLoaded", function() {
 //     const greetings = [
