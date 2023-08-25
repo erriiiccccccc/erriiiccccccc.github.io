@@ -5,6 +5,9 @@
     padding: 10px 20px;
     background-color: #d5f2ff; 
 }
+/* .title h1 {
+    text-align: center;
+} */
 
 .header-nav {
     display: flex;

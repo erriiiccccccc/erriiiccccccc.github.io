@@ -1,6 +1,8 @@
-body {
-    background-color: #fffee0;
-}
+@import url('https://fonts.googleapis.com/css2?family=Oswald&family=Press+Start+2P&family=Quattrocento&family=Teko&display=swap');
+/* font-family: 'Oswald', sans-serif;
+font-family: 'Press Start 2P', cursive;
+font-family: 'Quattrocento', serif;
+font-family: 'Teko', sans-serif; */
 
 ::-webkit-scrollbar {
     width: 10px;
@@ -21,13 +23,28 @@ body {
 }
 
 body {
+    background-color: #fffee0;
     margin: 0;
     overflow-x: hidden;
 }
 
-h1, h2 {
+h1 {
+    font-family: 'Press Start 2P', cursive;
+    text-align: center;
+    font-size: 30px;
+    padding-bottom: 10px;
+}
+
+h2 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 1000;
+    text-align: center;
+    font-size: 40px;
+}
+
+h3 { 
     margin: 0;
-    font-family: 'Quattrocento', serif;
+    font-family: 'Teko', sans-serif;
     font-weight: 1000;
     text-align: center;
     font-size: 40px;
@@ -35,27 +52,9 @@ h1, h2 {
 
 p {
     margin: 0;
-    font-family: 'Quattrocento', serif;
-    font-weight: 900;
-    line-height: 1.5;
+    font-family: 'Oswald', serif;
     font-size: 20px;
     text-align: center;
-}
-
-@font-face {
-    font-family: 'Quattrocento', serif;
-    src: url('fonts/Quattrocento-Regular.ttf');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Quattrocento', serif;
-    src: url('fonts/Quattrocento-Regular.ttf');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
 }
 
 #back-to-top-button {
