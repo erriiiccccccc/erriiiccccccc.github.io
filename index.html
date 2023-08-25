@@ -11,42 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Quattrocento&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/index.css">
     <link rel="stylesheet" type="text/css" href="css/header.css">
-
     <link rel="stylesheet" type="text/css" href="css/mystack.css">
     <link rel="stylesheet" type="text/css" href="css/hero.css">
-    <link rel="preload" href="css/hero.css" as="style">
     <link rel="stylesheet" type="text/css" href="css/contacts.css">
     <link rel="stylesheet" type="text/css" href="css/footer.css">
+    <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const greetings = [
-                "Hola.",
-                "您好.",
-                "Bonjour.",
-                "Guten Tag.",
-                "Salve.",
-                "こんにちは.",
-                "안녕하세요.",
-                "olá.",
-                "Namaste.",
-                "Ciao.",
-                "G'day.",
-                "Salam.",
-                "Ahoy."
-            ];
-
-            const greetingElement = document.getElementById("greeting");
-            let index = 0;
-
-            function changeGreeting() {
-                greetingElement.textContent = greetings[index];
-                index = (index + 1) % greetings.length;
-            }
-
-            setInterval(changeGreeting, 5000);
-        });
-    </script>
 </head>
 
 <body>
@@ -70,8 +40,23 @@
     </section>
     
     <section id="hero">
-        <div class="greeting-container">
-            <h1 id="greeting">Hello.</h1>
+        <div class="title">
+            <div class="slider">
+                <div>Hola.</div>
+                <div>Bonjour.</div>
+                <div>Guten Tag.</div>
+                <div>您好.</div>
+                <div>Salve.</div>
+                <div>こんにちは.</div>
+                <div>olá.</div>
+                <div>Namaste.</div>
+                <div>안녕하세요.</div>
+                <div>Ciao.</div>
+                <div>G'day.</div>
+                <div>Salam.</div>
+                <div>Ahoy.</div>
+                <div>Hello.</div>
+            </div>
         </div>
         <div>
             <p>I am Ng Min Chern Eric, <span class="typing"></span></p>
@@ -201,36 +186,5 @@
 
         <p class="footer">Designed & built by Eric Ng</p>
     </section>
-    
-    <!-- <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const greetings = [
-                "Hola.",
-                "您好.",
-                "Bonjour.",
-                "Guten Tag.",
-                "Salve.",
-                "こんにちは.",
-                "안녕하세요.",
-                "olá.",
-                "Namaste.",
-                "Ciao.",
-                "G'day.",
-                "Salam.",
-                "Ahoy."
-            ];
-
-            const greetingElement = document.getElementById("greeting");
-            let index = 0;
-
-            function changeGreeting() {
-                greetingElement.textContent = greetings[index];
-                index = (index + 1) % greetings.length;
-            }
-
-            setInterval(changeGreeting, 5000);
-        });
-    </script> -->
-    <script src="js/script.js"></script>
 </body>
 </html>

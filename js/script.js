@@ -6,35 +6,6 @@ var typed = new Typed(".typing",{
     loop:true
 })
 
-/* ============================== language animation ============================ */
-// document.addEventListener("DOMContentLoaded", function() {
-//     const greetings = [
-//         "Hola.",
-//         "Bonjour.",
-//         "Guten Tag.",
-//         "Salve.",
-//         "您好.",
-//         "こんにちは.",
-//         "안녕하세요.",
-//         "olá.",
-//         "Namaste.",
-//         "Ciao.",
-//         "G'day.",
-//         "Salam.",
-//         "Ahoy."
-//     ];
-
-//     const greetingElement = document.getElementById("greeting");
-//     let index = 0;
-
-//     function changeGreeting() {
-//         greetingElement.textContent = greetings[index];
-//         index = (index + 1) % greetings.length;
-//     }
-
-//     setInterval(changeGreeting, 3999);
-// });
-
 /* ============================== button animation ============================ */
 var backToTopButton = document.getElementById("back-to-top-button");
 var isScrolling = false;
@@ -77,3 +48,32 @@ window.addEventListener("scroll", debounce(function() {
 backToTopButton.addEventListener("click", function() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 });
+
+/* ============================== language animation ============================ */
+// document.addEventListener("DOMContentLoaded", function() {
+//     const greetings = [
+//         "Hola.",
+//         "您好.",
+//         "Bonjour.",
+//         "Guten Tag.",
+//         "Salve.",
+//         "こんにちは.",
+//         "안녕하세요.",
+//         "olá.",
+//         "Namaste.",
+//         "Ciao.",
+//         "G'day.",
+//         "Salam.",
+//         "Ahoy."
+//     ];
+
+//     const greetingElement = document.getElementById("greeting");
+//     let index = 0;
+
+//     function changeGreeting() {
+//         greetingElement.textContent = greetings[index];
+//         index = (index + 1) % greetings.length;
+//     }
+
+//     setInterval(changeGreeting, 5000);
+// });
