@@ -49,6 +49,17 @@ backToTopButton.addEventListener("click", function() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
+/* ============================== smooth scroll animation ============================ */
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+        });
+    });
+});
+
 /* ============================== language animation ============================ */
 // document.addEventListener("DOMContentLoaded", function() {
 //     const greetings = [
