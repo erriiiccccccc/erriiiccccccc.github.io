@@ -1,8 +1,8 @@
 .hiring-interns {
     max-width: 37.5rem; /* 600px / 16px = 37.5rem */
-    margin: 0 auto;
+    /* margin: 0 auto; */
     padding: 1.25rem; /* 20px / 16px = 1.25rem */
-    text-align: center;
+    /* text-align: center; */
 }
 
 .social-media a {
@@ -10,8 +10,8 @@
 }
 
 .social-media {
-    display: flex;
-    justify-content: center;
+    /* display: flex; */
+    /* justify-content: center; */
     gap: 1.5625rem; /* 25px / 16px = 1.5625rem */
     margin-bottom: 0.625rem; /* 10px / 16px = 0.625rem */
     margin-top: 0.625rem; /* 10px / 16px = 0.625rem */
@@ -24,3 +24,41 @@
 .social-media-img:hover {
     transform: scale(1.3);
 }
+
+/* .section-container-my-stack {
+    margin-bottom: 2.5rem; 
+}
+
+.section-title {
+    margin-bottom: 0.9375rem; 
+    align-self: flex-start;
+}
+
+.section-container-my-stack h2 {
+    margin-bottom: 0.9375rem; 
+}
+
+.img-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem; 
+    max-width: 25rem;
+    margin: 0 auto;
+    align-self: flex-start;
+}
+
+.img-container {
+    filter: grayscale(100%);
+    transition: filter 0.3s ease, transform 0.2s ease;
+    flex: 0 calc(16.666% - 1.25rem); 
+}
+
+.img-container:hover {
+    filter: none;
+    transform: scale(1.3);
+}
+
+.img-container img {
+    display: block;
+    margin: 0 auto;
+} 

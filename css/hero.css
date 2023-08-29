@@ -1,13 +1,16 @@
 .greeting-container {
     text-align: center;
-    height: 90px;
+    height: 50px;
 }
 
-.title {
-    font-size: 4.375rem; /* 70px / 16px = 4.375rem */
-    line-height: 6.25rem; /* 100px / 16px = 6.25rem */
+.type { 
+    margin-top: -3.125rem;
+}
+/* .title {
+    font-size: 4.375rem; 
+    line-height: 6.25rem; 
     font-weight: bold;
-    height: 6.25rem; /* 100px / 16px = 6.25rem */
+    height: 6.25rem; 
     text-align: center;
     display: flex;
     justify-content: center;
@@ -21,7 +24,7 @@
 }
 
 @keyframes slider {
-    0% { margin-top: -81.25rem; } /* Assuming 1rem = 16px */
+    0% { margin-top: -81.25rem; } 
 
     5.72% { margin-top: -81.25rem; }
     7.15% { margin-top: -68.75rem; }
@@ -64,4 +67,5 @@
     
     98.67% { margin-top: 81.25rem; }
     100% { margin-top: 93.75rem; }
-}
+} */
+

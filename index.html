@@ -12,6 +12,7 @@
     <link rel="stylesheet" type="text/css" href="css/hero.css">
     <link rel="stylesheet" type="text/css" href="css/contacts.css">
     <link rel="stylesheet" type="text/css" href="css/footer.css">
+    <link rel="stylesheet" type="text/css" href="css/title.css">
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
 </head>
 
@@ -43,27 +44,21 @@
     </section>
     
     <section id="hero">
-        <div class="title">
-            <h1> # </h1>
-            <h1>
-                <div class="slider">
-                <div>Hola.</div>
-                <div>Bonjour.</div>
-                <div>Guten Tag.</div>
-                <div>您好.</div>
-                <div>Salve.</div>
-                <div>こんにちは.</div>
-                <div>olá.</div>
-                <div>Namaste.</div>
-                <div>안녕하세요.</div>
-                <div>Ciao.</div>
-                <div>G'day.</div>
-                <div>Salam.</div>
-                <div>Ahoy.</div>
-                <div>Hello.</div>
-            </h1>
+        <div id="container">
+            <span id="text1"></span>
+            <span id="text2"></span>
         </div>
-        <div>
+        <svg id="filters">
+            <defs>
+                <filter id="threshold">
+                    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0
+                          0 1 0 0 0
+                          0 0 1 0 0
+                          0 0 0 255 -140" />
+                </filter>
+            </defs>
+        </svg>
+        <div class="type">
             <p>I am Ng Min Chern Eric, <span class="typing"></span></p>
         </div>
     </section>
