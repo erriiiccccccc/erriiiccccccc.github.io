@@ -55,6 +55,7 @@
         opacity: 0;
         transform: translateY(-10px);
         animation: fadeSlideIn 0.3s forwards;
+        z-index: 9999; /* Set a higher z-index to make it appear at the front */
     }
 
     .header-nav.active .header-nav-item {
@@ -68,6 +69,7 @@
         }
     }
 }
+
 
 
 

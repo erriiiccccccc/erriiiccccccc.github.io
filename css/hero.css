@@ -1,11 +1,12 @@
 .greeting-container {
     text-align: center;
-    height: 50px;
+    margin-top: 4.5rem;
 }
 
 .type { 
-    margin-top: -3.125rem;
+    margin-top: -4.5rem;
 }
+
 /* .title {
     font-size: 4.375rem; 
     line-height: 6.25rem; 

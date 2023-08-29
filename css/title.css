@@ -9,6 +9,7 @@
     /* top: 0;
     bottom: 0; */
     filter: url(#threshold) blur(0.6px);
+    position: relative;
 }
 
 #text1,
@@ -17,7 +18,7 @@
     width: 100%;
     display: inline-block;
     font-family: "Poppins", sans-serif;
-    font-size: 4rem;
+    font-size: 2.5rem;
     font-weight: bold;
     user-select: none;
 }

@@ -119,6 +119,8 @@ function doMorph() {
 }
 
 function setMorph(fraction) {
+    const fontSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-size'));
+
     elts.text2.style.filter = `blur(${Math.min(8 / fraction - 8, 100)}px)`;
     elts.text2.style.opacity = `${Math.pow(fraction, 0.4) * 100}%`;
 
