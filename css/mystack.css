@@ -1,15 +1,15 @@
 .section-container-my-stack {
-    margin-bottom: 2.5rem;
+    /* margin-bottom: 2.5rem; */
     border: 2px solid red; 
 }
 
-.section-title {
+/* .section-title {
     margin-bottom: 0.9375rem; 
 }
 
 .section-container-my-stack h2 {
     margin-bottom: 0.9375rem; 
-}
+} */
 
 .wrapper {
     display: flex;
