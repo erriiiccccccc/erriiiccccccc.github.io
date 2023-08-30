@@ -51,7 +51,7 @@
         background-color: #d5f2ff;
         padding: 20px;
         position: absolute;
-        top: 82px;
+        top: 80px;
         right: 0;
         width: 100px;
         /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
@@ -62,7 +62,8 @@
     }
 
     .header-nav.active .header-nav-item {
-        padding: 10px 0;
+        text-align: center;
+        /* border: 2px solid purple;  */
     }
     
     @keyframes fadeSlideIn {
