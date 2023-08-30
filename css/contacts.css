@@ -1,10 +1,13 @@
-@import url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.css);
+/* .section-container-contacts {
+    background-color: rgba(255, 0, 60, 0.05);
+    display: grid;
+    place-items: center;
+    height: 100vh;
+} */
 
-.hiring-interns {
-    max-width: 37.5rem; /* 600px / 16px = 37.5rem */
-    /* margin: 0 auto; */
-    padding: 1.25rem; /* 20px / 16px = 1.25rem */
-    /* text-align: center; */
+/* .hiring-interns {
+    max-width: 37.5rem; 
+    padding: 1.25rem; 
 }
 
 .social-media a {
@@ -12,11 +15,9 @@
 }
 
 .social-media {
-    /* display: flex; */
-    /* justify-content: center; */
-    gap: 1.5625rem; /* 25px / 16px = 1.5625rem */
-    margin-bottom: 0.625rem; /* 10px / 16px = 0.625rem */
-    margin-top: 0.625rem; /* 10px / 16px = 0.625rem */
+    gap: 1.5625rem; 
+    margin-bottom: 0.625rem; 
+    margin-top: 0.625rem; 
 }
 
 .social-media-img {
@@ -25,7 +26,7 @@
 
 .social-media-img:hover {
     transform: scale(1.3);
-}
+} */
 
 /* .section-container-my-stack {
     margin-bottom: 2.5rem; 
@@ -65,54 +66,3 @@
     margin: 0 auto;
 } 
  */
-
-.social-icons {
-    padding: 0;
-    list-style: none;
-    margin: 1em;
-}
-
-.social-icons li {
-    display: inline-block;
-    margin: 0.15em;
-    position: relative;
-    font-size: 1.2em;
-}
-
-.social-icons i {
-    color: #fff;
-    position: absolute;
-    top: 21px;
-    left: 21px;
-    transition: all 265ms ease-out;
-}
-
-.social-icons a {
-    display: inline-block;
-}
-
-.social-icons a:before {
-    transform: scale(1);
-    content: " ";
-    width: 60px;
-    height: 60px;
-    border-radius: 100%;
-    display: block;
-    background: linear-gradient(45deg, #92ccdd, #c7eff0);
-    transition: all 265ms ease-out;
-}
-
-.social-icons a:hover:before {
-    transform: scale(0);
-    transition: all 265ms ease-in;
-}
-
-.social-icons a:hover i {
-    transform: scale(2.2);
-    color: #92ccdd;
-    background: linear-gradient(45deg, #c7eff0, #92ccdd);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transition: all 265ms ease-in;
-}
