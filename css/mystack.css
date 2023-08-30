@@ -1,5 +1,6 @@
 .section-container-my-stack {
     margin-bottom: 2.5rem;
+    border: 2px solid red; 
 }
 
 .section-title {
@@ -15,6 +16,7 @@
     flex-wrap: wrap;
     gap: 1.25rem; 
     max-width: 25rem;
+    border: 2px solid red; 
     /* margin: 0 auto; */
 }
 
