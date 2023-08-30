@@ -39,7 +39,7 @@
 @media (max-width: 768px) {
     .mobile-menu-toggle {
         display: block; /* Show on smaller screens */
-        margin-right: 1.5rem;
+        margin-right: 5vw;
     }
 
     .header-nav {
@@ -47,7 +47,7 @@
     }
 
     .header-nav.active {
-        display: block; /* Show the mobile nav on smaller screens */
+        display: block; 
         background-color: #d5f2ff;
         padding: 20px;
         position: absolute;
