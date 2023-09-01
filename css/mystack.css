@@ -1,13 +1,29 @@
 .section-container-my-stack {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
     /* margin-bottom: 2.5rem; */
+    /* justify-content: center; */
+    margin: 0 auto;
+    width: 50rem;
     border: 2px solid red; 
 }
 
-/* .section-title {
-    margin-bottom: 0.9375rem; 
-}
+/* .section-title .wrapper .skull-image {
+    margin: 0 auto;
+} */
 
-.section-container-my-stack h2 {
+.section-title {
+    padding-bottom: 1.5rem;
+    /* margin-bottom: 0.9375rem;  */
+    display: flex;
+    /* justify-content: center;
+    align-items: center; */
+    /* border: 2px solid green;  */
+    width: 15rem;
+} 
+
+/* .section-container-my-stack h2 {
     margin-bottom: 0.9375rem; 
 } */
 
@@ -16,7 +32,7 @@
     flex-wrap: wrap;
     gap: 1.25rem; 
     max-width: 25rem;
-    border: 2px solid red; 
+    /* border: 2px solid red;  */
     /* margin: 0 auto; */
 }
 
@@ -98,4 +114,27 @@
 .wrapper .icon:hover .tooltip::before {
     color: #ffffff;
     filter: none;
+}
+
+.stack-with-title-and-wrapper {
+    /* display: flex; */
+    /* flex-direction: row; */
+    /* align-items: center;
+    justify-content: center; */
+    gap: 2.5rem; 
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Apply the animation to the .skull-image */
+.skull-image {
+    animation: spin 10s linear infinite; /* Adjust the duration and timing function as needed */
+    margin-left: 1rem; /* Adjust the value as needed */
 }
