@@ -5,8 +5,9 @@
     /* margin-bottom: 2.5rem; */
     /* justify-content: center; */
     margin: 0 auto;
-    width: 50rem;
-    border: 2px solid red; 
+    width: 55rem;
+    height: 60vh;
+    /* border: 2px solid red;  */
 }
 
 /* .section-title .wrapper .skull-image {
@@ -78,7 +79,7 @@
     color: #000000;
     padding: 0.3125rem 0.5rem;
     border-radius: 0.1875rem;
-    box-shadow: 0 0.3125rem 0.3125rem rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0.1125rem 0.1125rem rgba(0, 0, 0, 0.5);
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -133,8 +134,7 @@
     }
 }
 
-/* Apply the animation to the .skull-image */
 .skull-image {
-    animation: spin 10s linear infinite; /* Adjust the duration and timing function as needed */
-    margin-left: 1rem; /* Adjust the value as needed */
+    animation: spin 10s linear infinite; 
+    margin-left: 5.5rem; 
 }
