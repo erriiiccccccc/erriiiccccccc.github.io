@@ -5,7 +5,7 @@
     /* margin-bottom: 2.5rem; */
     /* justify-content: center; */
     margin: 0 auto;
-    width: 55rem;
+    /* width: 55rem; */
     height: 60vh;
     /* border: 2px solid red;  */
 }
@@ -138,3 +138,27 @@
     animation: spin 10s linear infinite; 
     margin-left: 5.5rem; 
 }
+
+@media (max-width: 768px) {
+    .section-container-my-stack {
+      flex-direction: column; 
+      align-items: center;
+      height: 70vh;
+    }
+    
+    .wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        padding-bottom: 2.5rem;
+    }
+
+    .stack-with-title-and-wrapper {
+      gap: 1rem; 
+    }
+    
+    .skull-image {
+      margin-left: 0; 
+      margin-top: 1rem; 
+    }
+  }
+  
