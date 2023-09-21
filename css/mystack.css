@@ -33,7 +33,7 @@
     flex-wrap: wrap;
     gap: 1.25rem; 
     max-width: 25rem;
-    border: 2px solid red; 
+        /* border: 2px solid red;  */
     /* margin: 0 auto; */
 }
 
@@ -118,7 +118,7 @@
 }
 
 .stack-with-title-and-wrapper {
-    border: 2px solid green; 
+    /* border: 2px solid green;  */
     /* display: flex; */
     /* flex-direction: row; */
     /* align-items: center;
