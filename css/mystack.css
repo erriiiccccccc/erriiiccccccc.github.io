@@ -33,7 +33,7 @@
     flex-wrap: wrap;
     gap: 1.25rem; 
     max-width: 25rem;
-    /* border: 2px solid red;  */
+    border: 2px solid red; 
     /* margin: 0 auto; */
 }
 
@@ -41,9 +41,9 @@
     align-self: center; 
     transition: filter 0.3s ease, transform 0.2s ease;
     flex: 0 calc(16.666% - 1.25rem);
-    display: flex;
+    /* display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: center; */
 }
 
 .icon img {
@@ -118,6 +118,7 @@
 }
 
 .stack-with-title-and-wrapper {
+    border: 2px solid green; 
     /* display: flex; */
     /* flex-direction: row; */
     /* align-items: center;
