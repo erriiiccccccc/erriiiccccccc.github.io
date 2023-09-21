@@ -17,7 +17,7 @@
     bottom: 0; */
     filter: url(#threshold) blur(0.6px);
     position: relative;
-    border: 2px solid red;
+    /* border: 2px solid red; */
 }
 
 #text1,
@@ -33,7 +33,7 @@
 
 .type {
     /* height: 6.25rem; */
-    border: 2px solid green;
+    /* border: 2px solid green; */
 }
 
 .centered-container {
