@@ -31,11 +31,6 @@
     user-select: none;
 }
 
-.type {
-    /* height: 6.25rem; */
-    /* border: 2px solid green; */
-}
-
 .centered-container {
     border: 2px solid yellow; 
     margin: 10rem auto ;
