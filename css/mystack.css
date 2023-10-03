@@ -19,7 +19,7 @@
     /* margin-bottom: 0.9375rem;  */
     display: flex;
     /* justify-content: center;
-    align-items: center; */
+    align-items: center;
     /* border: 2px solid green;  */
     width: 15rem;
 } 
@@ -118,7 +118,6 @@
 }
 
 .stack-with-title-and-wrapper {
-    /* border: 2px solid green;  */
     /* display: flex; */
     /* flex-direction: row; */
     /* align-items: center;

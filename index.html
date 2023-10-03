@@ -13,6 +13,7 @@
     <link rel="stylesheet" type="text/css" href="css/aboutme.css">
     <link rel="stylesheet" type="text/css" href="css/mystack.css">
     <link rel="stylesheet" type="text/css" href="css/projects.css">
+    <link rel="stylesheet" type="text/css" href="css/projects2.css">
     <link rel="stylesheet" type="text/css" href="css/contacts.css">
     <link rel="stylesheet" type="text/css" href="css/footer.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">   
@@ -20,6 +21,7 @@
 </head>
 
 <body>
+    <!-- <img src="img/underconstructionsign.png" class="underconstructionsign" alt="under construction sign board"> -->
     <button id="back-to-top-button">
         <img src="img/up_arrow.png" alt="up_arrow" width="40" height="40" style="max-width: 100%;">
     </button>
@@ -157,14 +159,110 @@
     </section>
 
     <section class="section-container-projects" id="section-container-projects">
-        <div class="centered-container">
-            <h1># Projects</h1>
-            <div class="portfolio-item">
-                <!-- <img src="https://github.com/erriiiccccccc/Elasticsearch-setup/assets/90021527/b7acc8f8-9435-40c7-b65e-106aefa646d3" alt="Kibana visualizer" width="500"> -->
-                <h2>ELK</h2>
-                <p>made ELK</p>
+        <div class="projects-wrapper">
+            <h1 class="section-title"># Projects</h1>
+
+            <div class="cards-container">
+                <input type="radio" name="slider" class="d-none" id="s1" checked>
+                <input type="radio" name="slider" class="d-none" id="s2">
+                <input type="radio" name="slider" class="d-none" id="s3">
+                <input type="radio" name="slider" class="d-none" id="s4">
+                <input type="radio" name="slider" class="d-none" id="s5">
+        
+                <div class="cards">
+                <label for="s1" id="slide1">
+                    <div class="card">
+                    <div class="image">
+                        <video src="img/donut.mp4" autoplay loop muted width="320" height="240">
+                        Your browser does not support the video tag.
+                        </video>
+                        <div class="dots">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        </div>
+                    </div>
+                    <div class="infos">
+                        <span class="name">Elasticsearch setup</span>
+                        <span class="lorem">hello</span>
+                    </div>
+                    <a href="https://github.com/erriiiccccccc/Elasticsearch-setup" rel="nofollow" target="_blank" class="btn-contact">details</a>
+                    </div>
+                </label>
+        
+                <label for="s2" id="slide2">
+                    <div class="card">
+                    <div class="image">
+                        <video src="img/donut.mp4" autoplay loop muted width="320" height="240"></video>
+                        <div class="dots">
+                        <div class="dot1"></div>
+                        <div class="dot2"></div>
+                        <div class="dot3"></div>
+                        </div>
+                    </div>
+                    <div class="infos">
+                        <span class="name">First Blender project</span>
+                        <span class="lorem">hi</span>
+                    </div>
+                    <a href="https://github.com/erriiiccccccc/First-blender-project" rel="nofollow" target="_blank" class="btn-contact">details</a>
+                    </div>
+                </label>
+        
+                <label for="s3" id="slide3">
+                    <div class="card">
+                    <div class="image">
+                        <img src="img/Black Toe Union.jpg" alt="">
+                        <div class="dots">
+                        <div class="dot1"></div>
+                        <div class="dot2"></div>
+                        <div class="dot3"></div>
+                        </div>
+                    </div>
+                    <div class="infos">
+                        <span class="name">JSON to CSV Converter</span>
+                        <span class="lorem">hi</span>
+                    </div>
+                    <a href="https://github.com/erriiiccccccc/JSON_CSV_Converter-online" rel="nofollow" target="_blank" class="btn-contact">details</a>
+                    </div>
+                </label>
+        
+                <label for="s4" id="slide4">
+                    <div class="card">
+                    <div class="image">
+                        <img src="img/Retro High Og.jpg" alt="">
+                        <div class="dots">
+                        <div class="dot1"></div>
+                        <div class="dot2"></div>
+                        <div class="dot3"></div>
+                        </div>
+                    </div>
+                    <div class="infos">
+                        <span class="name">Portfolio source code</span>
+                        <span class="lorem">hi</span>
+                    </div>
+                    <a href="https://github.com/erriiiccccccc/erriiiccccccc.github.io" rel="nofollow" target="_blank" class="btn-contact">details</a>
+                    </div>
+                </label>
+        
+                <label for="s5" id="slide5">
+                    <div class="card">
+                    <div class="image">
+                        <img src="img/Off-White x Air Jordan.jpg" alt="">
+                        <div class="dots">
+                        <div class="dot1"></div>
+                        <div class="dot2"></div>
+                        <div class="dot3"></div>
+                        </div>
+                    </div>
+                    <div class="infos">
+                        <span class="name">Ada Hack 2022</span>
+                        <span class="lorem">hi</span>
+                    </div>
+                    <a href="https://github.com/erriiiccccccc/AdaHack2022" rel="nofollow" target="_blank" class="btn-contact">details</a>
+                    </div>
+                </label>
+                </div>
             </div>
-        </div>
     </section>
 
     <section class="section-container-contacts" id="section-container-contacts">
@@ -202,5 +300,6 @@
         <p class="footer">Designed & built by Eric Ng</p>
     </section>
     <script src="js/script.js"></script>
+    <script src="js/swiper-bundle.min.js"></script>
 </body>
 </html>
