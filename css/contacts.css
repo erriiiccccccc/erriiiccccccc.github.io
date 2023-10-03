@@ -1,14 +1,14 @@
 @import url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css);
 
 .section-container-contacts{
-    border: 2px solid purple; 
+    /* border: 2px solid purple;  */
 }
 
 .social-icons {
     padding: 0;
     list-style: none;
     /* margin: 1em; */
-    border: 2px solid purple; 
+    /* border: 2px solid purple;  */
 }
 
 .social-icons li {
