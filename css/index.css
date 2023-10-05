@@ -19,7 +19,7 @@ font-family: 'Teko', sans-serif; */
 
 /* Scrollbar styles */
 ::-webkit-scrollbar {
-    width: 0.625rem;
+    width: 0.5rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -27,13 +27,13 @@ font-family: 'Teko', sans-serif; */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #FAC898; 
+    background: #92b6f0; 
     border-radius: 1.5625rem;
     transition: 0.1s ease-in;
 }
   
 ::-webkit-scrollbar-thumb:hover {
-    background: #ffb774; 
+    background: #92b6f0; 
 }
 
 /* General styles */

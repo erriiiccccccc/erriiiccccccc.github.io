@@ -2,6 +2,7 @@
 
 .section-container-contacts{
     /* border: 2px solid purple;  */
+    background: linear-gradient(to bottom, #e8dff5, #daeaf6);
 }
 
 .social-icons {

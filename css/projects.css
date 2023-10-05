@@ -6,7 +6,8 @@
     overflow: visible; /* Added */
     height: 100vh; /* Changed from 110vh */
     flex-wrap: wrap;
-    border: 2px solid pink;
+    /* border: 2px solid pink; */
+    background: linear-gradient(to bottom, #fce1e4, #e8dff5);
 }
 
 .section-container-projects h1 {
@@ -18,7 +19,7 @@
     height: 100%;
     display: flex;
     justify-content: center;
-    border: 2px solid yellow;
+    /* border: 2px solid yellow; */
 }
 
 a{
@@ -69,7 +70,7 @@ input {
     height: 100%;
     background-color: #d1dff6;
     border-radius: 10px;
-    padding: 30px 35px;
+    padding: 10px 10px;
 }
 
 .card .image{
@@ -80,19 +81,19 @@ input {
 .card .image img{
 
     border-radius: 5px;
-    box-shadow: 15px 15px 40px rgba(0, 0, 0, 50%);
+    /* box-shadow: 5px 5px 5px rgba(0, 0, 0, 50%); */
     margin-top: 23px;
-    width: 86%;
+    width: 100%;
     height: 220px;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .card .image video{
 
     border-radius: 5px;
-    box-shadow: 15px 15px 40px rgba(0, 0, 0, 50%);
+    /* box-shadow: 10px 10px 10px rgba(0, 0, 0, 50%); */
     margin-top: 23px;
-    width: 86%;
+    width: 100%;
     height: 220px;
     object-fit: cover;
 }
@@ -104,10 +105,9 @@ input {
 
 .dots div{
 
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-bottom: 10px;
+    /* width: 8px;
+    height: 8px; */
+    margin-bottom: 8px;
 }
 
 .dots div:nth-child(1){
@@ -115,7 +115,7 @@ input {
     background-color: var(--current-color1);
 }
 
-.dots div:nth-child(2){
+/* .dots div:nth-child(2){
 
     background-color: #5B85F9;
 }
@@ -123,7 +123,7 @@ input {
 .dots div:nth-child(3){
 
     background-color: #000;
-}
+} */
 
 .card .infos{
 

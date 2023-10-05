@@ -1,6 +1,7 @@
 .section-container-about-me {
     /* border: 2px solid green;  */
     height: 80vh;
+    background: linear-gradient(to bottom, #ddedea, #fcf4dd);
 }
 /* 
 .about-me {

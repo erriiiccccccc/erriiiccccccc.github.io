@@ -2,8 +2,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 3.125rem;
-    background-color: #d5f2ff; 
+    background-color: #92b6f0 ; 
     text-align: center; 
+    border-top: 2px solid darkblue;
 }
 
 .footer {
