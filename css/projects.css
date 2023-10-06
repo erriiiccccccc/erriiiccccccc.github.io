@@ -1,28 +1,26 @@
 #section-container-projects {
-    display: flex ;
+    display: flex;
     align-items: flex-start;
     justify-content: center;
     overflow-x: hidden;
-    overflow: visible; /* Added */
-    height: 100vh; /* Changed from 110vh */
+    overflow: visible;
+    height: 100vh;
     flex-wrap: wrap;
-    /* border: 2px solid pink; */
     background: linear-gradient(to bottom, #fce1e4, #e8dff5);
 }
 
 .section-container-projects h1 {
     position: absolute;
-  }
-  
+}
+
 .projects-wrapper {
     width: 100%;
     height: 100%;
     display: flex;
     justify-content: center;
-    /* border: 2px solid yellow; */
 }
 
-a{
+a {
     text-decoration: none;
 }
 
@@ -32,11 +30,10 @@ input {
 
 .cards-container {
     margin-top: 10vh;
-    /* border: 2px solid green; */
     width: 100%;
     height: 100%;
-    max-width: 600px;
-    max-height: 600px;
+    max-width: 37.5rem;
+    max-height: 37.5rem;
     display: flex;
     transform-style: preserve-3d;
     justify-content: center;
@@ -45,19 +42,17 @@ input {
 }
 
 .cards {
-
     position: relative;
-    height: 500px;
-    width: 430px;
-    margin-bottom: 20px;
-    perspective: 1000px;
+    height: 31.25rem;
+    width: 27.5rem;
+    margin-bottom: 1.25rem;
+    perspective: 62.5rem;
     transform-style: preserve-3d;
 }
 
 .cards label {
-
     position: absolute;
-    width: 430px;
+    width: 26rem;
     left: 0;
     right: 0;
     margin: auto;
@@ -65,115 +60,96 @@ input {
     transition: transform 0.55s ease;
 }
 
-.cards .card{
+.cards .card {
     position: flex;
     height: 100%;
     background-color: #d1dff6;
-    border-radius: 10px;
-    padding: 10px 2px;
-    margin-top: 5px;
+    border-radius: 1rem;
+    padding: 1rem 0.125rem;
+    margin-top: 0.3125rem;
 }
 
-.card .image{
+.card .image {
     display: flex;
     justify-content: center;
 }
 
-.card .image img{
-
-    border-radius: 5px;
-    /* box-shadow: 5px 5px 5px rgba(0, 0, 0, 50%); */
-    width: 25rem;
-    height: 225px;
+.card .image img {
+    border-radius: 0.3125rem;
+    width: 24rem;
+    height: 12.5rem;
     object-fit: contain;
 }
 
-.card .image video{
-
-    border-radius: 5px;
-    /* box-shadow: 10px 10px 10px rgba(0, 0, 0, 50%); */
-    width: 25rem;
-    height: 225px;
+.card .image video {
+    border-radius: 0.3125rem;
+    width: 24rem;
+    height: 12.5rem;
     object-fit: cover;
 }
 
-.card .image .dots{
-
+.card .image .dots {
     text-align: center;
 }
 
-.dots div{
-    width: 8px;
-    height: 8px;
+.dots div {
+    width: 0.5rem;
+    height: 0.5rem;
 }
 
-.dots div:nth-child(1){
-
+.dots div:nth-child(1) {
     background-color: var(--current-color1);
 }
 
-/* .dots div:nth-child(2){
-
-    background-color: #5B85F9;
-}
-
-.dots div:nth-child(3){
-
-    background-color: #000;
-} */
-
-.card .infos{
-
+.card .infos {
     display: block;
     text-align: end;
-    padding-top: 60px;
+    padding-top: 3.75rem;
 }
 
-.infos span{
-
+.infos span {
     display: block;
 }
 
-.infos .name{
+.infos .name {
     font-family: 'Oswald', serif;
-    font-size: 30px;
+    font-size: 1.875rem;
     color: var(--current-color1);
-    letter-spacing: 8px;
-    margin-bottom: 20px;
-    padding-left: 25%;
-    transition: all .6s ease;
+    letter-spacing: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-left: 15%;
+    transition: all 0.6s ease;
 }
 
-.infos .lorem{
+.infos .lorem {
     font-family: 'Oswald', serif;
-    font-size: 15.5px;
-    color: #ECEAED;
-    letter-spacing: 3px;
+    font-size: 0.9375rem;
+    color: #eceaed;
+    letter-spacing: 0.1875rem;
 }
 
-.card .btn-contact{
+.card .btn-contact {
     font-family: 'Oswald', serif;
-    width: 100%;
-    height: 60px;
-    margin: 35px auto;
-    border-radius: 5px;
+    width: 80%;
+    height: 3.75rem;
+    margin: 2.1875rem auto;
+    border-radius: 0.3125rem;
     background-color: var(--current-color1);
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-size: 25px;
-    letter-spacing: 10px;
+    font-size: 1.5625rem;
+    letter-spacing: 1rem;
     font-weight: 700;
-    transition: all .7s ease;
+    transition: all 0.7s ease;
 }
 
-.card .socials{
-
+.card .socials {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 20px;
+    padding-top: 1.25rem;
 }
 
 #s1:checked~.cards #slide4,
@@ -182,11 +158,10 @@ input {
 #s4:checked~.cards #slide2,
 #s5:checked~.cards #slide3 {
     background-color: #d1dff6;
-    box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 45%);
-    transform: translate3d(-70%, 0, -220px);
-    --current-color1: #ECEAED;
+    box-shadow: 0 0.9375rem 2.1875rem 0 rgba(0, 0, 0, 0.45);
+    transform: translate3d(-70%, 0, -13.75rem);
+    --current-color1: #eceaed;
     --current-color2: #404457;
-
 }
 
 #s1:checked~.cards #slide5,
@@ -195,9 +170,9 @@ input {
 #s4:checked~.cards #slide3,
 #s5:checked~.cards #slide4 {
     background-color: #d1dff6;
-    box-shadow: 0 20px 40px 0 rgba(0, 0, 0, 45%);
-    transform: translate3d(-35%, 0, -120px);
-    --current-color1: #ECEAED;
+    box-shadow: 0 1.25rem 2.5rem 0 rgba(0, 0, 0, 0.45);
+    transform: translate3d(-35%, 0, -6.875rem);
+    --current-color1: #eceaed;
     --current-color2: #404457;
 }
 
@@ -207,10 +182,10 @@ input {
 #s4:checked~.cards #slide4,
 #s5:checked~.cards #slide5 {
     background-color: #d1dff6;
-    box-shadow: 0 25px 50px 0 rgba(0, 0, 0, 50%);
+    box-shadow: 0 1.5625rem 3.125rem 0 rgba(0, 0, 0, 0.5);
     transform: translate3d(0, 0, 0);
     --current-color1: #92b6f0;
-    --current-color2: #ECEAED;
+    --current-color2: #eceaed;
 }
 
 #s1:checked~.cards #slide2,
@@ -219,9 +194,9 @@ input {
 #s4:checked~.cards #slide5,
 #s5:checked~.cards #slide1 {
     background-color: #d1dff6;
-    box-shadow: 0 20px 40px 0 rgba(0, 0, 0, 45%);
-    transform: translate3d(35%, 0, -120px);
-    --current-color1: #ECEAED;
+    box-shadow: 0 1.25rem 2.5rem 0 rgba(0, 0, 0, 0.45);
+    transform: translate3d(35%, 0, -6.875rem);
+    --current-color1: #eceaed;
     --current-color2: #404457;
 }
 
@@ -231,9 +206,8 @@ input {
 #s4:checked~.cards #slide1,
 #s5:checked~.cards #slide2 {
     background-color: #d1dff6;
-    box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 45%);
-    transform: translate3d(70%, 0, -220px);
+    box-shadow: 0 0.9375rem 2.1875rem 0 rgba(0, 0, 0, 0.45);
+    transform: translate3d(70%, 0, -13.75rem);
     --current-color1: #ECEAED;
     --current-color2: #404457;
 }
-
