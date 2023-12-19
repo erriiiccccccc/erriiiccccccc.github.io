@@ -18,6 +18,7 @@
     <link rel="stylesheet" type="text/css" href="css/footer.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">   
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
+    <script type="module" crossorigin src="js/index.4a2801f8.js"></script>
 </head>
 
 <body>
@@ -160,126 +161,166 @@
 
     <section class="section-container-projects" id="section-container-projects">
         <div class="projects-wrapper">
-            <h1 class="section-title"># Projects</h1>
+            <h1 class="projects-section-title"># Projects</h1>
 
-            <div class="cards-container">
-                <input type="radio" name="slider" class="d-none" id="s1" checked>
-                <input type="radio" name="slider" class="d-none" id="s2">
-                <input type="radio" name="slider" class="d-none" id="s3">
-                <input type="radio" name="slider" class="d-none" id="s4">
-                <input type="radio" name="slider" class="d-none" id="s5">
-        
-                <div class="cards">
-                <label for="s1" id="slide1">
-                    <div class="card">
-                    <div class="image">
-                        <video src="img/ELK_Logo.mp4" autoplay loop muted></video>
-                        </video>
-                        <div class="dots">
-                        <div></div>
-                        <div></div>
-                        <div></div>
+            <div id="app">
+                <!-- Expanding Collection, should wrap the Swiper -->
+                <div class="expanding-collection">
+                  <div class="swiper">
+                    <div class="swiper-wrapper">
+                      <!-- First slide -->
+                      <div class="swiper-slide">
+                        <!-- Expanding collection container, required element -->
+                        <div class="expanding-collection-container">
+                          <!-- Expanding collection content that opens underneath the cover image on click -->
+                          <div class="expanding-collection-content">
+                            <div class="expanding-collection-content-inner">
+                              <!-- Put any required content here -->
+                              <div class="demo-content">
+                                <div class="demo-content-title">
+                                  Elasticsearch
+                                </div>
+                                <!-- <div class="demo-content-avatars">
+                                  <img src="./images/avatar1.jpg" />
+                                  <img src="./images/avatar2.jpg" />
+                                  <img src="./images/avatar3.jpg" />
+                                  <img src="./images/avatar4.jpg" />
+                                </div>
+                                <div class="demo-content-rating">
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-gray.svg" />
+                                </div> -->
+                              </div>
+                            </div>
+                          </div>
+                          <!-- Expanding collection cover, can contain any HTML content -->
+                          <div class="expanding-collection-cover">
+                            <img src="./img/ELK_Logo.png" />
+                            <div class="demo-cover-title">Elasticsearch</div>
+                            <!-- <div class="demo-cover-coords">
+                              <span>North LAT 36</span>
+                              <span>East LON 37</span>
+                            </div> -->
+                          </div>
                         </div>
-                    </div>
-                    <div class="infos">
-                        <span class="name">Elasticsearch setup</span>
-                        <span class="lorem">hello</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/Elasticsearch-setup" rel="nofollow" target="_blank" class="btn-contact"> <i class="fa fa-github"></i> </a>
-                    </div>
-                </label>
-        
-                <label for="s2" id="slide2">
-                    <div class="card">
-                    <div class="image">
-                        <video src="img/donut.mp4" autoplay loop muted></video>
-                        <div class="dots">
-                        <div class="dot1"></div>
-                        <div class="dot2"></div>
-                        <div class="dot3"></div>
+                      </div>
+          
+                      <!-- Second slide -->
+                      <div class="swiper-slide">
+                        <div class="expanding-collection-container">
+                          <div class="expanding-collection-content">
+                            <div class="expanding-collection-content-inner">
+                              <div class="demo-content">
+                                <div class="demo-content-title">
+                                  Jameson Street, CA90030
+                                </div>
+                                <div class="demo-content-avatars">
+                                  <img src="./images/avatar1.jpg" />
+                                  <img src="./images/avatar2.jpg" />
+                                  <img src="./images/avatar3.jpg" />
+                                  <img src="./images/avatar4.jpg" />
+                                </div>
+                                <div class="demo-content-rating">
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-gray.svg" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="expanding-collection-cover">
+                            <img src="./img/donut.png" />
+                            <div class="demo-cover-title">Blender</div>
+                            <div class="demo-cover-coords">
+                              <span>North LAT 36</span>
+                              <span>East LON 37</span>
+                            </div>
+                          </div>
                         </div>
-                    </div>
-                    <div class="infos">
-                        <span class="name">First Blender project</span>
-                        <span class="lorem">hi</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/First-blender-project" rel="nofollow" target="_blank" class="btn-contact"> <i class="fa fa-github"></i> </a>
-                    </div>
-                </label>
-        
-                <label for="s3" id="slide3">
-                    <div class="card">
-                    <div class="image">
-                        <img src="img/Black Toe Union.jpg" alt="">
-                        <div class="dots">
-                        <div class="dot1"></div>
-                        <div class="dot2"></div>
-                        <div class="dot3"></div>
+                      </div>
+          
+                      <!-- Third slide -->
+                      <div class="swiper-slide">
+                        <div class="expanding-collection-container">
+                          <div class="expanding-collection-content">
+                            <div class="expanding-collection-content-inner">
+                              <div class="demo-content">
+                                <div class="demo-content-title">
+                                  Jameson Street, CA90030
+                                </div>
+                                <div class="demo-content-avatars">
+                                  <img src="./images/avatar1.jpg" />
+                                  <img src="./images/avatar2.jpg" />
+                                  <img src="./images/avatar3.jpg" />
+                                  <img src="./images/avatar4.jpg" />
+                                </div>
+                                <div class="demo-content-rating">
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-gray.svg" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="expanding-collection-cover">
+                            <img src="./img/JSON_CSV.png" />
+                            <div class="demo-cover-title">London</div>
+                            <div class="demo-cover-coords">
+                              <span>North LAT 36</span>
+                              <span>East LON 37</span>
+                            </div>
+                          </div>
                         </div>
-                    </div>
-                    <div class="infos">
-                        <span class="name">JSON to CSV Converter</span>
-                        <span class="lorem">hi</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/JSON_CSV_Converter-online" rel="nofollow" target="_blank" class="btn-contact"> <i class="fa fa-github"></i></a>
-                    </div>
-                </label>
-        
-                <label for="s4" id="slide4">
-                    <div class="card">
-                    <div class="image">
-                        <img src="img/Retro High Og.jpg" alt="">
-                        <div class="dots">
-                        <div class="dot1"></div>
-                        <div class="dot2"></div>
-                        <div class="dot3"></div>
+                      </div>
+          
+                      <!-- Fourth slide -->
+                      <div class="swiper-slide">
+                        <div class="expanding-collection-container">
+                          <div class="expanding-collection-content">
+                            <div class="expanding-collection-content-inner">
+                              <div class="demo-content">
+                                <div class="demo-content-title">
+                                  Jameson Street, CA90030
+                                </div>
+                                <div class="demo-content-avatars">
+                                  <img src="./images/avatar1.jpg" />
+                                  <img src="./images/avatar2.jpg" />
+                                  <img src="./images/avatar3.jpg" />
+                                  <img src="./images/avatar4.jpg" />
+                                </div>
+                                <div class="demo-content-rating">
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-orange.svg" />
+                                  <img src="./images/star-gray.svg" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="expanding-collection-cover">
+                            <img src="./img/moscow.jpg" />
+                            <div class="demo-cover-title">Moscow</div>
+                            <div class="demo-cover-coords">
+                              <span>North LAT 36</span>
+                              <span>East LON 37</span>
+                            </div>
+                          </div>
                         </div>
+                      </div>
                     </div>
-                    <div class="infos">
-                        <span class="name">Portfolio source code</span>
-                        <span class="lorem">hi</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/erriiiccccccc.github.io" rel="nofollow" target="_blank" class="btn-contact"> <i class="fa fa-github"></i> </a>
-                    </div>
-                </label>
-        
-                <label for="s5" id="slide5">
-                    <div class="card">
-                    <div class="image">
-                        <img src="img/Off-White x Air Jordan.jpg" alt="">
-                        <div class="dots">
-                        <div class="dot1"></div>
-                        <div class="dot2"></div>
-                        <div class="dot3"></div>
-                        </div>
-                    </div>
-                    <div class="infos">
-                        <span class="name">Ada Hack <br> 2022</span>
-                        <span class="lorem">hi</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/AdaHack2022" rel="nofollow" target="_blank" class="btn-contact"> <i class="fa fa-github"></i> </a>
-                    </div>
-                </label>
-
-                <!-- <label for="s6" id="slide5">
-                    <div class="card">
-                    <div class="image">
-                        <img src="img/Off-White x Air Jordan.jpg" alt="">
-                        <div class="dots">
-                        <div class="dot1"></div>
-                        <div class="dot2"></div>
-                        <div class="dot3"></div>
-                        </div>
-                    </div>
-                    <div class="infos">
-                        <span class="name">supermansuperman super</span>
-                        <span class="lorem">hi</span>
-                    </div>
-                    <a href="https://github.com/erriiiccccccc/AdaHack2022" rel="nofollow" target="_blank" class="btn-contact">details</a>
-                    </div>
-                </label> -->
+                  </div>
                 </div>
+              </div>
             </div>
+        </div>
     </section>
 
     <section class="section-container-contacts" id="section-container-contacts">

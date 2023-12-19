@@ -2,13 +2,12 @@
 @import url("https://fonts.googleapis.com/css?family=Poppins:100,200,300,400,500,600,700,800,900");
 
 #hero {
-    /* border: 2px solid red;  */
     display: flex;
     align-items: center;
     height: 88vh;
-    background: linear-gradient(to bottom, #daeaf6, #ddedea);
+    background: linear-gradient(to bottom, #cce2f2 20%, #ddedea);
     background-position: 25% 0;
-
+    /* border: 2px solid red; */
 }
 
 #container {
