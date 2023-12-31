@@ -1,4 +1,4 @@
-import { S as e } from "./vendor.602a9696.js";
+import { S as e } from "./vendor.js";
 !(function () {
   const e = document.createElement("link").relList;
   if (!(e && e.supports && e.supports("modulepreload"))) {
