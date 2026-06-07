@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite cache
+.vite/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Generated at build time — do not commit
+public/travel-stats.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code internals
+.claude/
+.claude-flow/
+CLAUDE.md
+nul

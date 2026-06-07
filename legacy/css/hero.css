@@ -1,0 +1,39 @@
+@import url("https://fonts.googleapis.com/css?family=Raleway:900&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Poppins:100,200,300,400,500,600,700,800,900");
+
+#hero {
+    display: flex;
+    align-items: center;
+    height: 88vh;
+    background: linear-gradient(to bottom, #cce2f2 20%, #ddedea);
+    background-position: 25% 0;
+    /* border: 2px solid red; */
+}
+
+#container {
+    /* position: absolute; */
+    /* margin: 0; */
+    /* width: 80vw; */
+    /* top: 0;
+    bottom: 0; */
+    filter: url(#threshold) blur(0.6px);
+    position: relative;
+    /* border: 2px solid red; */
+}
+
+#text1,
+#text2 {
+    position: absolute;
+    width: 100%;
+    display: inline-block;
+    font-family: "Poppins", sans-serif;
+    font-size: 2.5rem;
+    font-weight: bold;
+    user-select: none;
+}
+
+/* .centered-container {
+    border: 2px solid yellow; 
+    margin: 10rem auto ;
+    width: 50rem;
+} */

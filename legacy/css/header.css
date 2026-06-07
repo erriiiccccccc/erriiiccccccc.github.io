@@ -1,0 +1,97 @@
+/* .title h1 {
+    text-align: center;
+} */
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* height: 7vh; */
+    padding: 0.625rem; 
+    background-color: #92b6f0 ;
+    /* border: 2px solid purple;  */
+    border-bottom: 2px solid darkblue;
+}
+
+/* section {
+    padding: 1.25rem;
+    background-image: url('img/clouds.jpg');
+    background-size: cover;
+    background-position: center center;
+} */
+
+
+.header-nav {
+    display: flex;
+    gap: 0.78125em; 
+}
+
+.header-nav-item {
+    margin: 0;
+    padding: 0.15625em 0.3125em; 
+    font-weight: 1000;
+    transition: transform 0.3s ease;
+}
+
+.mobile-menu-toggle {
+    display: none; /* Hide by default on larger screens */
+    cursor: pointer;
+}
+
+.mobile-menu-toggle .bar {
+    width: 25px;
+    height: 3px;
+    background-color: #333;
+    margin: 6px 0;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block; /* Show on smaller screens */
+        margin-right: 5vw;
+    }
+
+    .header-nav {
+        display: none; /* Hide the regular nav on smaller screens */
+    }
+
+    .header-nav.active {
+        display: block; 
+        background-color: #d5f2ff;
+        padding: 20px;
+        position: absolute;
+        top: 80px;
+        right: 0;
+        width: 100px;
+        /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
+        opacity: 0;
+        transform: translateY(-10px);
+        animation: fadeSlideIn 0.3s forwards;
+        z-index: 9999; /* Set a higher z-index to make it appear at the front */
+    }
+
+    .header-nav.active .header-nav-item {
+        text-align: center;
+        /* border: 2px solid purple;  */
+    }
+    
+    @keyframes fadeSlideIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+.header-nav-item:hover {
+    transform: scale(1.2);
+}
+
+.header-nav-item a {
+    text-decoration: none;
+    color: black;
+}
+
+section {
+    padding: 1.25rem; 
+}

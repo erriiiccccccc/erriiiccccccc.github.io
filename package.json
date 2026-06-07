@@ -1,0 +1,27 @@
+{
+  "name": "erriiiccccccc-github-io",
+  "version": "1.0.0",
+  "description": "Eric's interactive 3D portfolio — a walkable Little Prince-style planet built with Three.js",
+  "author": "Eric Ng Min Chern <erriiiccccccc@github>",
+  "license": "MIT",
+  "homepage": "https://erriiiccccccc.github.io",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/fetch-travel-stats.mjs && vite",
+    "build": "node scripts/fetch-travel-stats.mjs && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "topojson-client": "^3.1.0",
+    "vite": "^5.4.0",
+    "world-atlas": "^2.0.2",
+    "world-countries": "^5.1.0"
+  }
+}
