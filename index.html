@@ -6,8 +6,8 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0d0820" />
 
-  <title>Eric's World — Interactive 3D Portfolio</title>
-  <meta name="description" content="An interactive 3D portfolio by Eric Ng Min Chern. Walk around a tiny Little Prince–style planet to explore my projects, skills, experience, travels and contact." />
+  <title>Eric's World!</title>
+  <meta name="description" content="Walk around a tiny handcrafted world and discover who Eric is. Six islands, each with its own story." />
   <meta name="author" content="Eric Ng Min Chern" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://erriiiccccccc.github.io/" />
@@ -15,16 +15,19 @@
   <!-- Open Graph / Twitter -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://erriiiccccccc.github.io/" />
-  <meta property="og:title" content="Eric's World — Interactive 3D Portfolio" />
-  <meta property="og:description" content="Walk a tiny planet to explore Eric's projects, skills and travels — built with Three.js." />
+  <meta property="og:title" content="Eric's World!" />
+  <meta property="og:description" content="Six islands. One tiny world. Built with Three.js." />
   <meta property="og:image" content="https://erriiiccccccc.github.io/loading-preview.png" />
   <meta property="og:image:alt" content="Stylised low-poly planet floating in deep purple space" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Eric's World — Interactive 3D Portfolio" />
-  <meta name="twitter:description" content="Walk a tiny planet to explore Eric's projects, skills and travels — built with Three.js." />
+  <meta name="twitter:title" content="Eric's World!" />
+  <meta name="twitter:description" content="Six islands. One tiny world. Built with Three.js." />
   <meta name="twitter:image" content="https://erriiiccccccc.github.io/loading-preview.png" />
 
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <!-- Brand mark: the shiba (dogsmalllogo). SVG planet kept as a fallback. -->
+  <link rel="icon" type="image/png" href="./dogsmalllogo.png" />
+  <link rel="apple-touch-icon" href="./dogsmalllogo.png" />
+  <link rel="alternate icon" type="image/svg+xml" href="./favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet" />
@@ -32,56 +35,76 @@
 </head>
 <body>
   <!-- Page heading for screen readers / SEO (the visual "title" is the 3D scene) -->
-  <h1 class="sr-only">Eric's World — interactive 3D portfolio of Eric Ng Min Chern</h1>
+  <h1 class="sr-only">Eric's World! An interactive world by Eric Ng Min Chern</h1>
 
-  <div id="loader" role="status" aria-live="polite" aria-label="Loading Eric's World">
-    <!-- Full-bleed preview (cover = same framing as canvas at any aspect ratio) -->
-    <div id="ldr-preview-bg" aria-hidden="true"></div>
-    <!-- Dark tiles fade out centre-outward to reveal the preview -->
-    <div id="ldr-tiles" aria-hidden="true"></div>
-    <!-- CRT scanlines -->
-    <div id="ldr-scanlines" aria-hidden="true"></div>
-    <!-- Pulse rings centred on planet -->
-    <div id="ldr-pulse" aria-hidden="true"></div>
-    <div id="ldr-pulse2" aria-hidden="true"></div>
-    <!-- Top-left system tag -->
-    <div id="ldr-tag" aria-hidden="true">◈ &nbsp;WORLD.LOAD</div>
-    <!-- Bottom-right progress -->
+  <!-- Loader is a transparent brand layer over the already-live 3D scene
+       (deep-purple space + stars + a spinning low-poly planet). -->
+  <div id="loader" role="status" aria-live="polite" aria-label="Loading Eric's World!">
+    <!-- Soft top/bottom vignette so text stays legible over the live scene -->
+    <div id="ldr-vignette" aria-hidden="true"></div>
+    <!-- Title (top-centre) -->
+    <div id="ldr-title">
+      <div id="ldr-name">Eric's World</div>
+      <div id="ldr-tagline">a tiny handcrafted world</div>
+    </div>
+    <!-- Progress (bottom-centre) -->
     <div id="ldr-progress">
-      <div id="ldr-label">WARPING SPACETIME</div>
-      <div id="ldr-bignum" aria-hidden="true"><span id="ldr-pct">00</span><span class="ldr-sup">%</span></div>
-      <div id="ldr-bar-track" aria-hidden="true"><div id="ldr-bar-fill"></div></div>
+      <div id="ldr-bar-row" aria-hidden="true">
+        <div id="ldr-bar-track"><div id="ldr-bar-fill"></div></div>
+        <div id="ldr-pct">0%</div>
+      </div>
+      <div id="ldr-label">Warping spacetime</div>
     </div>
   </div>
 
   <div id="hud">
-    <div id="controls-hint">WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Shift sprint &nbsp;·&nbsp; RMB look around &nbsp;·&nbsp; Scroll zoom</div>
-  </div>
-
-  <!-- Detail panel -->
-  <div id="detail-panel" class="hidden" role="dialog" aria-modal="false" aria-labelledby="detail-title">
-    <div id="detail-header">
-      <div id="detail-header-main">
-        <div id="detail-icon-badge" aria-hidden="true"><span id="detail-icon"></span></div>
-        <div id="detail-titles">
-          <div id="detail-island-label"></div>
-          <div id="detail-title"></div>
+    <div id="controls-hint" aria-label="Keyboard controls">
+      <div class="hud-keys">
+        <div class="hud-key-group">
+          <div class="kc-wasd">
+            <kbd class="kc">W</kbd>
+            <div class="kc-wasd-row"><kbd class="kc">A</kbd><kbd class="kc">S</kbd><kbd class="kc">D</kbd></div>
+          </div>
+          <span class="hud-key-label">Move</span>
         </div>
+        <span class="hud-key-sep"></span>
+        <div class="hud-key-group"><kbd class="kc kc--wide">Space</kbd><span class="hud-key-label">Jump</span></div>
+        <span class="hud-key-sep"></span>
+        <div class="hud-key-group"><kbd class="kc kc--wide">Shift</kbd><span class="hud-key-label">Sprint</span></div>
+        <span class="hud-key-sep"></span>
+        <div class="hud-key-group"><kbd class="kc kc--wide">RMB</kbd><span class="hud-key-label">Look</span></div>
+        <span class="hud-key-sep"></span>
+        <div class="hud-key-group"><kbd class="kc kc--wide">Scroll</kbd><span class="hud-key-label">Zoom</span></div>
       </div>
-      <button id="detail-close" type="button" aria-label="Close panel">✕</button>
     </div>
-    <div id="detail-content"></div>
   </div>
 
-  <canvas id="canvas" aria-label="Interactive 3D planet — use WASD to walk, press E to explore an island"></canvas>
+  <!-- World panel — fullscreen island detail (liquid glass) -->
+  <div id="world-panel" class="hidden" role="dialog" aria-modal="true" aria-labelledby="wp-title">
+    <div class="wp-scrim" aria-hidden="true"></div>
+    <div class="wp-card">
+      <div class="wp-halo" aria-hidden="true"></div>
+      <button id="wp-close" class="wp-close" type="button" aria-label="Close panel"></button>
+      <header class="wp-header">
+        <div class="wp-icon" id="wp-icon" aria-hidden="true"></div>
+        <div class="wp-titles">
+          <div class="wp-eyebrow" id="wp-eyebrow"></div>
+          <h2 class="wp-title" id="wp-title"></h2>
+        </div>
+      </header>
+      <div class="wp-rule" aria-hidden="true"></div>
+      <div class="wp-content" id="wp-content"></div>
+      <div class="wp-foot" aria-hidden="true"><kbd>Esc</kbd> to close</div>
+    </div>
+  </div>
+
+  <canvas id="canvas" aria-label="Interactive 3D world. Use WASD to explore, press E to visit an island."></canvas>
 
   <noscript>
     <div class="noscript-fallback">
-      <h2>JavaScript is required</h2>
-      <p>Eric's World is an interactive 3D experience that needs JavaScript and WebGL to run.</p>
-      <p>Please enable JavaScript or visit
-        <a href="https://github.com/erriiiccccccc">github.com/erriiiccccccc</a>
-        to find out more about Eric.</p>
+      <h2>Needs JavaScript to run</h2>
+      <p>Eric's World! is a 3D game that requires JavaScript and WebGL.</p>
+      <p>Find Eric at <a href="https://github.com/erriiiccccccc">github.com/erriiiccccccc</a> instead.</p>
     </div>
   </noscript>
 
@@ -100,7 +123,7 @@
           btn.id = 'ldr-retry'
           btn.type = 'button'
           btn.textContent = 'Reload'
-          btn.style.cssText = 'margin-top:14px;padding:6px 14px;font:inherit;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(124,58,237,0.25);border:1px solid rgba(124,58,237,0.7);color:#fff;border-radius:8px;cursor:pointer;'
+          btn.style.cssText = 'margin-top:14px;padding:6px 14px;font:inherit;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(124,58,237,0.25);border:1px solid rgba(124,58,237,0.7);color:#fff;border-radius:8px;cursor:pointer;pointer-events:auto;'
           btn.onclick = function () { location.reload() }
           prog.appendChild(btn)
         }

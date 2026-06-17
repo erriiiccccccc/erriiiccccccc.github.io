@@ -27,3 +27,4 @@ npm-debug.log*
 .claude-flow/
 CLAUDE.md
 nul
+_raw_backup/

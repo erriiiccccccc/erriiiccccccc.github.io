@@ -1,6 +1,7 @@
 // SettingsOverlay — quality / reduced-motion / hints toggles.
 // Persists to localStorage; restores on construction. Callbacks fire
 // once on construction (with the restored value) so main.js can apply them.
+import { svgIcon } from './icons.js'
 
 const LS_KEY = 'phf-settings-v1'
 
@@ -76,11 +77,11 @@ export class SettingsOverlay {
     el.innerHTML = `
       <div class="overlay-inner">
         <div class="overlay-header">
-          <span class="overlay-title" id="settings-title">⚙&nbsp; Settings</span>
+          <span class="overlay-title overlay-title--icon" id="settings-title">${svgIcon('settings', 18)} Options</span>
           <button class="overlay-x" id="settings-close" type="button" aria-label="Close settings">✕</button>
         </div>
         <div class="settings-row">
-          <span class="settings-label" id="settings-q-label">Graphics Quality</span>
+          <span class="settings-label" id="settings-q-label">Graphics</span>
           <div class="settings-opts" role="group" aria-labelledby="settings-q-label">
             ${qBtn('low',  'Low')}
             ${qBtn('auto', 'Auto')}
@@ -96,9 +97,9 @@ export class SettingsOverlay {
           <button class="stoggle${hv ? ' active' : ''}" id="hints-toggle" type="button" aria-pressed="${hv}">${hv ? 'ON' : 'OFF'}</button>
         </div>
         <div class="settings-row">
-          <span class="settings-label">Audio</span>
+          <span class="settings-label">Sound</span>
           <button class="stoggle" disabled type="button" aria-disabled="true" style="opacity:.35;cursor:default">OFF</button>
-          <span class="settings-note">Coming soon</span>
+          <span class="settings-note">coming soon</span>
         </div>
       </div>
     `

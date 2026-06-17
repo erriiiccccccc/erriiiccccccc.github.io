@@ -91,7 +91,7 @@ export class HelpOverlay {
             </div>
 
           </div>
-          <p class="help-tip">Walk toward a glowing island and press <kbd>E</kbd> to explore it.</p>
+          <p class="help-tip">Step onto a glowing island and press <kbd>E</kbd> to dive in.</p>
         </div>
 
         <!-- ── MOBILE TAB ───────────────────────────────────────── -->
@@ -135,7 +135,7 @@ export class HelpOverlay {
             </div>
 
           </div>
-          <p class="help-tip">Walk toward a glowing island and tap the prompt to explore it.</p>
+          <p class="help-tip">Step onto a glowing island and tap the prompt to dive in.</p>
         </div>
 
       </div>

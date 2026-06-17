@@ -1,3 +1,5 @@
+import { svgIcon } from '../ui/icons.js'
+
 /**
  * TouchControls — floating dynamic joystick + action buttons for mobile.
  *
@@ -50,7 +52,7 @@ export class TouchControls {
       <div id="joy-base"><div id="joy-thumb"></div></div>
       <!-- Action buttons -->
       <div id="touch-btns">
-        <button class="touch-btn touch-btn--map"  id="touch-map-btn"  aria-label="World Map">🗺</button>
+        <button class="touch-btn touch-btn--map"  id="touch-map-btn"  aria-label="World Map">${svgIcon('map', 20)}</button>
         <button class="touch-btn touch-btn--jump" id="touch-jump-btn" aria-label="Jump">↑</button>
         <button class="touch-btn touch-btn--e"    id="touch-e-btn"    aria-label="Explore">E</button>
       </div>

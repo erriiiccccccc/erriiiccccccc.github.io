@@ -1,3 +1,5 @@
+import { svgIcon } from './icons.js'
+
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
 export class IntroOverlay {
@@ -25,9 +27,9 @@ export class IntroOverlay {
         </div>
 
         <div class="intro-welcome">
-          <div class="intro-welcome-icon">🌍</div>
-          <h2 class="intro-welcome-title">Welcome to My World</h2>
-          <p class="intro-welcome-sub">A little interactive portfolio — explore 6 islands.</p>
+          <div class="intro-welcome-icon" id="intro-welcome-icon">${svgIcon('world', 38, 1.5)}</div>
+          <h2 class="intro-welcome-title" id="intro-welcome-title">Welcome to Eric's World!</h2>
+          <p class="intro-welcome-sub" id="intro-welcome-sub">Six islands. Explore them all.</p>
         </div>
 
         <div class="help-tabs" role="tablist" aria-label="Control reference">
@@ -93,7 +95,7 @@ export class IntroOverlay {
             </div>
 
           </div>
-          <p class="help-tip">Walk toward a glowing island and press <kbd>E</kbd> to explore it.</p>
+          <p class="help-tip">Step onto a glowing island and press <kbd>E</kbd> to dive in.</p>
         </div>
 
         <!-- ── MOBILE TAB ───────────────────────────────────────── -->
@@ -137,7 +139,7 @@ export class IntroOverlay {
             </div>
 
           </div>
-          <p class="help-tip">Walk toward a glowing island and tap the prompt to explore it.</p>
+          <p class="help-tip">Step onto a glowing island and tap the prompt to dive in.</p>
         </div>
 
         <div class="intro-press-hint" aria-hidden="true">press anything to start</div>
@@ -178,7 +180,17 @@ export class IntroOverlay {
     this._el = el
   }
 
-  open() {
+  // `returning` → swap the greeting to a warm "welcome back" + refresher copy.
+  open(returning = false) {
+    const iconEl  = this._el.querySelector('#intro-welcome-icon')
+    const titleEl = this._el.querySelector('#intro-welcome-title')
+    const subEl   = this._el.querySelector('#intro-welcome-sub')
+    if (iconEl)  iconEl.innerHTML  = svgIcon(returning ? 'compass' : 'world', 38, 1.5)
+    if (titleEl) titleEl.textContent = returning ? 'Welcome back!' : "Welcome to Eric's World!"
+    if (subEl)   subEl.textContent   = returning
+      ? "Here's a quick refresher in case you forgot the ropes."
+      : 'Six islands. Explore them all.'
+
     this._lastFocus = document.activeElement
     this._el.classList.add('is-open')
     queueMicrotask(() => this._el.querySelector('#intro-close')?.focus())
@@ -202,7 +214,7 @@ export class IntroOverlay {
 
   close() {
     this._el.classList.remove('is-open')
-    localStorage.setItem('phf-intro-ts', String(Date.now()))
+    localStorage.setItem('phf-intro-seen', '1')
 
     if (this._onKey)   document.removeEventListener('keydown',    this._onKey)
     if (this._onClick) this._el.removeEventListener('click',      this._onClick)

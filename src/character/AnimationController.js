@@ -68,6 +68,12 @@ export class AnimationController {
     this._idleTimer  = 0
     this._emoteDelay = this._randEmoteDelay()
 
+    // Random idle-variation clips (idleagree / idlecall / idlegreet). Played
+    // occasionally while standing still on the globe. Suppressed in the explore
+    // view via `emotesEnabled` so the inspected character just stands calmly.
+    this._emotes = []
+    this.emotesEnabled = true
+
     this._anims = {
       idle:        null,   // breathingidle.fbx   — loop
       walk:        null,   // walking.fbx          — loop
@@ -88,8 +94,17 @@ export class AnimationController {
   get isReady()    { return this.ready }
 
   // ─── Load ──────────────────────────────────────────────────────────────────
-  async load(root, fbxLoader, basePath) {
+  async load(root, fbxLoader, basePath, { skipAnims = false } = {}) {
     this.mixer = new THREE.AnimationMixer(root)
+
+    // Static-model test mode: skip FBX clips entirely (e.g. when the model's
+    // skeleton doesn't match the Mixamo animation rig). Model shows in its bind
+    // pose and bone-driven features like About head-tracking still work.
+    if (skipAnims) {
+      this._state = ANIM_STATE.IDLE
+      this.ready  = true
+      return
+    }
 
     const loadFBX = p => new Promise((res, rej) => fbxLoader.load(p, res, undefined, rej))
 
@@ -129,6 +144,60 @@ export class AnimationController {
     this.ready  = true
   }
 
+  // ─── Load from pre-parsed GLB clips (Tripo rig) ──────────────────────────────
+  // The Tripo locomotion exports are one clip per GLB and share the model's
+  // skeleton/bone names, so the clips bind directly. Only idle/walk/run exist
+  // for this rig — jump/bridge/emote states are absent and degrade gracefully
+  // (the state machine no-ops on null actions).
+  loadGlbClips(root, clips) {
+    this.mixer = new THREE.AnimationMixer(root)
+
+    // Idle = the model's clean bind pose, held static. The Tripo idle clip is
+    // choppy, so instead we pin every bone at its bind transform (a 1s loop that
+    // never moves). It still crossfades like a normal action.
+    const idleClip = clips.idle || this._makeBindPoseClip(root)
+    this._anims.idle = this.mixer.clipAction(idleClip)
+
+    for (const key of ['walk', 'run']) {
+      const clip = clips[key]
+      if (!clip) continue
+      this._stripRootMotion([clip])
+      this._anims[key] = this.mixer.clipAction(clip)
+    }
+
+    // Random idle variations — strip root motion so they play in place
+    if (Array.isArray(clips.emotes)) {
+      this._stripRootMotion(clips.emotes)
+      this._emotes = clips.emotes.map(c => this.mixer.clipAction(c))
+    }
+
+    this._anims.idle.setLoop(THREE.LoopRepeat)
+    this._anims.idle.play()
+    this._action = this._anims.idle
+
+    this._state = ANIM_STATE.IDLE
+    this.ready  = true
+  }
+
+  // Build a 1-second clip that holds every bone at its current (bind) transform,
+  // so "idle" is a perfectly still pose that still crossfades cleanly.
+  _makeBindPoseClip(root) {
+    const tracks = []
+    root.traverse(o => {
+      if (!o.isBone) return
+      const q = o.quaternion, p = o.position
+      tracks.push(new THREE.QuaternionKeyframeTrack(
+        `${o.name}.quaternion`, [0, 1],
+        [q.x, q.y, q.z, q.w, q.x, q.y, q.z, q.w]
+      ))
+      tracks.push(new THREE.VectorKeyframeTrack(
+        `${o.name}.position`, [0, 1],
+        [p.x, p.y, p.z, p.x, p.y, p.z]
+      ))
+    })
+    return new THREE.AnimationClip('idleStatic', 1, tracks)
+  }
+
   // ─── Update ────────────────────────────────────────────────────────────────
   // Call every frame with current physics/input state.
   update(dt, moving, sprinting, airborne) {
@@ -159,8 +228,8 @@ export class AnimationController {
       this._transitionGround(from, desired)
     }
 
-    // ── Idle emote timer ──
-    if (this._state === ANIM_STATE.IDLE) {
+    // ── Idle emote timer (suppressed in the explore view) ──
+    if (this._state === ANIM_STATE.IDLE && this.emotesEnabled) {
       this._idleTimer += dt
       if (this._idleTimer >= this._emoteDelay) {
         this._idleTimer  = 0
@@ -249,12 +318,7 @@ export class AnimationController {
 
   // Pick a random idle emote and play it once, then return to idle.
   _playEmote() {
-    const pool = [
-      this._anims.lookAround,
-      this._anims.lookAround2,
-      this._anims.wave,
-    ].filter(Boolean)
-
+    const pool = this._emotes.filter(Boolean)
     if (!pool.length) return
 
     const emoteAction = pool[Math.floor(Math.random() * pool.length)]
@@ -325,9 +389,14 @@ export class AnimationController {
   // planet while animations were authored with in-place locomotion.
   _stripRootMotion(clips) {
     for (const clip of clips) {
-      clip.tracks = clip.tracks.filter(t =>
-        !(t.name.toLowerCase().includes('hips') && t.name.endsWith('.position'))
-      )
+      clip.tracks = clip.tracks.filter(t => {
+        const n = t.name.toLowerCase()
+        // Strip root/hip translation so in-place clips never drift the character
+        // across the planet (Mixamo "hips", Tripo "Hip"/"Root").
+        const isRootPos = n.endsWith('.position') &&
+          (n.includes('hips') || n.includes('hip') || n.includes('root'))
+        return !isRootPos
+      })
     }
   }
 

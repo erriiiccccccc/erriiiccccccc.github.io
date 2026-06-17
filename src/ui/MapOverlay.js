@@ -1,4 +1,5 @@
 import { ISLANDS } from '../data/content.js'
+import { svgIcon } from './icons.js'
 
 // Escape user/data text before injecting via innerHTML — defense-in-depth even
 // though `content.js` is currently author-controlled.
@@ -26,22 +27,22 @@ export class MapOverlay {
 
     const cardsHTML = Object.entries(ISLANDS).map(([key, isl]) => `
       <div class="map-card" data-island="${esc(key)}" style="--ic:${esc(isl.color)}">
-        <div class="map-visited-badge" aria-hidden="true">✓ visited</div>
-        <div class="map-card-icon" aria-hidden="true">${esc(isl.icon)}</div>
+        <div class="map-visited-badge" aria-hidden="true">✓ found</div>
+        <div class="map-card-icon" aria-hidden="true">${svgIcon(isl.iconKey, 30)}</div>
         <div class="map-card-name">${esc(isl.name)}</div>
         <div class="map-card-section">${esc(isl.section)}</div>
         <button class="map-card-btn" type="button" data-teleport="${esc(key)}"
-                aria-label="Teleport to ${esc(isl.name)}">Teleport</button>
+                aria-label="Warp to ${esc(isl.name)}">Warp there</button>
       </div>
     `).join('')
 
     el.innerHTML = `
       <div class="overlay-inner map-overlay-inner">
         <div class="overlay-header">
-          <span class="overlay-title" id="map-title">🗺&nbsp; World Map</span>
+          <span class="overlay-title overlay-title--icon" id="map-title">${svgIcon('map', 18)} Island Map</span>
           <button class="overlay-x" id="map-close" type="button" aria-label="Close map">✕</button>
         </div>
-        <p class="overlay-sub">Walk to explore, or teleport directly to any island</p>
+        <p class="overlay-sub">Walk there yourself, or jump straight to any island.</p>
         <div class="map-grid">${cardsHTML}</div>
       </div>
     `

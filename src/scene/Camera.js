@@ -14,10 +14,18 @@ const PITCH_MIN   = 0.05   // max looking up   (~3°)
 const PITCH_MAX   = 1.1    // max looking down  (~63°)
 
 // Exponential lerp: each frame move (1 - exp(-k * dt)) toward target — lower k = slower.
-const LERP_ORBIT_INTRO   = 5.5   // loading shot → gameplay orbit (position + look pivot)
+const LERP_ORBIT_INTRO   = 3.5   // loading shot → gameplay orbit (position + look pivot)
 const LERP_ORBIT_PLAY    = 12    // full gameplay follow
 const INTRO_CLOSE_SQ     = 22    // camera “close enough” to start easing into play lerp (dist² to target)
 const INTRO_K_BLEND_SEC  = 0.9   // seconds to ramp k from intro → play (avoids one-frame k jump at reveal)
+
+// Exponential lerp peaks in velocity on frame 1 — it can't ease IN. Without this,
+// the camera arrival would lurch off the line ~5× faster than the planet's gentle
+// glide-in (handing off from triggerArrival). So for the first INTRO_LAUNCH_SEC we
+// ramp k up from INTRO_LAUNCH_K0×intro → full, giving a soft start that roughly
+// matches the planet's arrival speed, then the natural exp ease-out settles it.
+const INTRO_LAUNCH_SEC   = 0.55  // seconds to ramp the intro k from launch floor → full
+const INTRO_LAUNCH_K0    = 0.4   // fraction of intro k at the very first frame
 
 function smoothUnit(t) {
   const x = Math.min(1, Math.max(0, t))
@@ -50,6 +58,9 @@ export class Camera {
     // Zoom
     this._dist       = DIST
     this._distTarget = DIST
+    // Extra height added to the look pivot. Used by the About/explore view to
+    // raise the framing so the (taller-than-default) model isn't cut off.
+    this._pivotYExtra = 0
     // When a modal is open we suspend mouse / wheel input so the user can
     // interact with the modal without rotating / zooming the planet behind it.
     this._inputEnabled = true
@@ -93,6 +104,8 @@ export class Camera {
 
     /** 0→1 after INTRO_CLOSE_SQ crossed; ramps orbit lerp from intro to play without a step. */
     this._introKBlend = 0
+    /** Seconds since the camera arrival began — drives the soft launch ramp. */
+    this._introElapsed = 0
     this.characterRevealReady = false
   }
 
@@ -122,6 +135,7 @@ export class Camera {
     this.camera.lookAt(0, 0, 0)
     this._pivotSmooth.set(0, 0, 0)
     this._introKBlend = 0
+    this._introElapsed = 0
     this.characterRevealReady = false
   }
 
@@ -156,7 +170,7 @@ export class Camera {
     this._dist  += (this._distTarget  - this._dist)   * (1 - Math.exp(-8  * dt))
 
     // ── Pivot = character world position (centre of character body) ──────────
-    const pivotY = charY + 0.75  // 0.75 = half of 1.5-unit character height
+    const pivotY = charY + 0.75 + this._pivotYExtra  // 0.75 = half of default height
     this._pivot.set(0, pivotY, 0)
 
     // ── Spherical → Cartesian ────────────────────────────────────────────────
@@ -177,11 +191,20 @@ export class Camera {
       this._introKBlend = Math.min(1, this._introKBlend + dt / INTRO_K_BLEND_SEC)
     }
 
+    // Soft launch: for the first INTRO_LAUNCH_SEC, scale k from a low floor up to
+    // full so the camera eases IN from the planet's glide speed instead of lurching
+    // (exp lerp peaks on frame 1). Once intro→play blending starts this is long past 1.
+    this._introElapsed += dt
+    const launch = THREE.MathUtils.lerp(
+      INTRO_LAUNCH_K0, 1,
+      smoothUnit(this._introElapsed / INTRO_LAUNCH_SEC)
+    )
+
     const kOrbit = THREE.MathUtils.lerp(
       LERP_ORBIT_INTRO,
       LERP_ORBIT_PLAY,
       smoothUnit(this._introKBlend)
-    )
+    ) * launch
 
     // ── Smooth pivot follow ─
     const pf = 1 - Math.exp(-kOrbit * dt)
