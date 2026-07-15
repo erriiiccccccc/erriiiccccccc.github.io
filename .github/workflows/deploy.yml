@@ -29,6 +29,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          FORCE_TRAVEL: '1'   # always re-scrape live travel data on deploy/nightly cron
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4

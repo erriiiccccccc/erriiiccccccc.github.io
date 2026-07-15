@@ -16,63 +16,10 @@ const BASE = import.meta.env.BASE_URL || '/'
 const IS_DEV = import.meta.env.DEV
 const MAP_EMBED = 'https://www.google.com/maps/d/u/0/embed?mid=1Jqq0FtlUJEB3a12Xt-tvC5XGCQ9Qqf8&ehbc=2E312F'
 
-// name → continent, for deriving the continents stat.
-const COUNTRY_CONTINENT = {
-  'China': 'Asia',        'Denmark': 'Europe',
-  'France': 'Europe',     'Germany': 'Europe',
-  'Hong Kong': 'Asia',    'Hungary': 'Europe',
-  'Iceland': 'Europe',    'Ireland': 'Europe',
-  'Italy': 'Europe',      'Latvia': 'Europe',
-  'Malaysia': 'Asia',     'Malta': 'Europe',
-  'Morocco': 'Africa',    'Portugal': 'Europe',
-  'Singapore': 'Asia',    'Spain': 'Europe',
-  'Sweden': 'Europe',     'Switzerland': 'Europe',
-  'Thailand': 'Asia',     'Türkiye': 'Asia',
-  'Turkey': 'Asia',       'United Kingdom': 'Europe',
-  'Netherlands': 'Europe', 'Belgium': 'Europe',
-  'Austria': 'Europe',    'Greece': 'Europe',
-  'Norway': 'Europe',     'Finland': 'Europe',
-  'Japan': 'Asia',        'United States': 'North America',
-}
-const continentOf = (name) => COUNTRY_CONTINENT[name] || 'Other'
-
-// name → ISO-3166-1 alpha-2, for the flag SVGs vendored in public/flags/<iso>.svg
-const COUNTRY_ISO = {
-  'China': 'cn',          'Denmark': 'dk',
-  'France': 'fr',         'Germany': 'de',
-  'Hong Kong': 'hk',      'Hungary': 'hu',
-  'Iceland': 'is',        'Ireland': 'ie',
-  'Italy': 'it',          'Latvia': 'lv',
-  'Malaysia': 'my',       'Malta': 'mt',
-  'Morocco': 'ma',        'Portugal': 'pt',
-  'Singapore': 'sg',      'Spain': 'es',
-  'Sweden': 'se',         'Switzerland': 'ch',
-  'Thailand': 'th',       'Türkiye': 'tr',
-  'Turkey': 'tr',         'United Kingdom': 'gb',
-  'Netherlands': 'nl',    'Belgium': 'be',
-  'Austria': 'at',        'Greece': 'gr',
-  'Norway': 'no',         'Finland': 'fi',
-  'Japan': 'jp',          'United States': 'us',
-}
-
-// Rough centroids (lat, lng) for the furthest-flung calc. Home is Malaysia.
-const COUNTRY_LATLNG = {
-  'China': [35.0, 103.0],     'Denmark': [56.0, 10.0],
-  'France': [46.6, 2.2],      'Germany': [51.0, 9.0],
-  'Hong Kong': [22.3, 114.2], 'Hungary': [47.2, 19.5],
-  'Iceland': [64.9, -19.0],   'Ireland': [53.4, -8.0],
-  'Italy': [41.9, 12.6],      'Latvia': [56.9, 24.6],
-  'Malaysia': [4.2, 101.9],   'Malta': [35.9, 14.4],
-  'Morocco': [31.8, -7.0],    'Portugal': [39.5, -8.0],
-  'Singapore': [1.35, 103.8], 'Spain': [40.2, -3.6],
-  'Sweden': [62.0, 15.0],     'Switzerland': [46.8, 8.2],
-  'Thailand': [15.0, 101.0],  'Türkiye': [39.0, 35.0],
-  'Turkey': [39.0, 35.0],     'United Kingdom': [54.0, -2.0],
-  'Netherlands': [52.2, 5.3], 'Belgium': [50.6, 4.6],
-  'Austria': [47.6, 14.1],    'Greece': [39.0, 22.0],
-  'Norway': [64.5, 12.0],     'Finland': [64.0, 26.0],
-  'Japan': [36.2, 138.2],     'United States': [39.8, -98.6],
-}
+// iso / continent / centroid all now arrive per-country inside the scraped JSON
+// (derived from world-countries at build time), so there are no hand-maintained
+// lookup tables here anymore — a newly visited country just works. Furthest-flung
+// is measured from home.
 const HOME = 'Malaysia'
 
 // New 7 Wonders of the World — flip `seen` to true as Eric ticks them off.
@@ -99,16 +46,15 @@ function haversineKm(a, b) {
 }
 
 // Furthest visited country from home → { name, km } | null
-function furthestFrom(list) {
-  const home = COUNTRY_LATLNG[HOME]
+// `data` is the countryData array: [{ name, iso, continent, latlng }, ...]
+function furthestFrom(data) {
+  const home = data.find(c => c.name === HOME)?.latlng
   if (!home) return null
   let best = null
-  for (const name of list) {
-    if (name === HOME) continue
-    const ll = COUNTRY_LATLNG[name]
-    if (!ll) continue
-    const km = haversineKm(home, ll)
-    if (!best || km > best.km) best = { name, km }
+  for (const c of data) {
+    if (c.name === HOME || !c.latlng) continue
+    const km = haversineKm(home, c.latlng)
+    if (!best || km > best.km) best = { name: c.name, km }
   }
   return best
 }
@@ -177,9 +123,14 @@ function statBox({ label, value, sub, link }) {
 
 function renderStats(stats) {
   const list = stats.countriesList || []
-  const continents = list.length ? new Set(list.map(continentOf)).size : null
+  // Prefer the rich per-country records; fall back to bare names if an older
+  // cached JSON (pre-countryData) is served.
+  const data = (stats.countryData && stats.countryData.length)
+    ? stats.countryData
+    : list.map(name => ({ name, iso: null, continent: 'Other', latlng: null }))
+  const continents = data.length ? new Set(data.map(c => c.continent)).size : null
   const wonders = WONDERS.filter(w => w.seen).length
-  const furthest = list.length ? furthestFrom(list) : null
+  const furthest = data.length ? furthestFrom(data) : null
 
   const boxes = [
     { label: 'Countries',     value: stats.countries ?? (list.length || '–'), sub: 'visited', link: true },
@@ -194,7 +145,7 @@ function renderStats(stats) {
   const grid = q('tp-stats')
   if (grid) grid.innerHTML = boxes.map(statBox).join('')
 
-  renderFlags(list)
+  renderFlags(data)
 
   const status = q('travel-status')
   if (status) {
@@ -215,18 +166,17 @@ function renderStats(stats) {
   }
 }
 
-function renderFlags(list) {
+function renderFlags(data) {
   const wall  = q('tp-flags')
   const count = q('tp-cloud-count')
-  if (count) count.textContent = list.length || '–'
+  if (count) count.textContent = data.length || '–'
   if (!wall) return
-  if (!list.length) { wall.innerHTML = ''; return }
+  if (!data.length) { wall.innerHTML = ''; return }
 
-  wall.innerHTML = list
+  wall.innerHTML = data
     .slice()
-    .sort((a, b) => a.localeCompare(b))
-    .map(name => {
-      const iso = COUNTRY_ISO[name]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ name, iso }) => {
       if (!iso) {
         return `<span class="tp-flag tp-flag--plain" title="${name}"><span class="tp-flag-name">${name}</span></span>`
       }

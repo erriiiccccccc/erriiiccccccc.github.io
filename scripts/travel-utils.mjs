@@ -1,7 +1,12 @@
 import { createRequire } from 'module'
 import { feature } from 'topojson-client'
+import { writeFileSync, existsSync, mkdirSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
 const require = createRequire(import.meta.url)
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const FLAGS_DIR = join(__dirname, '..', 'public', 'flags')
 
 // world-atlas: simplified country polygons (110m scale = fast, accurate enough)
 const topology      = require('world-atlas/countries-50m.json')
@@ -10,10 +15,54 @@ const worldCountries = require('world-countries')
 // Build GeoJSON feature list
 const GEO_FEATURES = feature(topology, topology.objects.countries).features
 
-// Build numeric ISO 3166-1 → English name map
+// Build numeric ISO 3166-1 → English name map, and a name → full record map.
+// countriesList names come straight out of NAME_MAP, so every name is guaranteed
+// to resolve back through BY_NAME — no manual lookup tables needed anymore.
 const NAME_MAP = {}
+const BY_NAME  = {}
 for (const c of worldCountries) {
   if (c.ccn3) NAME_MAP[parseInt(c.ccn3)] = c.name.common
+  BY_NAME[c.name.common] = c
+}
+
+// world-countries `region` collapses the Americas into one bucket; split it back
+// out so the "continents / of 7" stat uses the 7-continent model.
+function continentOf(region, subregion) {
+  if (region === 'Americas')  return /south/i.test(subregion || '') ? 'South America' : 'North America'
+  if (region === 'Antarctic') return 'Antarctica'
+  return region || 'Other' // Europe, Asia, Africa, Oceania
+}
+
+// Per-country metadata derived entirely from world-countries: ISO alpha-2 (for
+// the flag file), continent, and centroid lat/lng (for furthest-flung).
+function metaFor(name) {
+  const c = BY_NAME[name]
+  if (!c) return { name, iso: null, continent: 'Other', latlng: null }
+  return {
+    name,
+    iso:       (c.cca2 || '').toLowerCase() || null,
+    continent: continentOf(c.region, c.subregion),
+    latlng:    Array.isArray(c.latlng) ? c.latlng : null,
+  }
+}
+
+// Vendor a flag SVG the first time a new country shows up. Cached in
+// public/flags/<iso>.svg forever after, so visitors only ever load local files
+// and we only hit the network once per brand-new country. Best-effort: a failed
+// download just leaves the country as a plain text chip.
+async function ensureFlag(iso, log) {
+  if (!iso) return
+  const file = join(FLAGS_DIR, `${iso}.svg`)
+  if (existsSync(file)) return
+  try {
+    const r = await fetch(`https://flagcdn.com/${iso}.svg`)
+    if (!r.ok) { log(`[flags] ${iso}: HTTP ${r.status}, skipped`); return }
+    mkdirSync(FLAGS_DIR, { recursive: true })
+    writeFileSync(file, await r.text())
+    log(`[flags] vendored new flag: ${iso}.svg`)
+  } catch (err) {
+    log(`[flags] ${iso}: ${err.message}, skipped`)
+  }
 }
 
 // ── Point-in-polygon (ray casting) ───────────────────────────────────────────
@@ -88,9 +137,15 @@ export async function fetchTravelStats() {
   const countriesList = [...countries].sort()
   log(`Countries (${countriesList.length}): ${countriesList.join(', ')}`)
 
+  // Derive iso / continent / lat-lng for each country, then make sure every
+  // flag SVG is vendored locally before we hand the data to the client.
+  const countryData = countriesList.map(metaFor)
+  for (const c of countryData) await ensureFlag(c.iso, log)
+
   return {
     countries:     countriesList.length || null,
     countriesList,
+    countryData,
     landmarks:     points.length || null,
     worldPct:      countriesList.length ? Math.round(countriesList.length / 195 * 100) : null,
     updatedAt:     new Date().toISOString(),
