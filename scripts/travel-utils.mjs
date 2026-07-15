@@ -119,7 +119,11 @@ function parsePoints(kmlText) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export async function fetchTravelStats() {
+// vendorFlags=false skips writing SVGs to disk — used by the Vercel serverless
+// refresh endpoint, whose filesystem is read-only (flags are already shipped in
+// the deployed build; a brand-new country just falls back to a plain chip until
+// the next deploy vendors it).
+export async function fetchTravelStats({ vendorFlags = true } = {}) {
   const logs = []
   const log  = msg => { console.log(msg); logs.push(msg) }
 
@@ -140,7 +144,7 @@ export async function fetchTravelStats() {
   // Derive iso / continent / lat-lng for each country, then make sure every
   // flag SVG is vendored locally before we hand the data to the client.
   const countryData = countriesList.map(metaFor)
-  for (const c of countryData) await ensureFlag(c.iso, log)
+  if (vendorFlags) for (const c of countryData) await ensureFlag(c.iso, log)
 
   return {
     countries:     countriesList.length || null,

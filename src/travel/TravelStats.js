@@ -3,17 +3,18 @@
 // and on the right an action row (reload + last-updated), a grid of aligned
 // stat boxes, and a wall of full-bleed flag chips for every country visited.
 //
-// The scrape pipeline only gives us countries / placemarks / worldPct. Everything
-// else interesting (continents, New 7 Wonders, furthest-flung) is derived here
-// client-side from small lookup tables, so the JSON stays untouched.
+// The scrape pipeline gives us per-country iso / continent / lat-lng; the fancier
+// stats (continents count, New 7 Wonders, furthest-flung) are derived from that
+// here client-side.
 //
-// In DEV the refresh button hits a Vite middleware that re-runs KML scraping.
-// In PROD the JSON is generated at build time (daily cron) and served static —
-// there is no live endpoint, so refresh just re-reads the same file.
+// Reload does a LIVE re-scrape via /api/refresh-travel-stats — served by the
+// Vite middleware in dev and a Vercel serverless function in prod. On a host
+// with no function (e.g. plain GitHub Pages) it falls back to re-reading the
+// static travel-stats.json baked at deploy time.
 import { svgIcon } from '../ui/icons.js'
 
 const BASE = import.meta.env.BASE_URL || '/'
-const IS_DEV = import.meta.env.DEV
+const REFRESH_ENDPOINT = '/api/refresh-travel-stats'
 const MAP_EMBED = 'https://www.google.com/maps/d/u/0/embed?mid=1Jqq0FtlUJEB3a12Xt-tvC5XGCQ9Qqf8&ehbc=2E312F'
 
 // iso / continent / centroid all now arrive per-country inside the scraped JSON
@@ -207,14 +208,26 @@ async function loadStats(forceRefresh = false) {
   if (status) status.textContent = forceRefresh ? 'Refreshing…' : 'Loading…'
 
   if (_inFlight) _inFlight.abort()
-  _inFlight = new AbortController()
+  const ctrl = _inFlight = new AbortController()
+
+  const readStatic = () =>
+    fetch(`${BASE}travel-stats.json?_=${Date.now()}`, { signal: ctrl.signal })
 
   try {
-    const url = (forceRefresh && IS_DEV)
-      ? '/api/refresh-travel-stats'
-      : `${import.meta.env.BASE_URL || './'}travel-stats.json?_=${Date.now()}`
-
-    const r = await fetch(url, { signal: _inFlight.signal })
+    let r
+    if (forceRefresh) {
+      // Live re-scrape. If the endpoint is missing (static host) or errors,
+      // fall back to the baked JSON so Reload still shows something.
+      try {
+        r = await fetch(REFRESH_ENDPOINT, { signal: ctrl.signal })
+        if (!r.ok) r = await readStatic()
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        r = await readStatic()
+      }
+    } else {
+      r = await readStatic()
+    }
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const stats = await r.json()
     if (stats.error) throw new Error(stats.error)
@@ -224,7 +237,7 @@ async function loadStats(forceRefresh = false) {
     renderEmpty(`Error: ${err.message}`)
     console.error('[TravelStats]', err)
   } finally {
-    _inFlight = null
+    if (_inFlight === ctrl) _inFlight = null
   }
 }
 
@@ -268,9 +281,7 @@ export function initTravelStats() {
 
   const btn = q('travel-refresh')
   if (btn) {
-    if (!IS_DEV) {
-      btn.title = 'Re-fetch the latest published stats. Live scraping only runs in dev / nightly build.'
-    }
+    btn.title = 'Re-scan the travel map for newly pinned places'
     btn.onclick = async () => {
       btn.disabled = true
       try { await loadStats(true) } finally { btn.disabled = false }
