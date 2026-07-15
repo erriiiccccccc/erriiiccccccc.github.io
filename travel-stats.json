@@ -1,0 +1,255 @@
+{
+  "countries": 24,
+  "countriesList": [
+    "China",
+    "Croatia",
+    "Denmark",
+    "France",
+    "Germany",
+    "Hong Kong",
+    "Hungary",
+    "Iceland",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Malaysia",
+    "Malta",
+    "Montenegro",
+    "Morocco",
+    "Poland",
+    "Portugal",
+    "Singapore",
+    "Spain",
+    "Sweden",
+    "Switzerland",
+    "Thailand",
+    "Türkiye",
+    "United Kingdom"
+  ],
+  "countryData": [
+    {
+      "name": "China",
+      "iso": "cn",
+      "continent": "Asia",
+      "latlng": [
+        35,
+        105
+      ]
+    },
+    {
+      "name": "Croatia",
+      "iso": "hr",
+      "continent": "Europe",
+      "latlng": [
+        45.16666666,
+        15.5
+      ]
+    },
+    {
+      "name": "Denmark",
+      "iso": "dk",
+      "continent": "Europe",
+      "latlng": [
+        56,
+        10
+      ]
+    },
+    {
+      "name": "France",
+      "iso": "fr",
+      "continent": "Europe",
+      "latlng": [
+        46,
+        2
+      ]
+    },
+    {
+      "name": "Germany",
+      "iso": "de",
+      "continent": "Europe",
+      "latlng": [
+        51,
+        9
+      ]
+    },
+    {
+      "name": "Hong Kong",
+      "iso": "hk",
+      "continent": "Asia",
+      "latlng": [
+        22.267,
+        114.188
+      ]
+    },
+    {
+      "name": "Hungary",
+      "iso": "hu",
+      "continent": "Europe",
+      "latlng": [
+        47,
+        20
+      ]
+    },
+    {
+      "name": "Iceland",
+      "iso": "is",
+      "continent": "Europe",
+      "latlng": [
+        65,
+        -18
+      ]
+    },
+    {
+      "name": "Ireland",
+      "iso": "ie",
+      "continent": "Europe",
+      "latlng": [
+        53,
+        -8
+      ]
+    },
+    {
+      "name": "Italy",
+      "iso": "it",
+      "continent": "Europe",
+      "latlng": [
+        42.83333333,
+        12.83333333
+      ]
+    },
+    {
+      "name": "Latvia",
+      "iso": "lv",
+      "continent": "Europe",
+      "latlng": [
+        57,
+        25
+      ]
+    },
+    {
+      "name": "Malaysia",
+      "iso": "my",
+      "continent": "Asia",
+      "latlng": [
+        2.5,
+        112.5
+      ]
+    },
+    {
+      "name": "Malta",
+      "iso": "mt",
+      "continent": "Europe",
+      "latlng": [
+        35.83333333,
+        14.58333333
+      ]
+    },
+    {
+      "name": "Montenegro",
+      "iso": "me",
+      "continent": "Europe",
+      "latlng": [
+        42.5,
+        19.3
+      ]
+    },
+    {
+      "name": "Morocco",
+      "iso": "ma",
+      "continent": "Africa",
+      "latlng": [
+        32,
+        -5
+      ]
+    },
+    {
+      "name": "Poland",
+      "iso": "pl",
+      "continent": "Europe",
+      "latlng": [
+        52,
+        20
+      ]
+    },
+    {
+      "name": "Portugal",
+      "iso": "pt",
+      "continent": "Europe",
+      "latlng": [
+        39.5,
+        -8
+      ]
+    },
+    {
+      "name": "Singapore",
+      "iso": "sg",
+      "continent": "Asia",
+      "latlng": [
+        1.36666666,
+        103.8
+      ]
+    },
+    {
+      "name": "Spain",
+      "iso": "es",
+      "continent": "Europe",
+      "latlng": [
+        40,
+        -4
+      ]
+    },
+    {
+      "name": "Sweden",
+      "iso": "se",
+      "continent": "Europe",
+      "latlng": [
+        62,
+        15
+      ]
+    },
+    {
+      "name": "Switzerland",
+      "iso": "ch",
+      "continent": "Europe",
+      "latlng": [
+        47,
+        8
+      ]
+    },
+    {
+      "name": "Thailand",
+      "iso": "th",
+      "continent": "Asia",
+      "latlng": [
+        15,
+        100
+      ]
+    },
+    {
+      "name": "Türkiye",
+      "iso": "tr",
+      "continent": "Asia",
+      "latlng": [
+        39,
+        35
+      ]
+    },
+    {
+      "name": "United Kingdom",
+      "iso": "gb",
+      "continent": "Europe",
+      "latlng": [
+        54,
+        -2
+      ]
+    }
+  ],
+  "landmarks": 997,
+  "worldPct": 12,
+  "updatedAt": "2026-07-15T17:11:22.585Z",
+  "logs": [
+    "Fetching KML...",
+    "Found 997 placemarks — running point-in-polygon...",
+    "Countries (24): China, Croatia, Denmark, France, Germany, Hong Kong, Hungary, Iceland, Ireland, Italy, Latvia, Malaysia, Malta, Montenegro, Morocco, Poland, Portugal, Singapore, Spain, Sweden, Switzerland, Thailand, Türkiye, United Kingdom"
+  ]
+}
