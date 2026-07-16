@@ -1,6 +1,7 @@
 {
-  "countries": 24,
+  "countries": 25,
   "countriesList": [
+    "Algeria",
     "China",
     "Croatia",
     "Denmark",
@@ -27,6 +28,15 @@
     "United Kingdom"
   ],
   "countryData": [
+    {
+      "name": "Algeria",
+      "iso": "dz",
+      "continent": "Africa",
+      "latlng": [
+        28,
+        3
+      ]
+    },
     {
       "name": "China",
       "iso": "cn",
@@ -244,12 +254,12 @@
       ]
     }
   ],
-  "landmarks": 997,
-  "worldPct": 12,
-  "updatedAt": "2026-07-16T05:41:34.619Z",
+  "landmarks": 1014,
+  "worldPct": 13,
+  "updatedAt": "2026-07-16T21:28:12.056Z",
   "logs": [
     "Fetching KML...",
-    "Found 997 placemarks — running point-in-polygon...",
-    "Countries (24): China, Croatia, Denmark, France, Germany, Hong Kong, Hungary, Iceland, Ireland, Italy, Latvia, Malaysia, Malta, Montenegro, Morocco, Poland, Portugal, Singapore, Spain, Sweden, Switzerland, Thailand, Türkiye, United Kingdom"
+    "Found 1014 placemarks — running point-in-polygon...",
+    "Countries (25): Algeria, China, Croatia, Denmark, France, Germany, Hong Kong, Hungary, Iceland, Ireland, Italy, Latvia, Malaysia, Malta, Montenegro, Morocco, Poland, Portugal, Singapore, Spain, Sweden, Switzerland, Thailand, Türkiye, United Kingdom"
   ]
 }
