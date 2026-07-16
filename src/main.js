@@ -184,6 +184,7 @@ settingsOverlay.applyRestored()
 // ─── HUD corner buttons ───────────────────────────────────────────────────────
 const hudBtnsEl = document.createElement('div')
 hudBtnsEl.id = 'hud-buttons'
+hudBtnsEl.classList.add('hud-hidden') // hidden during the loader; startScene fades it in
 hudBtnsEl.innerHTML = `
   <button class="hud-btn" type="button" id="btn-map"      aria-label="Island map (M)" title="Island Map (M)">${svgIcon('map', 18)}</button>
   <button class="hud-btn" type="button" id="btn-help"     aria-label="How to play"    title="How to Play">${svgIcon('help', 18)}</button>
@@ -210,6 +211,7 @@ function closeAnyOpenOverlay() {
 // ─── HUD top-left: island progress + social links ─────────────────────────────
 const hudLeftEl = document.createElement('div')
 hudLeftEl.id = 'hud-left'
+hudLeftEl.classList.add('hud-hidden') // hidden during the loader; startScene fades it in
 const HUD_SOCIALS = [
   ['github',    'GitHub',    'https://github.com/erriiiccccccc'],
   ['linkedin',  'LinkedIn',  'https://www.linkedin.com/in/erriiiccccccc/'],
@@ -258,7 +260,7 @@ document.body.appendChild(teleportFlashEl)
 const touchCtrl = IS_TOUCH ? new TouchControls() : null
 if (touchCtrl) {
   const tcEl = document.getElementById('touch-controls')
-  if (tcEl) tcEl.classList.add('active')
+  if (tcEl) tcEl.classList.add('active', 'hud-hidden') // hidden during the loader too
 }
 
 const PLANET_RADIUS = 25
@@ -979,6 +981,13 @@ function startScene() {
   setTimeout(() => {
     sceneStarted = true
     if (loaderEl) loaderEl.classList.add('fade-out')
+
+    // HUD fades in with the world — staggered (left card → corner buttons →
+    // key hints → mobile joystick) so it feels like the UI "boots up".
+    const hudRevealEls = [hudLeftEl, hudBtnsEl, controlsHintEl, document.getElementById('touch-controls')]
+    hudRevealEls.forEach((el, i) => {
+      if (el) setTimeout(() => el.classList.remove('hud-hidden'), 500 + i * 150)
+    })
     setTimeout(() => {
       if (loaderEl) loaderEl.style.display = 'none'
       // Loader gone — stop the flavour-text interval so we don't churn the DOM forever

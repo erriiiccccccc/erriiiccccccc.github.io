@@ -2196,6 +2196,21 @@ button.tp-box {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   HUD BOOT STATE — hidden while the loader is up, fades in as the world goes
+   live (main.js removes .hud-hidden with a stagger from startScene).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.hud-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+/* Corner clusters get a little downward glide on top of the fade */
+#hud-buttons.hud-hidden, #hud-left.hud-hidden { transform: translateY(-10px); }
+#hud-buttons, #hud-left {
+  transition: opacity 0.8s ease, transform 0.8s var(--ease-out);
+}
+#touch-controls { transition: opacity 0.8s ease; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
    HUD CORNER BUTTONS (top-right menu) + shared circular glass icon button
    ═══════════════════════════════════════════════════════════════════════════ */
 #hud-buttons {
