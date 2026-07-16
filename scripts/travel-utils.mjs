@@ -1,12 +1,7 @@
 import { createRequire } from 'module'
 import { feature } from 'topojson-client'
-import { writeFileSync, existsSync, mkdirSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
 const require = createRequire(import.meta.url)
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const FLAGS_DIR = join(__dirname, '..', 'public', 'flags')
 
 // world-atlas: simplified country polygons (110m scale = fast, accurate enough)
 const topology      = require('world-atlas/countries-50m.json')
@@ -33,8 +28,9 @@ function continentOf(region, subregion) {
   return region || 'Other' // Europe, Asia, Africa, Oceania
 }
 
-// Per-country metadata derived entirely from world-countries: ISO alpha-2 (for
-// the flag file), continent, and centroid lat/lng (for furthest-flung).
+// Per-country metadata derived entirely from world-countries: ISO alpha-2 (the
+// client loads flags on the fly from flagcdn.com/<iso>.svg), continent, and
+// centroid lat/lng (for furthest-flung).
 function metaFor(name) {
   const c = BY_NAME[name]
   if (!c) return { name, iso: null, continent: 'Other', latlng: null }
@@ -43,25 +39,6 @@ function metaFor(name) {
     iso:       (c.cca2 || '').toLowerCase() || null,
     continent: continentOf(c.region, c.subregion),
     latlng:    Array.isArray(c.latlng) ? c.latlng : null,
-  }
-}
-
-// Vendor a flag SVG the first time a new country shows up. Cached in
-// public/flags/<iso>.svg forever after, so visitors only ever load local files
-// and we only hit the network once per brand-new country. Best-effort: a failed
-// download just leaves the country as a plain text chip.
-async function ensureFlag(iso, log) {
-  if (!iso) return
-  const file = join(FLAGS_DIR, `${iso}.svg`)
-  if (existsSync(file)) return
-  try {
-    const r = await fetch(`https://flagcdn.com/${iso}.svg`)
-    if (!r.ok) { log(`[flags] ${iso}: HTTP ${r.status}, skipped`); return }
-    mkdirSync(FLAGS_DIR, { recursive: true })
-    writeFileSync(file, await r.text())
-    log(`[flags] vendored new flag: ${iso}.svg`)
-  } catch (err) {
-    log(`[flags] ${iso}: ${err.message}, skipped`)
   }
 }
 
@@ -119,11 +96,9 @@ function parsePoints(kmlText) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-// vendorFlags=false skips writing SVGs to disk — used by the Vercel serverless
-// refresh endpoint, whose filesystem is read-only (flags are already shipped in
-// the deployed build; a brand-new country just falls back to a plain chip until
-// the next deploy vendors it).
-export async function fetchTravelStats({ vendorFlags = true } = {}) {
+// Pure data scrape — no filesystem writes, so it runs identically at build time,
+// in the dev middleware, and on Vercel's read-only serverless filesystem.
+export async function fetchTravelStats() {
   const logs = []
   const log  = msg => { console.log(msg); logs.push(msg) }
 
@@ -141,10 +116,8 @@ export async function fetchTravelStats({ vendorFlags = true } = {}) {
   const countriesList = [...countries].sort()
   log(`Countries (${countriesList.length}): ${countriesList.join(', ')}`)
 
-  // Derive iso / continent / lat-lng for each country, then make sure every
-  // flag SVG is vendored locally before we hand the data to the client.
+  // Derive iso / continent / lat-lng for each country.
   const countryData = countriesList.map(metaFor)
-  if (vendorFlags) for (const c of countryData) await ensureFlag(c.iso, log)
 
   return {
     countries:     countriesList.length || null,

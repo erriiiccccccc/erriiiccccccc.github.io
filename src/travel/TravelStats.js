@@ -7,10 +7,12 @@
 // stats (continents count, New 7 Wonders, furthest-flung) are derived from that
 // here client-side.
 //
-// Reload does a LIVE re-scrape via /api/refresh-travel-stats — served by the
-// Vite middleware in dev and a Vercel serverless function in prod. On a host
-// with no function (e.g. plain GitHub Pages) it falls back to re-reading the
-// static travel-stats.json baked at deploy time.
+// Data flow: /api/refresh-travel-stats (Vite middleware in dev, Vercel
+// serverless fn in prod) does the live KML re-scrape. In prod its response is
+// edge-cached (s-maxage), so it's a shared store: normal page loads read it
+// too, meaning anyone's Reload becomes the data everyone sees. The baked
+// travel-stats.json is the instant first paint + the fallback on hosts with
+// no API (plain GitHub Pages).
 import { svgIcon } from '../ui/icons.js'
 
 const BASE = import.meta.env.BASE_URL || '/'
@@ -181,7 +183,9 @@ function renderFlags(data) {
       if (!iso) {
         return `<span class="tp-flag tp-flag--plain" title="${name}"><span class="tp-flag-name">${name}</span></span>`
       }
-      const url = `${BASE}flags/${iso}.svg`
+      // Flags load on the fly from flagcdn — nothing vendored in the repo, so a
+      // brand-new country gets its flag instantly with zero redeploys.
+      const url = `https://flagcdn.com/${iso}.svg`
       return `<span class="tp-flag" title="${name}" style="background-image:url('${url}')"><span class="tp-flag-name">${name}</span></span>`
     })
     .join('')
@@ -212,26 +216,48 @@ async function loadStats(forceRefresh = false) {
 
   const readStatic = () =>
     fetch(`${BASE}travel-stats.json?_=${Date.now()}`, { signal: ctrl.signal })
-
-  try {
-    let r
-    if (forceRefresh) {
-      // Live re-scrape. If the endpoint is missing (static host) or errors,
-      // fall back to the baked JSON so Reload still shows something.
-      try {
-        r = await fetch(REFRESH_ENDPOINT, { signal: ctrl.signal })
-        if (!r.ok) r = await readStatic()
-      } catch (err) {
-        if (err.name === 'AbortError') return
-        r = await readStatic()
-      }
-    } else {
-      r = await readStatic()
-    }
+  const readJson = async (r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const stats = await r.json()
     if (stats.error) throw new Error(stats.error)
-    renderStats(stats)
+    return stats
+  }
+
+  try {
+    if (forceRefresh) {
+      // Reload button: force a genuinely fresh scrape. The timestamp busts the
+      // edge cache so this never returns a cached copy. If the endpoint is
+      // missing (static host) or errors, fall back to the baked JSON.
+      let stats
+      try {
+        stats = await readJson(await fetch(`${REFRESH_ENDPOINT}?_=${Date.now()}`, { signal: ctrl.signal }))
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        stats = await readJson(await readStatic())
+      }
+      renderStats(stats)
+    } else {
+      // Normal load: paint instantly from the baked JSON, then silently upgrade
+      // to the shared edge-cached API data (at most ~10 min old for everyone),
+      // so a reload by any visitor sticks for all visitors. On hosts with no
+      // API (gh-pages) the second step just fails quietly.
+      let current = null
+      try {
+        current = await readJson(await readStatic())
+        renderStats(current)
+      } catch (err) {
+        if (err.name === 'AbortError') return
+      }
+      try {
+        const fresh = await readJson(await fetch(REFRESH_ENDPOINT, { signal: ctrl.signal }))
+        const isNewer = !current?.updatedAt ||
+          new Date(fresh.updatedAt || 0) >= new Date(current.updatedAt)
+        if (isNewer) renderStats(fresh)
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        if (!current) throw err // both sources failed → show the error
+      }
+    }
   } catch (err) {
     if (err.name === 'AbortError') return
     renderEmpty(`Error: ${err.message}`)
