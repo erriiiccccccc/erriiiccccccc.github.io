@@ -149,24 +149,25 @@ function renderStats(stats) {
   if (grid) grid.innerHTML = boxes.map(statBox).join('')
 
   renderFlags(data)
+  setUpdatedStatus(stats)
+}
 
+function setStatus(text) {
   const status = q('travel-status')
-  if (status) {
-    if (stats.error) {
-      status.textContent = `Error: ${stats.error}`
-    } else if (stats.updatedAt) {
-      const dt = new Date(stats.updatedAt)
-      const formatted = isNaN(dt.getTime())
-        ? stats.updatedAt
-        : dt.toLocaleString('en-GB', {
-            day: '2-digit', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: false,
-          })
-      status.textContent = `Updated ${formatted}`
-    } else {
-      status.textContent = 'No data yet'
-    }
-  }
+  if (status) status.textContent = text
+}
+
+function setUpdatedStatus(stats) {
+  if (stats.error) { setStatus(`Error: ${stats.error}`); return }
+  if (!stats.updatedAt) { setStatus('No data yet'); return }
+  const dt = new Date(stats.updatedAt)
+  const formatted = isNaN(dt.getTime())
+    ? stats.updatedAt
+    : dt.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      })
+  setStatus(`Updated ${formatted}`)
 }
 
 function renderFlags(data) {
@@ -229,22 +230,31 @@ async function loadStats(forceRefresh = false) {
       // edge cache so this never returns a cached copy. If the endpoint is
       // missing (static host) or errors, fall back to the baked JSON.
       let stats
+      let live = false
       try {
         stats = await readJson(await fetch(`${REFRESH_ENDPOINT}?_=${Date.now()}`, { signal: ctrl.signal }))
+        live = true
       } catch (err) {
         if (err.name === 'AbortError') return
         stats = await readJson(await readStatic())
       }
       renderStats(stats)
+      // Re-warm the shared edge cache under the PLAIN url (the one page loads
+      // read), so this reload becomes what every visitor sees next. Without
+      // this the busted url is a different cache key and the fresh data would
+      // never land in the shared entry. Fire-and-forget.
+      if (live) fetch(REFRESH_ENDPOINT).catch(() => {})
     } else {
-      // Normal load: paint instantly from the baked JSON, then silently upgrade
-      // to the shared edge-cached API data (at most ~10 min old for everyone),
-      // so a reload by any visitor sticks for all visitors. On hosts with no
-      // API (gh-pages) the second step just fails quietly.
+      // Normal load: paint the stats instantly from the baked JSON, but keep
+      // the status on "checking" so an out-of-date timestamp is never shown as
+      // final. Then upgrade to the live edge-cached API data (shared by all
+      // visitors, at most a few minutes old). On hosts with no API (gh-pages)
+      // the upgrade fails quietly and the baked timestamp is restored.
       let current = null
       try {
         current = await readJson(await readStatic())
         renderStats(current)
+        setStatus('Checking for the latest…')
       } catch (err) {
         if (err.name === 'AbortError') return
       }
@@ -252,10 +262,11 @@ async function loadStats(forceRefresh = false) {
         const fresh = await readJson(await fetch(REFRESH_ENDPOINT, { signal: ctrl.signal }))
         const isNewer = !current?.updatedAt ||
           new Date(fresh.updatedAt || 0) >= new Date(current.updatedAt)
-        if (isNewer) renderStats(fresh)
+        renderStats(isNewer ? fresh : current)
       } catch (err) {
         if (err.name === 'AbortError') return
         if (!current) throw err // both sources failed → show the error
+        setUpdatedStatus(current) // API unreachable → static timestamp is final
       }
     }
   } catch (err) {
