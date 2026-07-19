@@ -29,9 +29,15 @@
   <link rel="apple-touch-icon" href="./luckyicon-touch.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="./assets/index-BZ9IXg3O.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CaL_Xo5U.css">
+  <!-- display=optional: never block readiness on webfonts; system fallbacks are fine -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=optional" rel="stylesheet" />
+  <link rel="preload" href="./world.glb" as="fetch" crossorigin />
+  <script type="module" crossorigin src="./assets/index-B-MNyN8b.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-kpKb0UD-.js">
+  <link rel="modulepreload" crossorigin href="./assets/islands-ClYB82yH.js">
+  <link rel="modulepreload" crossorigin href="./assets/travel-DWeBpQJt.js">
+  <link rel="modulepreload" crossorigin href="./assets/gsap-C8pce-KX.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-DWn80scE.css">
 </head>
 <body>
   <!-- Page heading for screen readers / SEO (the visual "title" is the 3D scene) -->
@@ -135,16 +141,12 @@
         var msg = (e.reason && (e.reason.message || e.reason)) || 'Module import failed'
         showFatal('Load error: ' + msg)
       })
-      // Nuclear fallback: if 12s elapsed and nothing dismissed the loader, fade it out
-      // so the user is not stuck behind it forever (covers slow CDNs, partial loads).
+      // If the module never takes ownership of the loader, surface a retry
+      // (does NOT silently reveal an unfinished scene).
       setTimeout(function () {
-        var el = document.getElementById('loader')
-        if (el && !el.classList.contains('fade-out') && el.style.display !== 'none') {
-          el.style.transition = 'opacity 1s'
-          el.style.opacity = '0'
-          setTimeout(function () { if (el) el.style.display = 'none' }, 1000)
-        }
-      }, 12000)
+        if (window.__PHF_LOAD_OWNED__) return
+        showFatal('Still starting up — tap Reload if this persists.')
+      }, 20000)
     })()
   </script>
 
