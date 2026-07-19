@@ -13,18 +13,27 @@
     "dev": "node scripts/fetch-travel-stats.mjs && vite",
     "build": "node scripts/fetch-travel-stats.mjs && vite build",
     "preview": "vite preview",
-    "record": "node scripts/record-demos.mjs"
+    "record": "node scripts/record-demos.mjs",
+    "optimize:world": "node scripts/optimize-world.mjs",
+    "optimize:world:fidelity": "node scripts/optimize-world.mjs fidelity",
+    "optimize:world:balanced": "node scripts/optimize-world.mjs balanced",
+    "optimize:world:small": "node scripts/optimize-world.mjs small",
+    "smoke": "node scripts/smoke-load.mjs"
   },
   "dependencies": {
     "gsap": "^3.12.5",
-    "scrollama": "^3.2.0",
     "three": "^0.170.0",
+    "three-mesh-bvh": "^0.8.3",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2",
     "world-countries": "^5.1.0"
   },
   "devDependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@gltf-transform/cli": "^4.1.2",
+    "@gltf-transform/core": "^4.1.2",
+    "@gltf-transform/extensions": "^4.1.2",
+    "@gltf-transform/functions": "^4.1.2",
     "playwright": "^1.61.0",
     "vite": "^5.4.0"
   }

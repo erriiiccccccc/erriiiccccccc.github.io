@@ -18,6 +18,12 @@ Thumbs.db
 # Generated at build time — do not commit
 public/travel-stats.json
 
+# Intermediate world optimisation output
+assets/source/world.optimized.tmp.glb
+
+# Full-fidelity source GLB (~80MB) — keep locally; deploy uses public/world.glb
+assets/source/*.glb
+
 # Logs
 *.log
 npm-debug.log*

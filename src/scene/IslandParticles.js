@@ -182,6 +182,7 @@ export class IslandParticles {
   constructor() {
     this._systems = {}
     this._group   = new THREE.Group()
+    this._scale   = 1
 
     for (const [name, cfg] of Object.entries(CONFIGS)) {
       const sys = this._buildSystem(cfg)
@@ -191,6 +192,14 @@ export class IslandParticles {
   }
 
   get group() { return this._group }
+
+  /** 0–1 quality scale: reduces peak opacity / effective density feel. */
+  setScale(scale) {
+    this._scale = Math.max(0, Math.min(1, scale ?? 1))
+    if (this._scale < 0.05) {
+      for (const sys of Object.values(this._systems)) sys.points.visible = false
+    }
+  }
 
   _buildSystem(cfg) {
     const N = cfg.count
@@ -257,18 +266,19 @@ export class IslandParticles {
   // charWorldY: world Y of island surface (used to scale the local dir to surface).
   // This group must be a child of planetGroup so it rotates with the planet.
   update(dt, activeIsland, charWorldY, reducedMotion, islandDirs) {
-    if (reducedMotion) {
+    if (reducedMotion || this._scale < 0.05) {
       for (const sys of Object.values(this._systems)) sys.points.visible = false
       return
     }
 
     const t = performance.now() * 0.001
+    const peak = this._scale
 
     for (const [name, sys] of Object.entries(this._systems)) {
       const { points, uniforms } = sys
       const isActive = name === activeIsland
 
-      uniforms.uOpacity.value += ((isActive ? 1 : 0) - uniforms.uOpacity.value) * Math.min(1, dt * 2.5)
+      uniforms.uOpacity.value += ((isActive ? peak : 0) - uniforms.uOpacity.value) * Math.min(1, dt * 2.5)
 
       if (uniforms.uOpacity.value < 0.01) {
         points.visible = false

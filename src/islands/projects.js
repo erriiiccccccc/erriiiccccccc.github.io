@@ -270,7 +270,10 @@ export function initProjects(root) {
     }
   })
 
-  // First paint (no crossfade).
-  fillFeature(PROJECTS[0], 0)
-  current = 0
+  // Bind stage media on the next frame so opening the panel doesn't stall on
+  // video/poster probe in the same tick as the glass open.
+  requestAnimationFrame(() => {
+    fillFeature(PROJECTS[0], 0)
+    current = 0
+  })
 }

@@ -9,6 +9,23 @@ const OUT_PATH   = join(__dirname, 'public', 'travel-stats.json')
 
 export default defineConfig({
   base: './',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/three')) return 'three'
+          if (id.includes('node_modules/gsap')) return 'gsap'
+          if (id.includes('node_modules/three-mesh-bvh')) return 'bvh'
+          if (id.includes('/islands/')) return 'islands'
+          if (id.includes('/travel/')) return 'travel'
+          if (id.includes('/scene/Asteroids') || id.includes('/scene/Flyers')
+            || id.includes('/scene/Comet') || id.includes('/scene/Aurora')) {
+            return 'sky-deferred'
+          }
+        },
+      },
+    },
+  },
   plugins: [{
     name: 'travel-stats-api',
     configureServer(server) {

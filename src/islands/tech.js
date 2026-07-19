@@ -1,20 +1,12 @@
 // Tech Stack island — full-colour brand logos, always lit, grouped into
-// categories that show range (languages → web → data/AI → infra → robotics →
-// fabrication → ways of working). Logos live in public/tech/<k>.svg. Items
-// without a clean brand mark fall back to a lettered monogram tile. `inv`
-// inverts dark/monochrome marks so they read white on the dark glass.
+// categories. Logos live in public/tech/<k>.svg. `inv` inverts dark marks.
 //
-// Layout: the panel is widened (variant 'tech') and chips are a fixed width laid
-// out with flex-wrap, so even the largest category fits on a single row on
-// desktop — no orphan "one logo on a second row". scrollama reveals each
-// category (with a per-chip stagger) as it scrolls into the panel.
-
-import scrollama from 'scrollama'
+// Reveal uses native IntersectionObserver (scrollama was removed — it was only
+// driving category fade-ins on scroll, and its setup cost hitching E-to-open).
 
 const BASE = import.meta.env.BASE_URL || '/'
 
-// k = logo filename (public/tech/<k>.svg) · n = name · m = monogram (no logo)
-// inv = invert a dark/monochrome mark to white
+// k = logo filename · n = name · m = monogram · inv = invert mark
 const GROUPS = [
   {
     label: 'Languages',
@@ -109,9 +101,8 @@ const GROUPS = [
 
 function chip(it, i) {
   const visual = it.k
-    ? `<span class="tech-logo"><img src="${BASE}tech/${it.k}.svg" alt="" loading="lazy" width="36" height="36" draggable="false"></span>`
+    ? `<span class="tech-logo"><img src="${BASE}tech/${it.k}.svg" alt="" loading="lazy" decoding="async" width="36" height="36" draggable="false"></span>`
     : `<span class="tech-logo tech-mono">${it.m}</span>`
-  // --i drives the per-chip stagger delay when its group reveals
   return `
     <figure class="tech-chip${it.inv ? ' tech-chip--invert' : ''}" style="--i:${i}">
       ${visual}
@@ -141,50 +132,30 @@ export const TECH_HTML = `
   </div>
 `
 
-// ── Scroll-driven reveal ───────────────────────────────────────────────────────
-// The panel scrolls inside .wp-content (a fixed, centred glass card), so the
-// scroller is set up against that. We keep one instance and tear it down on each
-// re-open since UI.js re-mounts the panel HTML every time.
-let scroller = null
-
-function revealVisible(root) {
-  // Belt-and-suspenders: reveal any group already within the scroll viewport,
-  // so nothing can stay invisible if scrollama is slow to fire on a tiny scroll.
-  const box = root.getBoundingClientRect()
-  root.querySelectorAll('.tech-group:not(.is-in)').forEach(g => {
-    const r = g.getBoundingClientRect()
-    if (r.top < box.bottom - 40 && r.bottom > box.top) g.classList.add('is-in')
-  })
-}
-
 export function initTech(root) {
-  const groups = root.querySelectorAll('.tech-group')
+  const groups = [...root.querySelectorAll('.tech-group')]
   if (!groups.length) return
 
-  // Reduced motion → show everything immediately, no scroll choreography.
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     groups.forEach(g => g.classList.add('is-in'))
     return
   }
 
-  if (scroller) { try { scroller.destroy() } catch (_) {} scroller = null }
+  const scrollRoot = root.querySelector('.tech-groups') || root
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue
+      e.target.classList.add('is-in')
+      io.unobserve(e.target)
+    }
+  }, { root: scrollRoot, rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
 
-  scroller = scrollama()
-  scroller
-    .setup({ step: '.tech-group', offset: 0.85, once: true })
-    .onStepEnter(({ element }) => element.classList.add('is-in'))
-
-  // Reveal what's on screen at open, then let scrollama handle the rest.
-  // Two RAFs so the panel's open transition has settled before we measure.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    revealVisible(root)
-    scroller && scroller.resize()
-  }))
-
-  // Fallback: catch groups scrollama might miss on fast inner scrolls. The
-  // logos scroll inside .tech-groups now (full-height photo rail beside them),
-  // so listen there too — falling back to root on narrow/stacked layouts.
-  const scrollEl = root.querySelector('.tech-groups') || root
-  scrollEl.addEventListener('scroll', () => revealVisible(root), { passive: true })
-  if (scrollEl !== root) root.addEventListener('scroll', () => revealVisible(root), { passive: true })
+  requestAnimationFrame(() => {
+    const box = scrollRoot.getBoundingClientRect()
+    for (const g of groups) {
+      const r = g.getBoundingClientRect()
+      if (r.top < box.bottom - 24 && r.bottom > box.top) g.classList.add('is-in')
+      else io.observe(g)
+    }
+  })
 }

@@ -25,14 +25,12 @@ export class UI {
     `
     document.body.appendChild(this._popup)
 
-    // Tappable / clickable — fires onPopupTap callback
     this._popup.addEventListener('click', () => { this.onPopupTap?.() })
     this._popup.addEventListener('touchend', e => {
-      e.preventDefault()   // prevent ghost click on canvas behind
+      e.preventDefault()
       this.onPopupTap?.()
     }, { passive: false })
 
-    // ── Fullscreen world panel ──────────────────────────────────────────────────
     this._panel    = document.getElementById('world-panel')
     this._icon     = document.getElementById('wp-icon')
     this._eyebrow  = document.getElementById('wp-eyebrow')
@@ -43,7 +41,6 @@ export class UI {
     this._closeBtn.innerHTML = svgIcon('close', 18, 2)
     this._closeBtn.addEventListener('click', () => this._requestClose())
 
-    // Click the dimmed backdrop (outside the card) to dismiss
     this._panel.addEventListener('click', e => {
       if (e.target === this._panel || (e.target.classList && e.target.classList.contains('wp-scrim'))) {
         this._requestClose()
@@ -51,19 +48,15 @@ export class UI {
     })
 
     this._closeTimer = null
+    this.onPopupTap   = null
+    this.onClosePanel = null
 
-    // ── Callbacks (set from main.js) ────────────────────────────────────────────
-    this.onPopupTap   = null   // approach prompt tapped
-    this.onClosePanel = null   // ✕ / backdrop / Esc — keeps game state in sync
-
-    // Hide legacy HUD elements
     const badge = document.getElementById('landmark-badge')
     const hint  = document.getElementById('hint-text')
     if (badge) badge.style.display = 'none'
     if (hint)  hint.style.display  = 'none'
   }
 
-  // ── Approach prompt ──────────────────────────────────────────────────────────
   showPopup(island) {
     this._popup.querySelector('.pu-icon').innerHTML      = svgIcon(island.iconKey, 22)
     this._popup.querySelector('.pu-island').textContent  = island.name
@@ -73,7 +66,6 @@ export class UI {
     const keycap = this._popup.querySelector('.pu-keycap')
     const label  = this._popup.querySelector('.pu-key-label')
     if (IS_TOUCH) {
-      // A "tap target" glyph instead of a keyboard key
       keycap.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>`
       keycap.classList.add('pu-keycap--tap')
       label.textContent = 'Tap'
@@ -90,30 +82,43 @@ export class UI {
     this._popup.classList.add('hidden')
   }
 
-  // ── World panel ──────────────────────────────────────────────────────────────
   openPanel(island) {
     if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null }
+    this._openGen = (this._openGen || 0) + 1
+    const gen = this._openGen
 
     this._icon.innerHTML      = svgIcon(island.iconKey, 26)
     this._eyebrow.textContent = island.section
     this._title.textContent   = island.name
-    this._content.innerHTML   = typeof island.html === 'function' ? island.html() : island.html
-    this._content.scrollTop   = 0
     this._panel.style.setProperty('--ic', island.color)
 
-    // Per-island layout variant → card modifier class (e.g. 'wide', 'projects')
     const card = this._panel.querySelector('.wp-card')
     card.className = 'wp-card' + (island.variant ? ` wp--${island.variant}` : '')
 
+    // Open chrome first with empty body — avoids parsing a huge HTML tree on the
+    // same frame as the (expensive) glass backdrop-filter turn-on.
+    this._content.innerHTML = ''
+    this._content.scrollTop = 0
+
     this._panel.classList.remove('hidden', 'is-closing')
-    void this._panel.offsetWidth   // reflow so the open transition plays
+    void this._panel.offsetWidth
     this._panel.classList.add('is-open')
 
-    // Run the island's custom JS (carousel, form, travel stats…) after mount
-    island.init?.(this._content)
+    const html = typeof island.html === 'function' ? island.html() : island.html
+    const init = island.init
+
+    // Next frame: mount DOM. Frame after: run init (media / observers).
+    requestAnimationFrame(() => {
+      if (gen !== this._openGen) return
+      this._content.innerHTML = html
+      this._content.scrollTop = 0
+      requestAnimationFrame(() => {
+        if (gen !== this._openGen) return
+        init?.(this._content)
+      })
+    })
   }
 
-  // ✕ / backdrop / Esc → route through main so islandUIState resyncs + popup returns
   _requestClose() {
     if (this.onClosePanel) this.onClosePanel()
     else this.closePanel()
@@ -129,6 +134,7 @@ export class UI {
     this._closeTimer = setTimeout(() => {
       this._panel.classList.add('hidden')
       this._panel.classList.remove('is-closing')
+      this._content.innerHTML = ''
       this._closeTimer = null
     }, 320)
   }

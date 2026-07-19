@@ -1,6 +1,9 @@
 import * as THREE from 'three'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh'
 import { Starfield } from './scene/Starfield.js'
 import { LoaderFlybys } from './scene/LoaderFlybys.js'
 import { Lighting } from './scene/Lighting.js'
@@ -12,7 +15,7 @@ import { Camera } from './scene/Camera.js'
 import { ShootingStars } from './scene/ShootingStars.js'
 import { SkyDecor } from './scene/SkyDecor.js'
 import { IslandParticles } from './scene/IslandParticles.js'
-import { ISLANDS } from './data/content.js'
+import { ISLANDS, prefetchAllIslands } from './data/content.js'
 import { UI } from './ui/UI.js'
 import { svgIcon } from './ui/icons.js'
 import { MapOverlay } from './ui/MapOverlay.js'
@@ -20,7 +23,22 @@ import { HelpOverlay } from './ui/HelpOverlay.js'
 import { IntroOverlay } from './ui/IntroOverlay.js'
 import { SettingsOverlay } from './ui/SettingsOverlay.js'
 import { AboutOverlay } from './ui/AboutOverlay.js'
+import { LoadDirector } from './loading/LoadDirector.js'
+import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
+import {
+  resolveQuality,
+  ADAPTIVE_DPR_BUDGET_MS,
+  ADAPTIVE_DPR_MIN,
+  ADAPTIVE_DPR_SAMPLES,
+} from './loading/quality.js'
 import gsap from 'gsap'
+
+perfNavBaseline()
+
+// Accelerated mesh raycasts (three-mesh-bvh)
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
+THREE.Mesh.prototype.raycast = acceleratedRaycast
 
 const ISLAND_NAMES = Object.keys(ISLANDS)
 const ISLAND_COLOR_HEX = {}
@@ -31,18 +49,55 @@ for (const name of ISLAND_NAMES) {
 
 // --- Renderer ---
 const canvas = document.getElementById('canvas')
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-  powerPreference: 'high-performance',
-  stencil: false,
-})
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+/** @type {import('./loading/LoadDirector.js').LoadDirector | null} */
+let loadDirector = null
+let qualitySettings = resolveQuality('auto')
+/** @type {THREE.WebGLRenderer} */
+let renderer
+try {
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: qualitySettings.antialias,
+    powerPreference: 'high-performance',
+    stencil: false,
+  })
+} catch (err) {
+  console.error('WebGL init failed:', err)
+  showBootFatal('WebGL is unavailable in this browser. Try Chrome or Firefox, or enable hardware acceleration.')
+  throw err
+}
+renderer.setPixelRatio(qualitySettings.dpr)
 renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
+renderer.shadowMap.enabled = qualitySettings.shadows
+renderer.shadowMap.type = qualitySettings.shadowType === 'soft'
+  ? THREE.PCFSoftShadowMap
+  : THREE.BasicShadowMap
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.0
+
+function showBootFatal(msg) {
+  const label = document.getElementById('ldr-label')
+  if (label) label.textContent = String(msg).slice(0, 160)
+  const prog = document.getElementById('ldr-progress')
+  if (prog && !document.getElementById('ldr-retry')) {
+    const btn = document.createElement('button')
+    btn.id = 'ldr-retry'
+    btn.type = 'button'
+    btn.textContent = 'Reload'
+    btn.className = 'ldr-retry-btn'
+    btn.onclick = () => location.reload()
+    prog.appendChild(btn)
+  }
+}
+
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault()
+  loadDirector?.markContextLost()
+}, false)
+canvas.addEventListener('webglcontextrestored', () => {
+  loadDirector?.markContextRestored()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+}, false)
 
 // --- Scene ---
 const scene = new THREE.Scene()
@@ -157,14 +212,38 @@ function releaseFromPresentation() {
 
 // Wire settings callbacks
 let reducedMotion = settingsOverlay.reducedMotion
-settingsOverlay.onQualityChange = (q) => {
-  const dpr = q === 'low' ? 1 : q === 'high' ? Math.min(window.devicePixelRatio, 2) : Math.min(window.devicePixelRatio, 1.5)
-  renderer.setPixelRatio(dpr)
-  renderer.shadowMap.enabled = q !== 'low'
+let _adaptiveDprEnabled = qualitySettings.adaptiveDpr
+let _adaptiveFrameSamples = 0
+let _adaptiveFrameTotal = 0
+let _currentDpr = qualitySettings.dpr
+
+function applyQualityPreset(preset) {
+  qualitySettings = resolveQuality(preset)
+  _currentDpr = qualitySettings.dpr
+  _adaptiveDprEnabled = qualitySettings.adaptiveDpr
+  _adaptiveFrameSamples = 0
+  _adaptiveFrameTotal = 0
+  renderer.setPixelRatio(_currentDpr)
+  renderer.shadowMap.enabled = qualitySettings.shadows
+  renderer.shadowMap.type = qualitySettings.shadowType === 'soft'
+    ? THREE.PCFSoftShadowMap
+    : THREE.BasicShadowMap
+  // Shadow map size on lights
+  const mapSize = qualitySettings.shadowMapSize
+  if (lighting.sunLight?.shadow?.mapSize) {
+    lighting.sunLight.shadow.mapSize.set(mapSize, mapSize)
+    lighting.sunLight.shadow.map?.dispose()
+    lighting.sunLight.shadow.map = null
+  }
+  skyDecor.setSkyTier(qualitySettings.skyTier)
+  islandParticles.setScale(qualitySettings.particleScale)
 }
+
+settingsOverlay.onQualityChange = (q) => applyQualityPreset(q)
 settingsOverlay.onReducedMotionChange = (rm) => {
   reducedMotion = rm
   document.body.classList.toggle('reduced-motion', rm)
+  loadDirector?.setReducedMotion(rm)
 }
 // Controls-hint visibility is contextual (driven each frame in the render loop):
 // shown when the player is idle, hidden while moving or while a panel is open.
@@ -178,8 +257,7 @@ settingsOverlay.onHintsChange = (visible) => {
   controlsHintEl.setAttribute('aria-hidden', String(!visible))
   if (!visible) { controlsHintEl.classList.add('faded'); hintShown = false }
 }
-// Push initial values now that callbacks are wired (restores saved settings)
-settingsOverlay.applyRestored()
+// applyRestored() runs after skyDecor / islandParticles exist (see below)
 
 // ─── HUD corner buttons ───────────────────────────────────────────────────────
 const hudBtnsEl = document.createElement('div')
@@ -300,139 +378,286 @@ const _sun2Off    = new THREE.Vector3()
 // root (github.io) or under a sub-path (e.g. project pages, local preview).
 const ASSET_BASE = (import.meta.env.BASE_URL || './').replace(/\/?$/, '/')
 
+// Loader DOM + director must exist before world.glb XHR callbacks fire
+const loaderEl   = document.getElementById('loader')
+const ldrPct     = document.getElementById('ldr-pct')
+const ldrBarFill = document.getElementById('ldr-bar-fill')
+const ldrLabel   = document.getElementById('ldr-label')
+let _lastStageLabel = ''
+let _loaderElapsed = 0
+let _loaderTriggered = false
+/** After compile, next loading-loop render marks first meaningful frame. */
+let _pendingMeaningfulFrame = false
+let _arrivalDone = false
+let _revealScheduled = false
+let sceneStarted = false
+let scenePlayTime = 0
+
+function setLoaderProgress(p, label) {
+  const shown = Math.min(100, Math.max(0, Math.floor(p)))
+  if (ldrPct)     ldrPct.textContent     = shown + '%'
+  if (ldrBarFill) ldrBarFill.style.width = shown + '%'
+  if (label && ldrLabel && label !== _lastStageLabel && !loadDirector?.isFatal) {
+    _lastStageLabel = label
+    ldrLabel.style.opacity = '0'
+    setTimeout(() => {
+      if (ldrLabel) { ldrLabel.textContent = label; ldrLabel.style.opacity = '1' }
+    }, 160)
+  }
+}
+
+loadDirector = new LoadDirector({
+  reducedMotion,
+  onProgress: (p, label) => setLoaderProgress(p, label),
+  onFatal: (msg) => {
+    showBootFatal(msg)
+    setLoaderProgress(0, msg)
+  },
+  onReady: () => tryBeginReveal(),
+})
+loadDirector.markCriticalCode()
+window.__PHF_LOAD_OWNED__ = true
+
 // --- Planet (GLB) ---
+/*
+  ═══════════════════════════════════════════════════════════════════════════
+  UPDATING THE GLOBE — redo optimisation (full guide: assets/README.md)
+  ═══════════════════════════════════════════════════════════════════════════
+  1. Export full-quality .glb from Blender (keep island names + "(terrain)").
+  2. Overwrite:  assets/source/world.glb
+  3. npm install   (once)
+  4. npm run optimize:world              ← fidelity (recommended)
+     npm run optimize:world -- balanced  ← smaller
+     npm run optimize:world -- small     ← tiniest / softest (old aggressive)
+  5. That writes public/world.glb (what the site loads below).
+  6. npm run dev  → check islands / cliffs / textures
+  7. npm run build  (+ optional: npm run smoke)
 
+  Runtime must-haves for the optimised file (do not rip out):
+  • MeshoptDecoder + KTX2Loader + public/basis/ transcoder
+  • LoadDirector readiness (progress ≠ download alone)
+  • Selective terrain shadows + FrontSide on opaque mats (perf)
+
+  First aggressive pass used preset "small" (~81% size cut, visible quality loss).
+  Prefer "fidelity" or "balanced" after the next globe export.
+  ═══════════════════════════════════════════════════════════════════════════
+*/
 const gltfLoader = new GLTFLoader()
-gltfLoader.load(ASSET_BASE + 'world.glb', (gltf) => {
-  const model = gltf.scene
+gltfLoader.setMeshoptDecoder(MeshoptDecoder)
+const ktx2Loader = new KTX2Loader()
+ktx2Loader.setTranscoderPath(ASSET_BASE + 'basis/')
+ktx2Loader.detectSupport(renderer)
+gltfLoader.setKTX2Loader(ktx2Loader)
 
-  // Scale model so its bounding sphere matches PLANET_RADIUS
-  const box = new THREE.Box3().setFromObject(model)
-  const sphere = new THREE.Sphere()
-  box.getBoundingSphere(sphere)
-  const scale = PLANET_RADIUS / sphere.radius
-  model.scale.setScalar(scale)
+/** Let the loader UI + flybys paint between heavy sync chunks. */
+function yieldToMain() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0))
+  })
+}
 
-  // Re-center after scale
-  const box2 = new THREE.Box3().setFromObject(model)
-  const center = box2.getCenter(new THREE.Vector3())
-  model.position.sub(center)
+/** Meshes that still need BVH after first reveal (non-terrain). */
+const _deferredBvhMeshes = []
 
-  const foundNames = import.meta.env.DEV ? [] : null
-  let _terrainLayerCount = 0
-  model.traverse(obj => {
-    if (obj.isMesh) {
-      obj.castShadow = true
-      obj.receiveShadow = true
-      // Tag mesh as walkable (layer 1) or obstacle (layer 2) based on Blender name.
-      // Any mesh with "(terrain)" in its name is walkable; everything else is an obstacle.
-      if (obj.name && obj.name.toLowerCase().includes('(terrain)')) {
-        obj.layers.enable(1)
-        _terrainLayerCount++
-      } else {
-        obj.layers.enable(2)
+function scheduleDeferredBvh() {
+  if (!_deferredBvhMeshes.length) return
+  const chunk = () => {
+    const start = performance.now()
+    while (_deferredBvhMeshes.length && performance.now() - start < 4) {
+      const mesh = _deferredBvhMeshes.pop()
+      if (!mesh?.geometry || mesh.geometry.boundsTree) continue
+      try { mesh.geometry.computeBoundsTree() } catch { /* ignore */ }
+    }
+    if (_deferredBvhMeshes.length) {
+      if ('requestIdleCallback' in window) requestIdleCallback(chunk, { timeout: 200 })
+      else setTimeout(chunk, 0)
+    }
+  }
+  if ('requestIdleCallback' in window) requestIdleCallback(chunk, { timeout: 500 })
+  else setTimeout(chunk, 0)
+}
+
+perfMark('world_download_start')
+
+// Custom fetch → paint "Unpacking" → parse. Three's XHR path parses in the same
+// turn as the last progress event, which freezes the loader mid-bar (~65%).
+;(async () => {
+  const url = ASSET_BASE + 'world.glb'
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const total = Number(res.headers.get('content-length')) || 0
+    const reader = res.body?.getReader()
+    let buffer
+
+    if (reader) {
+      const chunks = []
+      let loaded = 0
+      let sinceYield = 0
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        loaded += value.byteLength
+        sinceYield += value.byteLength
+        if (total > 0) loadDirector?.setDownloadProgress(loaded, total)
+        // Keep flybys alive during large downloads
+        if (sinceYield > 512 * 1024) {
+          sinceYield = 0
+          await yieldToMain()
+        }
+      }
+      if (total > 0) loadDirector?.setDownloadProgress(total, total)
+      else loadDirector?.setDownloadProgress(loaded, loaded)
+      loadDirector?.flush?.()
+      await yieldToMain()
+      const merged = new Uint8Array(loaded)
+      let offset = 0
+      for (const c of chunks) { merged.set(c, offset); offset += c.byteLength }
+      buffer = merged.buffer
+    } else {
+      buffer = await res.arrayBuffer()
+      loadDirector?.setDownloadProgress(1, 1)
+      loadDirector?.flush?.()
+      await yieldToMain()
+    }
+
+    const gltf = await new Promise((resolve, reject) => {
+      gltfLoader.parse(buffer, ASSET_BASE, resolve, reject)
+    })
+
+    const model = gltf.scene
+    loadDirector?.markWorldLoaded()
+    loadDirector?.flush?.()
+    await yieldToMain()
+
+    // Scale model so its bounding sphere matches PLANET_RADIUS
+    const box = new THREE.Box3().setFromObject(model)
+    const sphere = new THREE.Sphere()
+    box.getBoundingSphere(sphere)
+    const scale = PLANET_RADIUS / sphere.radius
+    model.scale.setScalar(scale)
+    const box2 = new THREE.Box3().setFromObject(model)
+    const center = box2.getCenter(new THREE.Vector3())
+    model.position.sub(center)
+    await yieldToMain()
+
+    const foundNames = import.meta.env.DEV ? [] : null
+    let _terrainLayerCount = 0
+    model.traverse(obj => {
+      if (obj.isMesh) {
+        const nameLower = (obj.name || '').toLowerCase()
+        const isTerrain = nameLower.includes('(terrain)')
+        obj.castShadow = isTerrain
+        obj.receiveShadow = true
+        if (obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+          for (const mat of mats) {
+            if (mat && mat.opacity >= 0.99 && !mat.transparent) mat.side = THREE.FrontSide
+          }
+        }
+        // BVH only for walkable terrain at boot — rest deferred (was a big freeze)
+        if (obj.geometry && !obj.geometry.boundsTree) {
+          if (isTerrain) {
+            try { obj.geometry.computeBoundsTree() } catch { /* ignore */ }
+          } else {
+            _deferredBvhMeshes.push(obj)
+          }
+        }
+        if (isTerrain) {
+          obj.layers.enable(1)
+          _terrainLayerCount++
+        } else {
+          obj.layers.enable(2)
+        }
+      }
+      if (foundNames && obj.name) foundNames.push(obj.name)
+      const nm = obj.name
+      if (nm && ISLANDS[nm] && !islandObjects[nm]) {
+        islandObjects[nm] = obj
+        islandMeshes[nm] = []
+        obj.traverse(c => {
+          if (c.isMesh) {
+            c.material = c.material.clone()
+            c.material.emissive = new THREE.Color(0x000000)
+            c.material._origColor = c.material.color.clone()
+            c.material.color.multiplyScalar(0.35)
+            c.material._isFloor = true
+            islandMeshes[nm].push(c)
+          }
+        })
+      }
+    })
+    if (import.meta.env.DEV) {
+      console.log('[GLB] all named objects:', foundNames)
+      console.log('[GLB] islands matched:', Object.keys(islandObjects))
+    }
+    if (_terrainLayerCount > 0) {
+      surfaceRay.layers.set(1)
+      terrainLayerActive = true
+    }
+    await yieldToMain()
+
+    // CRITICAL: keep invisible until triggerArrival parks it off-screen.
+    // Yields below let animate() render — a visible centered planet would flash
+    // under the transparent loader (regression from chunked/async setup).
+    model.visible = false
+    planetGroup.add(model)
+    planetModel = model
+
+    planetGroup.updateMatrixWorld(true)
+    const _islandBox = new THREE.Box3()
+    const _islandCtr = new THREE.Vector3()
+    for (const nm of ISLAND_NAMES) {
+      if (islandMeshes[nm] && islandMeshes[nm].length) {
+        _islandBox.makeEmpty()
+        for (const mesh of islandMeshes[nm]) _islandBox.expandByObject(mesh)
+        _islandBox.getCenter(_islandCtr)
+        planetGroup.worldToLocal(_islandCtr)
+        if (_islandCtr.lengthSq() > 0.0001) {
+          islandDirs[nm] = _islandCtr.clone().normalize()
+        }
       }
     }
-    if (foundNames && obj.name) foundNames.push(obj.name)
-    const nm = obj.name
-    if (nm && ISLANDS[nm] && !islandObjects[nm]) {
-      islandObjects[nm] = obj
-      islandMeshes[nm] = []
-      obj.traverse(c => {
-        if (c.isMesh) {
-          c.material = c.material.clone()
-          c.material.emissive = new THREE.Color(0x000000)
-          c.material._origColor = c.material.color.clone()
-          c.material.color.multiplyScalar(0.35)
-          c.material._isFloor = true   // floor mesh — gets emissive glow
-          islandMeshes[nm].push(c)
+    await yieldToMain()
+
+    {
+      const _bnds = {}
+      const _sc   = new THREE.Vector3()
+      for (const nm of ISLAND_NAMES) {
+        if (!islandMeshes[nm]?.length) continue
+        const b = new THREE.Box3()
+        for (const m of islandMeshes[nm]) b.expandByObject(m)
+        b.expandByScalar(3.0)
+        _bnds[nm] = b
+      }
+      const _claimed = new Set()
+      for (const nm of ISLAND_NAMES) (islandMeshes[nm] || []).forEach(m => _claimed.add(m))
+      planetModel.traverse(obj => {
+        if (!obj.isMesh || _claimed.has(obj)) return
+        new THREE.Box3().setFromObject(obj).getCenter(_sc)
+        for (const nm of ISLAND_NAMES) {
+          if (!_bnds[nm]?.containsPoint(_sc)) continue
+          obj.material = obj.material.clone()
+          obj.material.emissive = new THREE.Color(0x000000)
+          obj.material._origColor = obj.material.color.clone()
+          obj.material.color.multiplyScalar(0.35)
+          obj.material._isFloor = false
+          islandMeshes[nm].push(obj)
+          _claimed.add(obj)
+          break
         }
       })
     }
-  })
-  if (import.meta.env.DEV) {
-    console.log('[GLB] all named objects:', foundNames)
-    console.log('[GLB] islands matched:', Object.keys(islandObjects))
-  }
 
-  // Activate terrain-layer raycasting once at least one "(terrain)" mesh is found
-  if (_terrainLayerCount > 0) {
-    surfaceRay.layers.set(1)
-    terrainLayerActive = true
-    if (import.meta.env.DEV) console.log('[terrain] layer system active —', _terrainLayerCount, 'walkable meshes tagged')
-  }
-
-  planetGroup.add(model)
-  planetModel = model
-
-  // Compute each island's unit direction in planetGroup local space.
-  // Use bounding-box centre of the island's meshes — NOT getWorldPosition() on the
-  // parent Object3D, whose Blender pivot may sit at the planet centre for every island.
-  planetGroup.updateMatrixWorld(true)
-  const _islandBox = new THREE.Box3()
-  const _islandCtr = new THREE.Vector3()
-  for (const nm of ISLAND_NAMES) {
-    if (islandMeshes[nm] && islandMeshes[nm].length) {
-      _islandBox.makeEmpty()
-      for (const mesh of islandMeshes[nm]) _islandBox.expandByObject(mesh)
-      _islandBox.getCenter(_islandCtr)          // world-space centre
-      planetGroup.worldToLocal(_islandCtr)      // → planetGroup local
-      if (_islandCtr.lengthSq() > 0.0001) {
-        islandDirs[nm] = _islandCtr.clone().normalize()
-      } else if (import.meta.env.DEV) {
-        console.warn('[teleport] zero-length dir for', nm, '— island meshes at origin?')
-      }
-    }
-  }
-  if (import.meta.env.DEV) console.log('[teleport] islandDirs:', Object.fromEntries(
-    Object.entries(islandDirs).map(([k,v]) => [k, [v.x.toFixed(2), v.y.toFixed(2), v.z.toFixed(2)]])
-  ))
-
-  // ── Spatial second pass: claim side/cliff meshes that sit inside an island's
-  //    footprint but weren't children of the named GLB node (sibling geometry).
-  {
-    const _bnds = {}
-    const _sc   = new THREE.Vector3()
     for (const nm of ISLAND_NAMES) {
-      if (!islandMeshes[nm]?.length) continue
-      const b = new THREE.Box3()
-      for (const m of islandMeshes[nm]) b.expandByObject(m)
-      b.expandByScalar(3.0)   // grow to capture side/cliff geometry
-      _bnds[nm] = b
+      for (const m of (islandMeshes[nm] || [])) meshToIsland.set(m, nm)
     }
-    const _claimed = new Set()
-    for (const nm of ISLAND_NAMES) (islandMeshes[nm] || []).forEach(m => _claimed.add(m))
-    planetModel.traverse(obj => {
-      if (!obj.isMesh || _claimed.has(obj)) return
-      new THREE.Box3().setFromObject(obj).getCenter(_sc)
-      for (const nm of ISLAND_NAMES) {
-        if (!_bnds[nm]?.containsPoint(_sc)) continue
-        obj.material = obj.material.clone()
-        obj.material.emissive = new THREE.Color(0x000000)
-        obj.material._origColor = obj.material.color.clone()
-        obj.material.color.multiplyScalar(0.35)
-        obj.material._isFloor = false  // side/cliff mesh — colour only, no emissive
-        islandMeshes[nm].push(obj)
-        _claimed.add(obj)
-        break
-      }
-    })
-    if (import.meta.env.DEV) console.log('[islands] mesh counts after spatial pass:',
-      Object.fromEntries(ISLAND_NAMES.map(nm => [nm, islandMeshes[nm]?.length ?? 0])))
-  }
+    await yieldToMain()
 
-  // Build reverse-lookup: any mesh → its island name.
-  // Covers both hierarchy children and spatially-claimed siblings (rocks, props, etc.)
-  for (const nm of ISLAND_NAMES) {
-    for (const m of (islandMeshes[nm] || [])) meshToIsland.set(m, nm)
-  }
-
-  // GLB fully loaded — trigger colour phase then scene
-  if (!_loaderTriggered) {
+    if (_loaderTriggered) return
     _loaderTriggered = true
 
-    // ── Screenshot mode (DEV only): visit /?screenshot to capture loading-preview.png
-    //    (the social/OG image). Hide the character so only the real planet is framed. ──
     if (import.meta.env.DEV && window.location.search.includes('screenshot')) {
       modelGroup.visible      = false
       character.group.visible = false
@@ -451,20 +676,30 @@ gltfLoader.load(ASSET_BASE + 'world.glb', (gltf) => {
       return
     }
 
-    // Force the GPU to upload the planet's (large) textures + compile its shaders
-    // NOW, on a static loading frame — so the hitch lands here instead of stuttering
-    // the planet's slide-in. (The 77 MB world.glb is texture-heavy; this matters.)
-    renderer.compile(scene, camSystem.camera)
+    loadDirector?.markSceneBuilt()
+    loadDirector?.flush?.()
+    await yieldToMain()
+
+    try {
+      renderer.compile(scene, camSystem.camera)
+      loadDirector?.markShadersCompiled()
+      loadDirector?.flush?.()
+    } catch (compileErr) {
+      console.error('Shader compile failed:', compileErr)
+      loadDirector?.fail('Could not prepare graphics. Try reloading.')
+      return
+    }
+    await yieldToMain()
+
+    renderer.render(scene, camSystem.camera)
+    _pendingMeaningfulFrame = true
     triggerArrival(model)
+    scheduleDeferredBvh()
+  } catch (err) {
+    console.error('GLB load error:', err)
+    loadDirector?.fail('Could not load the world. Check your connection, then retry.')
   }
-},
-(xhr) => {
-  // Real download progress (maps 0-100% download → 0-92% on bar; reveal fills 92→100)
-  if (xhr.total > 0) {
-    setLoaderProgress(Math.min(92, (xhr.loaded / xhr.total) * 92))
-  }
-},
-err => console.error('GLB load error:', err))
+})()
 
 // ─── Surface raycaster ───────────────────────────────────────────────────────
 let planetModel = null
@@ -505,6 +740,9 @@ const meshToIsland  = new Map()  // Mesh → islandName (built after GLB spatial
 
 let islandUIState    = 'exploring'  // 'exploring' | 'near' | 'detail'
 let activeIslandName = null         // set by sampleSurfaceHeight (see animate raycast cache)
+let _prevActiveIslandForLerp = null
+let _islandLerpSettling = 0
+let _forceIslandLerp = true
 
 // --- Starfield ---
 const stars = new Starfield()
@@ -521,13 +759,17 @@ scene.add(loaderFlybys.group)
 const shootingStars = new ShootingStars()
 scene.add(shootingStars.group)
 
-// --- Sky decor (sun, planets, nebula, flyers, asteroids, comet, aurora) ---
-const skyDecor = new SkyDecor()
+// --- Sky decor (critical atmosphere first; extras deferred after reveal) ---
+const skyDecor = new SkyDecor(qualitySettings.skyTier)
 scene.add(skyDecor.group)
 
 // --- Island Particles ---
 const islandParticles = new IslandParticles()
+islandParticles.setScale(qualitySettings.particleScale)
 planetGroup.add(islandParticles.group)
+
+// Restore settings now that optional scene systems exist (avoids TDZ on skyDecor)
+settingsOverlay.applyRestored()
 
 // --- Procedural Character (fallback while FBX loads) ---
 const character = new Character()
@@ -862,35 +1104,7 @@ function syncOverlayInputGate() {
   if (locked) spaceHeld = false
 }
 
-// ─── Loader ──────────────────────────────────────────────────────────────────
-const loaderEl   = document.getElementById('loader')
-const ldrPct     = document.getElementById('ldr-pct')
-const ldrBarFill = document.getElementById('ldr-bar-fill')
-const ldrLabel   = document.getElementById('ldr-label')
-const canvasEl   = document.getElementById('canvas')
-let   _loaderElapsed   = 0
-let   _loaderTriggered = false
-
-// Cycle flavour text under the progress bar (restyled in CSS — sentence case now)
-const LDR_MSGS = [
-  'Warping spacetime', 'Sculpting islands', 'Placing stars',
-  'Calibrating orbit', 'Summoning Eric', 'Painting atmosphere',
-]
-let _msgIdx = 0
-const _ldrMsgInterval = setInterval(() => {
-  _msgIdx = (_msgIdx + 1) % LDR_MSGS.length
-  if (ldrLabel) {
-    ldrLabel.style.opacity = '0'
-    setTimeout(() => {
-      if (ldrLabel) { ldrLabel.textContent = LDR_MSGS[_msgIdx]; ldrLabel.style.opacity = '1' }
-    }, 200)
-  }
-}, 1600)
-
-let ldrProgress = 0
-let sceneStarted = false
-let scenePlayTime = 0 // seconds after gameplay starts; failsafe for character reveal
-
+// ─── Arrival / reveal choreography (readiness owned by LoadDirector above) ───
 let wasCharReveal = false
 /** Teleport-in intro: -1 idle, else seconds elapsed while playing */
 let teleportInAge = -1
@@ -902,104 +1116,94 @@ function easeOutBack(t) {
   return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
 }
 
-function setLoaderProgress(p) {
-  ldrProgress = Math.min(p, 100)
-  if (ldrPct)     ldrPct.textContent     = Math.floor(ldrProgress) + '%'
-  if (ldrBarFill) ldrBarFill.style.width = ldrProgress + '%'
+const LDR_ARRIVE_SPEED = 55
+
+function tryBeginReveal() {
+  if (_revealScheduled || loadDirector?.isFatal) return
+  if (!loadDirector?.isReady || !_arrivalDone) return
+  _revealScheduled = true
+
+  const dwell = loadDirector.minDwellMs
+  const start = () => {
+    loadDirector.beginReveal()
+    startScene()
+  }
+  if (dwell > 0) setTimeout(start, dwell)
+  else start()
 }
 
-/*
-  Loader / intro timing reference (tune here + overlay.css #loader transition)
-  ─────────────────────────────────────────────────────────────────────────────
-  Until GLB loads:     variable (network); bar uses xhr (→92%) or timed fallback.
-  Live scene:          deep-space + stars + procedural flybys (LoaderFlybys) render
-                       every frame in the !sceneStarted branch of animate().
-  Arrival (GLB done):  flybys cleared; the REAL planet eases in from off-screen
-                       right to centre (expo.out + slight spin), bar 92→100.
-  Before zoom (gap):   LDR_GAP_BEFORE_PLAY_MS — then sceneStarted + loader fade-out.
-  Loader fade:         1400ms opacity (overlay.css); display:none 1400ms after fade starts.
-  Zoom to orbit:       no fixed duration — exponential lerp in Camera.update (~exp(-12*dt)).
-  Character visible:   when camera within ~4.5u of target OR scenePlayTime > CHAR_REVEAL_FAILSAFE_SEC.
-  Teleport-in:         TELEPORT_IN_SEC after character reveal.
-*/
-const LDR_ARRIVE_SPEED         = 55   // units/sec — matches the flushed-out flybys' exit speed; constant glide in
-const LDR_GAP_BEFORE_PLAY_MS    = 160  // pause after arrival before zoom + fade
-const CHAR_REVEAL_FAILSAFE_SEC  = 2.2
-
-// Called when world.glb finishes. The planet IS the real model (so it always
-// matches), and it eases in from just off the RIGHT edge of the screen to centre
-// with a soft decelerating glide + a touch of spin — so the world arrives rather
-// than just popping into being. Bar fills 92→100 over the same beat.
+// Called when world.glb finishes compile. Planet eases in from off-screen right.
 function triggerArrival(model) {
-  // Any flybys still on screen peel off to the left first (natural exit), and the
-  // planet follows them in — rather than them blinking out as the world appears.
   const hadFlybys = loaderFlybys.flushOut()
-  const baseX = model.position.x // natural centred position
+  const baseX = model.position.x
 
-  // Reduced motion: no slide/spin — just place it and go.
+  const finishArrival = () => {
+    _arrivalDone = true
+    tryBeginReveal()
+  }
+
   if (reducedMotion) {
     loaderFlybys.clear()
     model.position.x = baseX
     model.rotation.y = 0
-    setLoaderProgress(100)
-    startScene()
+    model.visible = true
+    finishArrival()
     return
   }
 
-  // Start just off the right edge of the frustum at the planet's depth (z≈0).
   const halfH = Math.tan(THREE.MathUtils.degToRad(camSystem.camera.fov) / 2) * camSystem.camera.position.z
   const halfW = halfH * (window.innerWidth / window.innerHeight)
-  const startX = baseX + halfW + 30       // planet radius (~25) + small margin clears the edge
+  const startX = baseX + halfW + 30
+  // Park off-screen BEFORE making visible — never show a centered pop-in.
   model.position.x = startX
   model.rotation.y = -0.45
+  model.visible = true
 
-  // Move at a CONSTANT speed (like a flyby) for most of the way, then a short
-  // settle so it parks smoothly instead of dead-stopping. The settle starts at
-  // exactly the glide speed (no jerk): power2.out's initial velocity = 2·d/t.
   const dist       = startX - baseX
   const settleDist = dist * 0.18
   const dLinear    = (dist - settleDist) / LDR_ARRIVE_SPEED
   const dSettle    = (2 * settleDist)    / LDR_ARRIVE_SPEED
 
-  const prog = { p: ldrProgress }
-  // Small lead so the flybys get clear of frame before the world sweeps in.
-  const tl = gsap.timeline({ delay: hadFlybys ? 0.25 : 0, onComplete: startScene })
+  const tl = gsap.timeline({ delay: hadFlybys ? 0.25 : 0, onComplete: finishArrival })
   tl.to(model.position, { x: baseX + settleDist, duration: dLinear, ease: 'none' }, 0)
     .to(model.position, { x: baseX,              duration: dSettle, ease: 'power2.out' })
   tl.to(model.rotation, { y: 0, duration: dLinear + dSettle, ease: 'sine.out' }, 0)
-  tl.to(prog, {
-    p: 100, duration: Math.min(0.9, dLinear), ease: 'none',
-    onUpdate: () => setLoaderProgress(prog.p),
-  }, 0)
 }
 
 function startScene() {
-  setLoaderProgress(100)
-  loaderFlybys.clear()   // safety net: bin any straggler before the scene takes over
+  loaderFlybys.clear()
+  sceneStarted = true
+  loadDirector?.markLive()
+  perfMark('loader_dismiss')
+  perfMeasure('time_to_dismiss', 'module_eval', 'loader_dismiss')
 
-  // Zoom + loader fade start together after a short beat
+  if (loaderEl) loaderEl.classList.add('fade-out')
+
+  // Character + HUD reveal with the crossfade (no empty underlay)
+  const hudRevealEls = [hudLeftEl, hudBtnsEl, controlsHintEl, document.getElementById('touch-controls')]
+  hudRevealEls.forEach((el, i) => {
+    if (el) setTimeout(() => el.classList.remove('hud-hidden'), (reducedMotion ? 80 : 200) + i * 120)
+  })
   setTimeout(() => {
-    sceneStarted = true
-    if (loaderEl) loaderEl.classList.add('fade-out')
+    if (loaderEl) loaderEl.style.display = 'none'
+  }, reducedMotion ? 400 : 1400)
 
-    // HUD fades in with the world — staggered (left card → corner buttons →
-    // key hints → mobile joystick) so it feels like the UI "boots up".
-    const hudRevealEls = [hudLeftEl, hudBtnsEl, controlsHintEl, document.getElementById('touch-controls')]
-    hudRevealEls.forEach((el, i) => {
-      if (el) setTimeout(() => el.classList.remove('hud-hidden'), 500 + i * 150)
-    })
-    setTimeout(() => {
-      if (loaderEl) loaderEl.style.display = 'none'
-      // Loader gone — stop the flavour-text interval so we don't churn the DOM forever
-      clearInterval(_ldrMsgInterval)
-    }, 1400)
+  const _introReturning = !!localStorage.getItem('phf-intro-seen')
+  setTimeout(() => introOverlay.open(_introReturning), reducedMotion ? 400 : 900)
 
-    // Greet on every visit: first-timers get "Welcome to Eric's World!", returning
-    // visitors get a warmer "Welcome back" refresher (flagged via 'phf-intro-seen').
-    // Opens on a timer (no input needed) — kept short so it lands as the world settles.
-    const _introReturning = !!localStorage.getItem('phf-intro-seen')
-    setTimeout(() => introOverlay.open(_introReturning), 900)
-  }, LDR_GAP_BEFORE_PLAY_MS)
+  // Prefetch ALL island panel modules after reveal so E never hits a cold import.
+  const prefetch = () => { prefetchAllIslands() }
+  if ('requestIdleCallback' in window) requestIdleCallback(prefetch, { timeout: 1800 })
+  else setTimeout(prefetch, 800)
+
+  if (isPerfEnabled()) setTimeout(() => perfSummary(), 100)
+
+  // Defer non-critical sky systems after first live frames
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => skyDecor?.enableDeferred?.(qualitySettings.skyTier), { timeout: 2000 })
+  } else {
+    setTimeout(() => skyDecor?.enableDeferred?.(qualitySettings.skyTier), 600)
+  }
 }
 
 // ─── Render loop ─────────────────────────────────────────────────────────────
@@ -1049,8 +1253,16 @@ function prewarmCharacterDraw(useFbx) {
   character.group.visible = svC
 }
 
+let _pageHidden = document.hidden
+document.addEventListener('visibilitychange', () => {
+  _pageHidden = document.hidden
+  if (!_pageHidden) clock.getDelta() // drop accumulated time after resume
+})
+
 function animate() {
   requestAnimationFrame(animate)
+  if (_pageHidden || loadDirector?.isFatal) return
+
   const dt = Math.min(clock.getDelta(), 0.05)
   time += dt
 
@@ -1058,24 +1270,45 @@ function animate() {
   syncOverlayInputGate()
 
   if (!sceneStarted) {
-    // Fallback: slow timed progress so the bar always moves even if
-    // the server doesn't send Content-Length (no xhr.total).
-    // Real progress from the GLB xhr callback overrides this whenever available.
     _loaderElapsed += dt
-    const fallback = Math.min(92, _loaderElapsed * 22)
-    if (ldrProgress < fallback) setLoaderProgress(fallback)
-    // Wide planet shot — hide character so he never reads as floating in frame
+    // Soft download fallback when Content-Length is missing (never reaches 100 alone)
+    loadDirector?.nudgeDownloadFallback(_loaderElapsed)
+    loadDirector?.tick(dt)
+
     if (!(import.meta.env.DEV && window.location.search.includes('screenshot'))) {
       character.group.visible = false
       modelGroup.visible = false
     }
-    // Drift procedural flybys across the screen while we wait on world.glb
     loaderFlybys.update(dt, reducedMotion)
     renderer.render(scene, camSystem.camera)
+
+    if (_pendingMeaningfulFrame && planetModel && canvas.clientWidth > 0) {
+      _pendingMeaningfulFrame = false
+      loadDirector?.markFirstMeaningfulFrame()
+    }
     return
   }
 
   scenePlayTime += dt
+  loadDirector?.tick(dt)
+
+  // Adaptive DPR (auto quality only): ease toward 1 if frames are heavy
+  if (_adaptiveDprEnabled && qualitySettings.preset === 'auto') {
+    _adaptiveFrameTotal += dt * 1000
+    _adaptiveFrameSamples++
+    if (_adaptiveFrameSamples >= ADAPTIVE_DPR_SAMPLES) {
+      const avg = _adaptiveFrameTotal / _adaptiveFrameSamples
+      _adaptiveFrameSamples = 0
+      _adaptiveFrameTotal = 0
+      const target = avg > ADAPTIVE_DPR_BUDGET_MS
+        ? Math.max(ADAPTIVE_DPR_MIN, _currentDpr - 0.15)
+        : Math.min(qualitySettings.dpr, _currentDpr + 0.05)
+      if (Math.abs(target - _currentDpr) > 0.04) {
+        _currentDpr = target
+        renderer.setPixelRatio(_currentDpr)
+      }
+    }
+  }
 
   // While viewing a panel/overlay, freeze every world input (keys are already
   // cleared by the gate; this also silences touch movement + idle auto-rotate).
@@ -1259,31 +1492,38 @@ function animate() {
   }
 
   // ── Island highlight: dim when inactive, full colour + glow when active ──
+  // Throttle full mesh lerps unless the active island changed or still settling.
   const LERP_K = 3.5
   const lerpF  = 1 - Math.exp(-LERP_K * dt)
-  for (let i = 0; i < ISLAND_NAMES.length; i++) {
-    const name   = ISLAND_NAMES[i]
-    const meshes = islandMeshes[name]
-    if (!meshes || !meshes.length) continue
-    const isActive       = name === activeIslandName
-    const targetEmissive = (isActive && !ISLANDS[name].noGlow) ? 0.45 : 0
-    const targetBright   = isActive ? 1.0 : 0.50
-    for (let j = 0; j < meshes.length; j++) {
-      const m  = meshes[j]
-      const oc = m.material._origColor
-      // Base colour: dim ↔ original
-      if (oc) {
-        m.material.color.r += (oc.r * targetBright - m.material.color.r) * lerpF
-        m.material.color.g += (oc.g * targetBright - m.material.color.g) * lerpF
-        m.material.color.b += (oc.b * targetBright - m.material.color.b) * lerpF
-      }
-      // Emissive glow only on floor meshes
-      if (m.material._isFloor) {
-        m.material.emissiveIntensity += (targetEmissive - m.material.emissiveIntensity) * lerpF
-        if (isActive) {
-          m.material.emissive.setHex(ISLAND_COLOR_HEX[name])
-        } else if (m.material.emissiveIntensity < 0.002) {
-          m.material.emissive.set(0, 0, 0)
+  if (activeIslandName !== _prevActiveIslandForLerp) {
+    _islandLerpSettling = 0.55
+    _prevActiveIslandForLerp = activeIslandName
+  }
+  if (_islandLerpSettling > 0) _islandLerpSettling -= dt
+  if (_islandLerpSettling > 0 || _forceIslandLerp) {
+    _forceIslandLerp = false
+    for (let i = 0; i < ISLAND_NAMES.length; i++) {
+      const name   = ISLAND_NAMES[i]
+      const meshes = islandMeshes[name]
+      if (!meshes || !meshes.length) continue
+      const isActive       = name === activeIslandName
+      const targetEmissive = (isActive && !ISLANDS[name].noGlow) ? 0.45 : 0
+      const targetBright   = isActive ? 1.0 : 0.50
+      for (let j = 0; j < meshes.length; j++) {
+        const m  = meshes[j]
+        const oc = m.material._origColor
+        if (oc) {
+          m.material.color.r += (oc.r * targetBright - m.material.color.r) * lerpF
+          m.material.color.g += (oc.g * targetBright - m.material.color.g) * lerpF
+          m.material.color.b += (oc.b * targetBright - m.material.color.b) * lerpF
+        }
+        if (m.material._isFloor) {
+          m.material.emissiveIntensity += (targetEmissive - m.material.emissiveIntensity) * lerpF
+          if (isActive) {
+            m.material.emissive.setHex(ISLAND_COLOR_HEX[name])
+          } else if (m.material.emissiveIntensity < 0.002) {
+            m.material.emissive.set(0, 0, 0)
+          }
         }
       }
     }
@@ -1387,8 +1627,9 @@ function animate() {
   islandParticles.update(dt, activeIslandName, charWorldY, reducedMotion, islandDirs)
   camSystem.update(dt, PLANET_RADIUS, charWorldY, -1, null, planetGroup, heading, moving)
 
-  const charReveal =
-    camSystem.characterRevealReady || scenePlayTime > CHAR_REVEAL_FAILSAFE_SEC
+  // Reveal with the loader crossfade (Ready already required a meaningful frame).
+  // Camera can still be lerping in — character is visible so the scene never feels empty.
+  const charReveal = sceneStarted
 
   let teleportScale = 1
   let teleportLift = 0

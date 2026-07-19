@@ -1,7 +1,5 @@
-// Island registry. Each entry: { iconKey, name, section, color, html, init?, variant? }
-// `html` (string or fn) fills the World Panel; `init(contentEl)` runs custom JS
-// after mount (carousel, form, travel stats…); `variant` adds a layout modifier
-// class to the card. meadow_island is special-cased to the AboutOverlay in main.js.
+// Island registry. Panel modules are eager so pressing E never pays for a
+// cold dynamic-import + parse hitch. meadow_island → AboutOverlay in main.js.
 import { TECH_HTML, initTech } from '../islands/tech.js'
 import { PROJECTS_HTML, initProjects } from '../islands/projects.js'
 import { EXPERIENCE_HTML } from '../islands/experience.js'
@@ -14,7 +12,6 @@ export const ISLANDS = {
     name: 'Meadow Island',
     section: 'About Me',
     color: '#4CAF50',
-    // Rendered via AboutOverlay (3D character reveal), not the World Panel.
     html: `
       <p>Hey, I'm <strong>Eric Ng Min Chern</strong> — a final-year Computer Science student
       at the University of Edinburgh (graduating June 2026), originally from Malaysia.</p>
@@ -79,4 +76,9 @@ export const ISLANDS = {
     html: TRAVEL_HTML,
     init: initTravelStats,
   },
+}
+
+/** No-op kept for call sites; panels are eager now. */
+export function prefetchAllIslands() {
+  return Promise.resolve()
 }
