@@ -63,6 +63,10 @@ function furthestFrom(data) {
 }
 
 let _inFlight = null
+/** Last successful stats — instant paint on reopen without waiting on fetch. */
+let _cachedStats = null
+/** Cancel in-flight flag chunking when a newer render starts. */
+let _flagRenderGen = 0
 
 function q(id) { return document.getElementById(id) }
 
@@ -148,6 +152,7 @@ function renderStats(stats) {
   const grid = q('tp-stats')
   if (grid) grid.innerHTML = boxes.map(statBox).join('')
 
+  _cachedStats = stats
   renderFlags(data)
   setUpdatedStatus(stats)
 }
@@ -170,26 +175,40 @@ function setUpdatedStatus(stats) {
   setStatus(`Updated ${formatted}`)
 }
 
+function makeFlagEl({ name, iso }) {
+  const el = document.createElement('span')
+  el.className = iso ? 'tp-flag' : 'tp-flag tp-flag--plain'
+  el.title = name
+  if (iso) el.style.backgroundImage = `url('https://flagcdn.com/${iso}.svg')`
+  const label = document.createElement('span')
+  label.className = 'tp-flag-name'
+  label.textContent = name
+  el.appendChild(label)
+  return el
+}
+
 function renderFlags(data) {
   const wall  = q('tp-flags')
   const count = q('tp-cloud-count')
   if (count) count.textContent = data.length || '–'
   if (!wall) return
-  if (!data.length) { wall.innerHTML = ''; return }
+  if (!data.length) { wall.replaceChildren(); return }
 
-  wall.innerHTML = data
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(({ name, iso }) => {
-      if (!iso) {
-        return `<span class="tp-flag tp-flag--plain" title="${name}"><span class="tp-flag-name">${name}</span></span>`
-      }
-      // Flags load on the fly from flagcdn — nothing vendored in the repo, so a
-      // brand-new country gets its flag instantly with zero redeploys.
-      const url = `https://flagcdn.com/${iso}.svg`
-      return `<span class="tp-flag" title="${name}" style="background-image:url('${url}')"><span class="tp-flag-name">${name}</span></span>`
-    })
-    .join('')
+  const sorted = data.slice().sort((a, b) => a.name.localeCompare(b.name))
+  wall.replaceChildren()
+  const gen = ++_flagRenderGen
+  const CHUNK = 10
+  let i = 0
+
+  const pump = () => {
+    if (gen !== _flagRenderGen || !wall.isConnected) return
+    const frag = document.createDocumentFragment()
+    const end = Math.min(i + CHUNK, sorted.length)
+    for (; i < end; i++) frag.appendChild(makeFlagEl(sorted[i]))
+    wall.appendChild(frag)
+    if (i < sorted.length) requestAnimationFrame(pump)
+  }
+  pump()
 }
 
 function renderEmpty(message) {
@@ -323,6 +342,13 @@ export function initTravelStats() {
       btn.disabled = true
       try { await loadStats(true) } finally { btn.disabled = false }
     }
+  }
+
+  // Reopen: paint cached stats immediately (flags chunk in over a few frames)
+  if (_cachedStats) {
+    renderStats(_cachedStats)
+    loadStats(false)
+    return
   }
 
   renderEmpty()

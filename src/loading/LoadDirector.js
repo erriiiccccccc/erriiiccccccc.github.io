@@ -5,14 +5,15 @@
 
 import { perfMark, perfMeasure } from './perfLog.js'
 
-/** @typedef {'Booting'|'LoadingAssets'|'BuildingScene'|'Compiling'|'FirstFrame'|'Ready'|'Revealing'|'Live'|'Fatal'|'Degraded'} LoadState */
+/** @typedef {'Booting'|'LoadingAssets'|'Unpacking'|'BuildingScene'|'Compiling'|'FirstFrame'|'WarmingPlay'|'Ready'|'Revealing'|'Live'|'Fatal'|'Degraded'} LoadState */
 
 const WEIGHTS = {
   criticalCode: 0.08,
-  download: 0.52,
-  sceneBuilt: 0.12,
-  shadersCompiled: 0.12,
-  firstMeaningfulFrame: 0.10,
+  download: 0.50,
+  sceneBuilt: 0.10,
+  shadersCompiled: 0.10,
+  firstMeaningfulFrame: 0.08,
+  playWarmed: 0.08,
   interactionShell: 0.06,
 }
 
@@ -23,6 +24,7 @@ const STAGE_LABELS = {
   BuildingScene: 'Building the world',
   Compiling: 'Preparing the world',
   FirstFrame: 'Lighting the stage',
+  WarmingPlay: 'Settling into orbit',
   Ready: 'Ready',
   Revealing: 'Welcome in',
   Live: 'Live',
@@ -61,6 +63,7 @@ export class LoadDirector {
       sceneBuilt: false,
       shadersCompiled: false,
       firstMeaningfulFrame: false,
+      playWarmed: false,
       cameraPosed: false,
       interactionShell: false,
     }
@@ -94,8 +97,7 @@ export class LoadDirector {
   setDownloadProgress(loaded, total) {
     if (total > 0) {
       this._downloadFrac = Math.min(1, loaded / total)
-      // Download finished → parse/decode still blocks the main thread (freeze at ~60%).
-      // Flip into Unpacking so the bar keeps creeping and the label stays honest.
+      // Download finished → parse/decode still blocks the main thread.
       if (this._downloadFrac >= 1 && !this._flags.criticalAssets) {
         this._awaitingParse = true
         this._setState('Unpacking')
@@ -107,7 +109,6 @@ export class LoadDirector {
 
   /** Timed fallback when Content-Length is missing (never reaches Ready alone). */
   nudgeDownloadFallback(elapsedSec) {
-    // Asymptote toward ~0.85 of download weight over ~20s
     const soft = 1 - Math.exp(-elapsedSec * 0.12)
     this._downloadFrac = Math.max(this._downloadFrac, Math.min(0.85, soft))
     this._recompute()
@@ -145,6 +146,25 @@ export class LoadDirector {
     this._flags.firstMeaningfulFrame = true
     perfMark('first_meaningful_frame')
     perfMeasure('first_frame', 'shaders_compiled', 'first_meaningful_frame')
+    // Stay on FirstFrame until beginWarmingPlay() — arrival may still be finishing
+    this._recompute()
+    this._maybeReady()
+  }
+
+  /** Enter play warm-up (character compile + shadow fills) under the loader. */
+  beginWarmingPlay() {
+    if (this._flags.playWarmed) return
+    this._setState('WarmingPlay')
+    this._recompute()
+    this.flush()
+  }
+
+  /** Character + play-camera shadow warm finished — last gate before Ready. */
+  markPlayWarmed() {
+    if (this._flags.playWarmed) return
+    this._flags.playWarmed = true
+    perfMark('play_warmed')
+    perfMeasure('play_warm', 'first_meaningful_frame', 'play_warmed')
     this._recompute()
     this._maybeReady()
   }
@@ -159,6 +179,14 @@ export class LoadDirector {
     this._flags.interactionShell = true
     this._recompute()
     this._maybeReady()
+  }
+
+  get hasFirstFrame() {
+    return this._flags.firstMeaningfulFrame
+  }
+
+  get hasPlayWarmed() {
+    return this._flags.playWarmed
   }
 
   /** @param {string} message */
@@ -206,8 +234,6 @@ export class LoadDirector {
 
   /** Smooth display progress toward target; call each frame. */
   tick(dt) {
-    // While GLTF parse/decode is blocking between download-done and onLoad,
-    // slowly creep the bar so it doesn't look stuck at ~60–65%.
     if (this._awaitingParse && !this._flags.criticalAssets) {
       const unpackCap = (WEIGHTS.criticalCode + WEIGHTS.download + WEIGHTS.sceneBuilt * 0.45) * 100
       this._targetProgress = Math.max(this._targetProgress, Math.min(unpackCap, this._displayProgress + dt * 14))
@@ -215,7 +241,6 @@ export class LoadDirector {
 
     const k = 1 - Math.exp(-(this.reducedMotion ? 18 : 8) * dt)
     this._displayProgress += (this._targetProgress - this._displayProgress) * k
-    // Never show 100 until Ready
     if (!this._allReadyFlags()) {
       this._displayProgress = Math.min(this._displayProgress, 99.2)
     } else {
@@ -237,7 +262,13 @@ export class LoadDirector {
 
   get label() {
     if (this.state === 'Fatal') return this.fatalMessage || STAGE_LABELS.Fatal
-    if (this.state === 'Compiling' || this.state === 'FirstFrame' || this.state === 'BuildingScene') {
+    if (
+      this.state === 'Compiling' ||
+      this.state === 'FirstFrame' ||
+      this.state === 'BuildingScene' ||
+      this.state === 'WarmingPlay' ||
+      this.state === 'Unpacking'
+    ) {
       return STAGE_LABELS[this.state]
     }
     if (this.state === 'LoadingAssets' && this._downloadFrac >= 0.98) {
@@ -259,6 +290,7 @@ export class LoadDirector {
       f.sceneBuilt &&
       f.shadersCompiled &&
       f.firstMeaningfulFrame &&
+      f.playWarmed &&
       f.cameraPosed &&
       f.interactionShell
     )
@@ -286,6 +318,7 @@ export class LoadDirector {
     if (f.sceneBuilt) p += WEIGHTS.sceneBuilt
     if (f.shadersCompiled) p += WEIGHTS.shadersCompiled
     if (f.firstMeaningfulFrame) p += WEIGHTS.firstMeaningfulFrame
+    if (f.playWarmed) p += WEIGHTS.playWarmed
     if (f.interactionShell) p += WEIGHTS.interactionShell
 
     let pct = p * 100
@@ -293,7 +326,6 @@ export class LoadDirector {
     else pct = 100
 
     this._targetProgress = pct
-    // Snap upward a bit so bar doesn't lag too far behind real work
     if (pct > this._displayProgress) {
       this._displayProgress += (pct - this._displayProgress) * 0.35
     }

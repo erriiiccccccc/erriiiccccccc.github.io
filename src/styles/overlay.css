@@ -17,7 +17,7 @@
   --glass-stroke:   rgba(255, 255, 255, 0.12);
   --glass-stroke-2: rgba(255, 255, 255, 0.18);
   --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  /* 14px keeps the liquid-glass look without as harsh a first-paint GPU spike */
+  /* Driven by quality.js applyGlassCss — high 14 / auto mid 8 / low 0 */
   --glass-blur:     14px;
   --glass-shadow:   0 30px 90px rgba(0, 0, 0, 0.55);
 
@@ -553,18 +553,21 @@ body {
 #world-panel.is-closing { visibility: visible; }
 #world-panel.is-open    { pointer-events: auto; }
 
-/* Backdrop — dims + blurs the planet so glass text stays legible */
+/* Backdrop — dims the planet (no full-screen backdrop-filter over live WebGL) */
 .wp-scrim {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at center,
-    rgba(8, 5, 22, 0.58) 0%,
-    rgba(4, 2, 12, 0.88) 100%);
-  /* Scrim blur is a full-screen filter — keep it light; card blur does the rest */
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+    rgba(8, 5, 22, 0.62) 0%,
+    rgba(4, 2, 12, 0.90) 100%);
   opacity: 0;
   transition: opacity var(--dur-in) ease;
+}
+
+/* Low / auto-low quality: solid glass fill when --glass-blur is 0 */
+html.glass-solid {
+  --glass-base:  rgba(12, 8, 30, 0.90);
+  --glass-deep:  rgba(8, 5, 22, 0.96);
 }
 #world-panel.is-open .wp-scrim    { opacity: 1; }
 #world-panel.is-closing .wp-scrim { opacity: 0; transition-duration: var(--dur-out); }
@@ -697,6 +700,8 @@ body {
 }
 .wp-content::-webkit-scrollbar { width: 8px; }
 .wp-content::-webkit-scrollbar-thumb { background: var(--glass-stroke); border-radius: 4px; }
+/* Cache wrapper — transparent to layout so panel CSS still sees direct children */
+.wp-content > .wp-body { display: contents; }
 .wp-content > p { margin-bottom: 0.7rem; }
 .wp-content strong { color: var(--txt); font-weight: 600; }
 .wp-content h2 { font-size: 1.02rem; font-weight: 700; color: #fff; margin-bottom: 0.6rem; }
@@ -2893,8 +2898,8 @@ button.tp-box {
   padding: 7px 16px;
   border-radius: var(--r-pill);
   background: var(--glass-base);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-stroke);
   font-size: 0.7rem;
   letter-spacing: 0.05em;

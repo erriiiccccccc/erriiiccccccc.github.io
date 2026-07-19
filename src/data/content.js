@@ -78,7 +78,45 @@ export const ISLANDS = {
   },
 }
 
-/** No-op kept for call sites; panels are eager now. */
+/** Detached panel body templates — cloned on each open (no innerHTML parse). */
+const _panelCache = new Map()
+
+function htmlToBody(island) {
+  const html = typeof island.html === 'function' ? island.html() : (island.html || '')
+  const wrap = document.createElement('div')
+  wrap.className = 'wp-body'
+  wrap.innerHTML = html
+  return wrap
+}
+
+export function hasPanelCached(key) {
+  return !!key && _panelCache.has(key)
+}
+
+/** Ensure a template exists; returns true if already (or newly) cached. */
+export function ensurePanelCached(key, island) {
+  if (!key || !island || key === 'meadow_island') return false
+  if (!_panelCache.has(key)) _panelCache.set(key, htmlToBody(island))
+  return _panelCache.has(key)
+}
+
+/** Clone a cached body (builds + caches on miss). */
+export function takePanelBody(key, island) {
+  ensurePanelCached(key, island)
+  const tmpl = _panelCache.get(key)
+  return tmpl ? tmpl.cloneNode(true) : htmlToBody(island)
+}
+
+/** Idle after reveal: pre-parse every world panel once. */
+export function prebuildIslandPanels() {
+  for (const [key, island] of Object.entries(ISLANDS)) {
+    if (key === 'meadow_island') continue
+    ensurePanelCached(key, island)
+  }
+}
+
+/** @deprecated name kept for call sites — now idle-prebuilds panel DOM. */
 export function prefetchAllIslands() {
+  prebuildIslandPanels()
   return Promise.resolve()
 }

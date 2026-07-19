@@ -176,8 +176,36 @@ export function initProjects(root) {
   const cntEl   = root.querySelector('.pj-counter')
 
   let current = -1
+  let videoGen = 0
+  let videoTimer = 0
 
-  const fillFeature = (p, i) => {
+  const clearVideo = () => {
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+    stage.classList.remove('has-media')
+  }
+
+  /** Attach/play demo video after open animation — poster shows immediately. */
+  const attachVideo = (p, gen) => {
+    if (gen !== videoGen) return
+    const videoUrl = `${BASE}projects/${p.slug}.webm`
+    video.muted = true
+    video.playsInline = true
+    video.src = videoUrl
+    video.oncanplay = () => {
+      if (gen !== videoGen) return
+      stage.classList.add('has-media')
+      video.play().catch(() => {})
+    }
+    video.onerror = () => {
+      if (gen !== videoGen) return
+      stage.classList.remove('has-media')
+    }
+    video.play().catch(() => {})
+  }
+
+  const fillFeature = (p, i, { deferVideo = true } = {}) => {
     spread.style.setProperty('--pc', p.accent)
     idxEl.textContent = pad(i + 1)
     cntEl.textContent = `${pad(i + 1)} / ${pad(PROJECTS.length)}`
@@ -195,39 +223,33 @@ export function initProjects(root) {
     ].filter(Boolean).join('')
     linksEl.innerHTML = links
 
-    // Stage media has three fallback layers:
-    //   video (if it loads)  →  poster photo (if it loads)  →  mountain (always).
-    // We probe each by actually loading it; missing files error silently.
-    video.pause()
-    video.removeAttribute('src')
-    video.load()
+    // Stage media: poster immediately; video after card open (or on project switch).
+    clearTimeout(videoTimer)
+    videoGen += 1
+    const gen = videoGen
+    clearVideo()
     poster.removeAttribute('src')
-    stage.classList.remove('has-media', 'has-poster')
+    stage.classList.remove('has-poster')
 
     const posterUrl = `${BASE}projects/${p.slug}.jpg`
-    const videoUrl  = `${BASE}projects/${p.slug}.webm`
-
-    // Poster photo = the backup. Show it the moment the .jpg loads.
-    poster.onload  = () => stage.classList.add('has-poster')
-    poster.onerror = () => stage.classList.remove('has-poster')
+    poster.onload  = () => { if (gen === videoGen) stage.classList.add('has-poster') }
+    poster.onerror = () => { if (gen === videoGen) stage.classList.remove('has-poster') }
     poster.src = posterUrl
-    video.poster = posterUrl    // also covers the video's own buffering gap
-
-    // The demos ARE the content, so they play even under prefers-reduced-motion
-    // (they're muted, silent loops). muted/playsInline MUST be set as properties
-    // (not just HTML attrs) — when the panel re-mounts via innerHTML, Chrome
-    // ignores the attributes and blocks muted autoplay, freezing on frame 1.
-    video.muted = true
-    video.playsInline = true
-    // Video fades in on top of the poster once it can play; on error the
-    // poster (or mountain) simply stays.
-    video.src = videoUrl
-    video.oncanplay = () => { stage.classList.add('has-media'); video.play().catch(() => {}) }
-    video.onerror   = () => stage.classList.remove('has-media')
-    video.play().catch(() => {})
+    video.poster = posterUrl
 
     if (p.badge) { badgeTx.textContent = p.badge; badgeEl.hidden = false }
     else badgeEl.hidden = true
+
+    const startVideo = () => attachVideo(p, gen)
+    if (deferVideo) {
+      const schedule = (fn) => {
+        if ('requestIdleCallback' in window) requestIdleCallback(fn, { timeout: 500 })
+        else videoTimer = setTimeout(fn, 320)
+      }
+      schedule(startVideo)
+    } else {
+      startVideo()
+    }
   }
 
   const select = (i, focus = false) => {
@@ -240,11 +262,11 @@ export function initProjects(root) {
     })
     if (focus) items[i].focus()
 
-    if (REDUCE) { fillFeature(PROJECTS[i], i); return }
+    if (REDUCE) { fillFeature(PROJECTS[i], i, { deferVideo: false }); return }
     // Quick crossfade: fade body+stage down, swap content, fade back up.
     feature.classList.add('is-swapping')
     const swap = () => {
-      fillFeature(PROJECTS[i], i)
+      fillFeature(PROJECTS[i], i, { deferVideo: false })
       requestAnimationFrame(() => feature.classList.remove('is-swapping'))
     }
     // ~150ms out, matching the CSS transition
@@ -270,10 +292,7 @@ export function initProjects(root) {
     }
   })
 
-  // Bind stage media on the next frame so opening the panel doesn't stall on
-  // video/poster probe in the same tick as the glass open.
-  requestAnimationFrame(() => {
-    fillFeature(PROJECTS[0], 0)
-    current = 0
-  })
+  // Text + poster now; video waits for idle / ~320ms so E-open stays smooth.
+  fillFeature(PROJECTS[0], 0, { deferVideo: true })
+  current = 0
 }

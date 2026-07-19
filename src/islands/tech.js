@@ -141,21 +141,23 @@ export function initTech(root) {
     return
   }
 
-  const scrollRoot = root.querySelector('.tech-groups') || root
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue
-      e.target.classList.add('is-in')
-      io.unobserve(e.target)
-    }
-  }, { root: scrollRoot, rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
+  // First two groups are above the fold — reveal without measuring every rect
+  groups.slice(0, 2).forEach(g => g.classList.add('is-in'))
+  const rest = groups.slice(2)
+  if (!rest.length) return
 
+  const scrollRoot = root.querySelector('.tech-groups') || root
+  // Defer observer setup so E-open paint isn't blocked by IO + layout
   requestAnimationFrame(() => {
-    const box = scrollRoot.getBoundingClientRect()
-    for (const g of groups) {
-      const r = g.getBoundingClientRect()
-      if (r.top < box.bottom - 24 && r.bottom > box.top) g.classList.add('is-in')
-      else io.observe(g)
-    }
+    requestAnimationFrame(() => {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue
+          e.target.classList.add('is-in')
+          io.unobserve(e.target)
+        }
+      }, { root: scrollRoot, rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
+      for (const g of rest) io.observe(g)
+    })
   })
 }

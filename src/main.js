@@ -27,6 +27,7 @@ import { LoadDirector } from './loading/LoadDirector.js'
 import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
 import {
   resolveQuality,
+  applyGlassCss,
   ADAPTIVE_DPR_BUDGET_MS,
   ADAPTIVE_DPR_MIN,
   ADAPTIVE_DPR_SAMPLES,
@@ -74,6 +75,7 @@ renderer.shadowMap.type = qualitySettings.shadowType === 'soft'
   : THREE.BasicShadowMap
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.0
+applyGlassCss(qualitySettings)
 
 function showBootFatal(msg) {
   const label = document.getElementById('ldr-label')
@@ -237,6 +239,7 @@ function applyQualityPreset(preset) {
   }
   skyDecor.setSkyTier(qualitySettings.skyTier)
   islandParticles.setScale(qualitySettings.particleScale)
+  applyGlassCss(qualitySettings)
 }
 
 settingsOverlay.onQualityChange = (q) => applyQualityPreset(q)
@@ -694,7 +697,7 @@ perfMark('world_download_start')
     renderer.render(scene, camSystem.camera)
     _pendingMeaningfulFrame = true
     triggerArrival(model)
-    scheduleDeferredBvh()
+    // BVH for non-terrain meshes waits until after the intro zoom (see animate)
   } catch (err) {
     console.error('GLB load error:', err)
     loadDirector?.fail('Could not load the world. Check your connection, then retry.')
@@ -1043,7 +1046,7 @@ function openIslandPanel() {
     return
   }
 
-  ui.openPanel(ISLANDS[activeIslandName])
+  ui.openPanel(ISLANDS[activeIslandName], activeIslandName)
 }
 
 function closeIslandPanel() {
@@ -1118,6 +1121,18 @@ function easeOutBack(t) {
 
 const LDR_ARRIVE_SPEED = 55
 
+/** True while warmPlayView owns the camera/renders (loading animate must not fight it). */
+let _warmingPlay = false
+let _playWarmStarted = false
+/** Bumped to cancel an in-flight warm after a deadline. */
+let _playWarmToken = 0
+/** Delay deferred BVH / sky until intro zoom has settled. */
+let _postIntroDeferredDone = false
+let _introOverlayOpened = false
+/** @type {number[]|null} */
+let _introFrameSamples = null
+let _introFrameLogged = false
+
 function tryBeginReveal() {
   if (_revealScheduled || loadDirector?.isFatal) return
   if (!loadDirector?.isReady || !_arrivalDone) return
@@ -1132,14 +1147,162 @@ function tryBeginReveal() {
   else start()
 }
 
+/**
+ * Warm character shaders + play-camera shadow maps UNDER the loader so the
+ * post-100% zoom is just a camera lerp (no compile/shadow first-hit spike).
+ * Renders into an offscreen target so the settled arrival frame stays on screen
+ * (no canvas hide / camera jump flash).
+ * @param {number} warmToken invalidated if a deadline aborts the warm
+ */
+async function warmPlayView(warmToken) {
+  if (!planetModel || loadDirector?.isFatal) return
+  _warmingPlay = true
+  loadDirector?.beginWarmingPlay()
+  perfMark('play_warm_start')
+
+  const stillActive = () => warmToken === _playWarmToken && !loadDirector?.hasPlayWarmed
+
+  // Let the arrival settle paint before we hitch the main thread
+  await yieldToMain()
+  if (!stillActive()) {
+    _warmingPlay = false
+    return
+  }
+
+  planetModel.visible = true
+
+  // Approximate play orbit (matches Camera.js DIST / PITCH_DEF / character pivot)
+  const charY = PLANET_RADIUS + 0.9
+  const pitch = 0.38
+  const dist = 16
+  const hDist = Math.cos(pitch) * dist
+  const vDist = Math.sin(pitch) * dist
+  const pivotY = charY + 0.75
+  camSystem.camera.position.set(0, pivotY + vDist, hDist)
+  camSystem.camera.lookAt(0, pivotY, 0)
+  camSystem.camera.updateMatrixWorld(true)
+  planetGroup.updateMatrixWorld(true)
+
+  // Pose character at play height so shadow/compile warm matches gameplay
+  const charWorldY = PLANET_RADIUS + 0.9
+  character.group.position.set(0, charWorldY, 0)
+  modelGroup.position.set(0, charWorldY, 0)
+
+  // Headless/automation: rAF is starved and full shadow compiles can hang —
+  // do a minimal warm so Ready isn't blocked (real browsers take the full path).
+  const lightWarm = reducedMotion || !!navigator.webdriver
+
+  // Keep character visible for shadow-map fills
+  if (fbxInScene) {
+    modelGroup.visible = true
+    character.group.visible = false
+  } else {
+    modelGroup.visible = false
+    character.group.visible = true
+  }
+
+  // Offscreen: shadow maps still update; the on-screen canvas keeps the last
+  // arrival frame (no blank flash from hiding the canvas).
+  const warmRT = new THREE.WebGLRenderTarget(4, 4)
+  renderer.setRenderTarget(warmRT)
+  lighting.sunLight.intensity = 4.0
+
+  try {
+    if (stillActive() && !lightWarm) {
+      if (fbxInScene && _charGpuPrewarmStage < 2) {
+        prewarmCharacterDraw(true)
+        _charGpuPrewarmStage = 2
+      } else if (!fbxInScene && _charGpuPrewarmStage < 1) {
+        prewarmCharacterDraw(false)
+        _charGpuPrewarmStage = 1
+      }
+      try {
+        renderer.compile(scene, camSystem.camera)
+      } catch (err) {
+        console.warn('Play-view compile warning:', err)
+      }
+    } else if (stillActive() && lightWarm) {
+      _charGpuPrewarmStage = fbxInScene ? 2 : 1
+    }
+
+    const warmPasses = lightWarm ? 1 : 3
+    for (let i = 0; i < warmPasses && stillActive(); i++) {
+      renderer.render(scene, camSystem.camera)
+      await yieldToMain()
+      if (stillActive()) renderer.setRenderTarget(warmRT)
+    }
+  } finally {
+    renderer.setRenderTarget(null)
+    warmRT.dispose()
+    lighting.sunLight.intensity = 0
+    character.group.visible = false
+    modelGroup.visible = false
+    // Restore loading camera without redrawing — screen still shows settled globe
+    camSystem.setLoadingView()
+  }
+
+  if (stillActive()) {
+    perfMark('play_warm_end')
+    perfMeasure('play_warm_gpu', 'play_warm_start', 'play_warm_end')
+  }
+  if (warmToken === _playWarmToken) _warmingPlay = false
+}
+
+/** After planet arrival + first frame: warm play view, then Ready → reveal. */
+async function maybeStartPlayWarm() {
+  if (_playWarmStarted || loadDirector?.isFatal) return
+  if (!_arrivalDone) return
+  if (!loadDirector?.hasFirstFrame) return
+  if (loadDirector?.hasPlayWarmed) {
+    tryBeginReveal()
+    return
+  }
+  _playWarmStarted = true
+  const warmToken = ++_playWarmToken
+  if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('perf')) {
+    console.log('[load] play warm start')
+  }
+  // Safety net if GPU warm hangs (should be rare outside headless)
+  const warmMs = reducedMotion || navigator.webdriver ? 3000 : 20000
+  const warmDeadline = new Promise(resolve => setTimeout(resolve, warmMs))
+  try {
+    await Promise.race([warmPlayView(warmToken), warmDeadline])
+    if (!loadDirector?.hasPlayWarmed) {
+      console.warn('[load] play warm deadline — continuing')
+      _playWarmToken++
+      _warmingPlay = false
+      lighting.sunLight.intensity = 0
+      renderer.setRenderTarget(null)
+      camSystem.setLoadingView()
+    }
+    loadDirector?.markPlayWarmed()
+    loadDirector?.flush?.()
+  } catch (err) {
+    console.error('Play warm failed:', err)
+    _playWarmToken++
+    _warmingPlay = false
+    lighting.sunLight.intensity = 0
+    renderer.setRenderTarget(null)
+    camSystem.setLoadingView()
+    // Don't block forever — mark warmed so reveal can proceed
+    loadDirector?.markPlayWarmed()
+  }
+  tryBeginReveal()
+}
+
 // Called when world.glb finishes compile. Planet eases in from off-screen right.
 function triggerArrival(model) {
   const hadFlybys = loaderFlybys.flushOut()
   const baseX = model.position.x
 
   const finishArrival = () => {
+    if (_arrivalDone) return
     _arrivalDone = true
-    tryBeginReveal()
+    if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('perf')) {
+      console.log('[load] arrival done → play warm')
+    }
+    // Next frame: let the centered globe paint before GPU warm hitches the thread
+    requestAnimationFrame(() => maybeStartPlayWarm())
   }
 
   if (reducedMotion) {
@@ -1151,23 +1314,35 @@ function triggerArrival(model) {
     return
   }
 
+  const viewH = Math.max(1, window.innerHeight || 1)
+  const viewW = Math.max(1, window.innerWidth || 1)
   const halfH = Math.tan(THREE.MathUtils.degToRad(camSystem.camera.fov) / 2) * camSystem.camera.position.z
-  const halfW = halfH * (window.innerWidth / window.innerHeight)
-  const startX = baseX + halfW + 30
+  const halfW = halfH * (viewW / viewH)
+  const startX = baseX + (Number.isFinite(halfW) ? halfW : 40) + 30
   // Park off-screen BEFORE making visible — never show a centered pop-in.
   model.position.x = startX
   model.rotation.y = -0.45
   model.visible = true
 
-  const dist       = startX - baseX
+  const dist       = Math.max(0.01, startX - baseX)
   const settleDist = dist * 0.18
-  const dLinear    = (dist - settleDist) / LDR_ARRIVE_SPEED
-  const dSettle    = (2 * settleDist)    / LDR_ARRIVE_SPEED
+  const dLinear    = Math.min(8, Math.max(0.05, (dist - settleDist) / LDR_ARRIVE_SPEED))
+  const dSettle    = Math.min(4, Math.max(0.05, (2 * settleDist) / LDR_ARRIVE_SPEED))
 
-  const tl = gsap.timeline({ delay: hadFlybys ? 0.25 : 0, onComplete: finishArrival })
+  const delay = hadFlybys ? 0.25 : 0
+  const tl = gsap.timeline({ delay, onComplete: finishArrival })
   tl.to(model.position, { x: baseX + settleDist, duration: dLinear, ease: 'none' }, 0)
     .to(model.position, { x: baseX,              duration: dSettle, ease: 'power2.out' })
   tl.to(model.rotation, { y: 0, duration: dLinear + dSettle, ease: 'sine.out' }, 0)
+  // Failsafe outside GSAP — never block Ready if the tween stalls
+  setTimeout(() => {
+    if (!_arrivalDone) {
+      console.warn('[load] arrival failsafe')
+      model.position.x = baseX
+      model.rotation.y = 0
+      finishArrival()
+    }
+  }, Math.ceil((delay + dLinear + dSettle + 1.25) * 1000))
 }
 
 function startScene() {
@@ -1188,22 +1363,14 @@ function startScene() {
     if (loaderEl) loaderEl.style.display = 'none'
   }, reducedMotion ? 400 : 1400)
 
-  const _introReturning = !!localStorage.getItem('phf-intro-seen')
-  setTimeout(() => introOverlay.open(_introReturning), reducedMotion ? 400 : 900)
+  // Intro overlay + deferred sky/BVH wait until zoom settles (see animate)
 
-  // Prefetch ALL island panel modules after reveal so E never hits a cold import.
+  // Prefetch island panel modules after reveal (eager modules → no-op today)
   const prefetch = () => { prefetchAllIslands() }
   if ('requestIdleCallback' in window) requestIdleCallback(prefetch, { timeout: 1800 })
   else setTimeout(prefetch, 800)
 
   if (isPerfEnabled()) setTimeout(() => perfSummary(), 100)
-
-  // Defer non-critical sky systems after first live frames
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => skyDecor?.enableDeferred?.(qualitySettings.skyTier), { timeout: 2000 })
-  } else {
-    setTimeout(() => skyDecor?.enableDeferred?.(qualitySettings.skyTier), 600)
-  }
 }
 
 // ─── Render loop ─────────────────────────────────────────────────────────────
@@ -1275,6 +1442,9 @@ function animate() {
     loadDirector?.nudgeDownloadFallback(_loaderElapsed)
     loadDirector?.tick(dt)
 
+    // warmPlayView owns camera + renders — don't overwrite mid-warm
+    if (_warmingPlay) return
+
     if (!(import.meta.env.DEV && window.location.search.includes('screenshot'))) {
       character.group.visible = false
       modelGroup.visible = false
@@ -1285,12 +1455,26 @@ function animate() {
     if (_pendingMeaningfulFrame && planetModel && canvas.clientWidth > 0) {
       _pendingMeaningfulFrame = false
       loadDirector?.markFirstMeaningfulFrame()
+      maybeStartPlayWarm()
     }
     return
   }
 
   scenePlayTime += dt
   loadDirector?.tick(dt)
+
+  // ?perf=1: sample frame times for the first second after reveal
+  if (isPerfEnabled() && scenePlayTime <= 1.05) {
+    if (!_introFrameSamples) _introFrameSamples = []
+    _introFrameSamples.push(dt * 1000)
+    if (scenePlayTime > 1 && !_introFrameLogged) {
+      _introFrameLogged = true
+      const arr = _introFrameSamples
+      const max = Math.max(...arr)
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length
+      console.log(`[perf] first_1s_frames: n=${arr.length} avg=${avg.toFixed(1)}ms max=${max.toFixed(1)}ms`)
+    }
+  }
 
   // Adaptive DPR (auto quality only): ease toward 1 if frames are heavy
   if (_adaptiveDprEnabled && qualitySettings.preset === 'auto') {
@@ -1621,10 +1805,17 @@ function animate() {
     lighting.presentationSun2.intensity += (0 - lighting.presentationSun2.intensity) * lerpF
   }
 
+  // While a detail panel / About is open, skip decorative GPU work so glass UI
+  // isn't fighting a full sky + particle + shadow update every frame.
+  const uiDetailOpen = islandUIState === 'detail' || aboutOverlay.isOpen()
+  renderer.shadowMap.autoUpdate = !uiDetailOpen
+
   stars.update(time, 0)
-  if (!reducedMotion) shootingStars.update(dt)
-  skyDecor.update(dt, time, reducedMotion)
-  islandParticles.update(dt, activeIslandName, charWorldY, reducedMotion, islandDirs)
+  if (!uiDetailOpen) {
+    if (!reducedMotion) shootingStars.update(dt)
+    skyDecor.update(dt, time, reducedMotion)
+    islandParticles.update(dt, activeIslandName, charWorldY, reducedMotion, islandDirs)
+  }
   camSystem.update(dt, PLANET_RADIUS, charWorldY, -1, null, planetGroup, heading, moving)
 
   // Reveal with the loader crossfade (Ready already required a meaningful frame).
@@ -1678,14 +1869,29 @@ function animate() {
     }
   }
 
-  if (planetModel) {
-    if (fbxInScene && _charGpuPrewarmStage < 2) {
-      prewarmCharacterDraw(true)
-      _charGpuPrewarmStage = 2
-    } else if (!fbxInScene && _charGpuPrewarmStage < 1) {
-      prewarmCharacterDraw(false)
-      _charGpuPrewarmStage = 1
-    }
+  // Character GPU warm runs under the loader (warmPlayView). Only catch a late
+  // skinned-model load here — never re-compile mid zoom.
+  if (planetModel && fbxInScene && _charGpuPrewarmStage < 2 && scenePlayTime > 2.5) {
+    prewarmCharacterDraw(true)
+    _charGpuPrewarmStage = 2
+  }
+
+  // After intro zoom settles: deferred BVH, sky extras, welcome overlay
+  const introSettled =
+    reducedMotion ||
+    camSystem._introKBlend >= 1 ||
+    scenePlayTime > 2.2
+  if (introSettled && !_postIntroDeferredDone) {
+    _postIntroDeferredDone = true
+    scheduleDeferredBvh()
+    const enableSky = () => skyDecor?.enableDeferred?.(qualitySettings.skyTier)
+    if ('requestIdleCallback' in window) requestIdleCallback(enableSky, { timeout: 1500 })
+    else setTimeout(enableSky, 200)
+  }
+  if (introSettled && !_introOverlayOpened) {
+    _introOverlayOpened = true
+    const returning = !!localStorage.getItem('phf-intro-seen')
+    introOverlay.open(returning)
   }
 
   renderer.render(scene, camSystem.camera)

@@ -45,6 +45,7 @@ export function resolveQuality(preset, opts = {}) {
       skyTier: 'minimal',
       particleScale: 0.35,
       adaptiveDpr: false,
+      glassBlur: 0,
     })
   } else if (preset === 'high') {
     s = baseSettings({
@@ -56,6 +57,7 @@ export function resolveQuality(preset, opts = {}) {
       skyTier: 'full',
       particleScale: 1,
       adaptiveDpr: false,
+      glassBlur: 14,
     })
   } else {
     // auto — scale from device tier
@@ -69,6 +71,7 @@ export function resolveQuality(preset, opts = {}) {
         skyTier: 'minimal',
         particleScale: 0.4,
         adaptiveDpr: true,
+        glassBlur: 0,
       })
     } else if (tier === 'high') {
       s = baseSettings({
@@ -80,6 +83,7 @@ export function resolveQuality(preset, opts = {}) {
         skyTier: 'full',
         particleScale: 1,
         adaptiveDpr: true,
+        glassBlur: 14,
       })
     } else {
       s = baseSettings({
@@ -91,6 +95,7 @@ export function resolveQuality(preset, opts = {}) {
         skyTier: 'standard',
         particleScale: 0.7,
         adaptiveDpr: true,
+        glassBlur: 8,
       })
     }
   }
@@ -112,8 +117,17 @@ function baseSettings(partial) {
     skyTier: 'standard', // 'minimal' | 'standard' | 'full'
     particleScale: 1,
     adaptiveDpr: false,
+    glassBlur: 14, // CSS --glass-blur px; 0 = solid fill (cheap over WebGL)
     ...partial,
   }
+}
+
+/** Push glass blur tokens onto :root (call after resolveQuality / preset change). */
+export function applyGlassCss(settings) {
+  const root = document.documentElement
+  const blur = settings?.glassBlur ?? 14
+  root.style.setProperty('--glass-blur', `${blur}px`)
+  root.classList.toggle('glass-solid', blur === 0)
 }
 
 /** Frame-time budget (ms) for adaptive DPR in auto mode. */

@@ -1,4 +1,6 @@
 import { svgIcon } from './icons.js'
+import { takePanelBody, hasPanelCached } from '../data/content.js'
+import { isPerfEnabled, perfMark, perfMeasure } from '../loading/perfLog.js'
 
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
@@ -48,6 +50,7 @@ export class UI {
     })
 
     this._closeTimer = null
+    this._openGen = 0
     this.onPopupTap   = null
     this.onClosePanel = null
 
@@ -82,9 +85,13 @@ export class UI {
     this._popup.classList.add('hidden')
   }
 
-  openPanel(island) {
+  /**
+   * @param {object} island
+   * @param {string} cacheKey ISLANDS registry key (e.g. arctic_island)
+   */
+  openPanel(island, cacheKey) {
     if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null }
-    this._openGen = (this._openGen || 0) + 1
+    this._openGen += 1
     const gen = this._openGen
 
     this._icon.innerHTML      = svgIcon(island.iconKey, 26)
@@ -95,22 +102,41 @@ export class UI {
     const card = this._panel.querySelector('.wp-card')
     card.className = 'wp-card' + (island.variant ? ` wp--${island.variant}` : '')
 
-    // Open chrome first with empty body — avoids parsing a huge HTML tree on the
-    // same frame as the (expensive) glass backdrop-filter turn-on.
-    this._content.innerHTML = ''
+    const key = cacheKey || island.section
+    const init = island.init
     this._content.scrollTop = 0
 
+    const perfKey = `panel_open_${key}`
+    if (isPerfEnabled()) perfMark(`${perfKey}_start`)
+
+    if (hasPanelCached(key)) {
+      // Warm cache: mount body same frame as chrome (clone = no HTML parse hitch)
+      const body = takePanelBody(key, island)
+      this._content.replaceChildren(body)
+      this._panel.classList.remove('hidden', 'is-closing')
+      void this._panel.offsetWidth
+      this._panel.classList.add('is-open')
+      requestAnimationFrame(() => {
+        if (gen !== this._openGen) return
+        init?.(this._content)
+        if (isPerfEnabled()) {
+          perfMark(`${perfKey}_end`)
+          perfMeasure(perfKey, `${perfKey}_start`, `${perfKey}_end`)
+        }
+      })
+      return
+    }
+
+    // Cold path: chrome first, parse+cache next frame, init the frame after
+    this._content.replaceChildren()
     this._panel.classList.remove('hidden', 'is-closing')
     void this._panel.offsetWidth
     this._panel.classList.add('is-open')
 
-    const html = typeof island.html === 'function' ? island.html() : island.html
-    const init = island.init
-
-    // Next frame: mount DOM. Frame after: run init (media / observers).
     requestAnimationFrame(() => {
       if (gen !== this._openGen) return
-      this._content.innerHTML = html
+      const body = takePanelBody(key, island)
+      this._content.replaceChildren(body)
       this._content.scrollTop = 0
       requestAnimationFrame(() => {
         if (gen !== this._openGen) return
@@ -134,7 +160,8 @@ export class UI {
     this._closeTimer = setTimeout(() => {
       this._panel.classList.add('hidden')
       this._panel.classList.remove('is-closing')
-      this._content.innerHTML = ''
+      // Drop live nodes; templates stay in the island cache for the next open
+      this._content.replaceChildren()
       this._closeTimer = null
     }, 320)
   }
