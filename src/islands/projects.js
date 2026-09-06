@@ -1,298 +1,728 @@
-// Projects island — a "featured spread" (master–detail), not a carousel:
-//   • Left  → the FEATURED project: a large media stage (real photo/video when
-//     you drop one in, a mountain placeholder until then) + title, blurb, tags,
-//     and actions.
-//   • Right → a clickable list of every project. Pick one and the feature
-//     crossfades to it. Keyboard ↑/↓ moves the selection; Enter opens its link.
-//
-// Media: drop public/projects/<slug>.webm (+ optional <slug>.jpg poster) and it
-// auto-plays in the stage; otherwise the placeholder shows. Works with zero
-// assets today. `npm run record` generates both from a live URL.
+// Mountain Island — editorial horizontal collage (justified mosaic rows).
+// Shared horizontal scroll; projects grow on hover/focus and open a detail sheet.
 import { svgIcon } from '../ui/icons.js'
+import { GALLERY, PROJECT_BY_ID } from './projectsData.js'
+import { layoutCollage, shouldRelayout } from './projectsLayout.js'
 
-const BASE = import.meta.env.BASE_URL || '/'
-const REDUCE = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const REDUCE = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+const COARSE = window.matchMedia?.('(pointer: coarse)').matches ?? false
+const DRAG_THRESHOLD = 12
 
-// accent = per-project hue that recolours the stage glow + active row, so
-// flicking through projects feels alive. year/role add a line of context.
-const PROJECTS = [
-  {
-    slug: 'erics-world',
-    title: "Eric's World",
-    year: '2026',
-    role: 'Creative Dev',
-    blurb: "The 3D walkable planet you're standing on right now — a Little Prince-inspired portfolio, fully procedural, built from Three.js primitives and a hand-rolled glass UI.",
-    tags: ['Three.js', 'Vite', 'GLSL'],
-    accent: '#FF8A65',
-    href: 'https://erriiiccccccc.github.io',
-    repo: 'https://github.com/erriiiccccccc/erriiiccccccc.github.io',
-  },
-  {
-    slug: 'foundtech',
-    title: 'FoundTech',
-    year: '2024',
-    role: 'Web Dev',
-    blurb: 'A clean, responsive marketing site for a Malaysian tech company — built and shipped live, with a smooth scrolling story from hero to footer.',
-    tags: ['Web', 'Responsive', 'Frontend'],
-    accent: '#26C6DA',
-    href: 'https://foundtech.com.my',
-  },
-  {
-    slug: 'petaling-utama',
-    title: 'Petaling Utama Motor',
-    year: '2024',
-    role: 'Full-Stack',
-    blurb: 'Full-stack e-commerce site for a real Malaysian motor business — live and in production, handling a real catalogue and real customers.',
-    tags: ['React', 'Node.js', 'PostgreSQL', 'Nginx'],
-    accent: '#4CAF50',
-    href: 'https://petalingutamamotor.com',
-  },
-  {
-    slug: 'medmatch',
-    title: 'MedMatch',
-    year: '2024',
-    role: 'Web Dev',
-    blurb: 'A matching platform that connects medical students with clinicians through verified profiles, purpose-built matching, and streamlined selection — research, without the friction.',
-    tags: ['Web', 'Platform', 'Frontend'],
-    accent: '#EC407A',
-    href: 'https://www.medmatch.institute',
-  },
-  {
-    slug: 'ygo',
-    title: 'YGo Tours',
-    year: '2024',
-    role: 'Web Dev',
-    blurb: 'A polished site for a Kuala Lumpur travel agency (est. 1994) — private journeys, corporate incentives, and specialty trips, presented with an editorial, magazine-style feel.',
-    tags: ['Web', 'Editorial', 'Frontend'],
-    accent: '#7E57C2',
-    href: 'https://ygowebsite.vercel.app',
-  },
-  {
-    slug: 'sotwds',
-    title: 'Scotland on the Web',
-    year: '2024',
-    role: 'Data Story',
-    blurb: 'A scrollytelling data story reading two web-archiving systems side by side — a manually curated seed list vs an automated stream — to surface what each kind of memory infrastructure preserves and misses.',
-    tags: ['Scrollytelling', 'Data Viz', 'D3'],
-    accent: '#29B6F6',
-    href: 'https://sotwds.vercel.app',
-  },
-  {
-    slug: 'elk-pipeline',
-    title: 'ELK Logging Pipeline',
-    year: '2023',
-    role: 'Internship',
-    blurb: 'An Elasticsearch + Kibana + Logstash pipeline on Oracle Linux for a fintech platform at Finexus — turning raw server logs into searchable, alertable dashboards.',
-    tags: ['Elasticsearch', 'Kibana', 'Linux'],
-    accent: '#64B5F6',
-  },
-  {
-    slug: 'blender',
-    title: 'First Blender Project',
-    year: '2023',
-    role: 'Personal',
-    blurb: 'Dove into 3D modeling and built a full scene from scratch — lighting, materials, the lot. Pretty proud of how it turned out for a first go.',
-    tags: ['Blender', '3D Art'],
-    accent: '#FBBF24',
-  },
-  {
-    slug: 'ada-hack',
-    title: 'Ada Hack 2022 — HumanEd',
-    year: '2022',
-    role: 'Hackathon',
-    blurb: "Hackathon winner at the University of Edinburgh, built for the Rubik's Cube Painting Challenge under a tight 24-hour clock.",
-    tags: ['Hackathon'],
-    accent: '#7C3AED',
-    badge: 'Winner',
-  },
-]
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
-const pad = (n) => String(n).padStart(2, '0')
+function cardHtml(item) {
+  const isProject = item.type === 'project'
+  const ar = item.aspectRatio
+  const accent = item.accent || '#FF8A65'
+  const tag = isProject ? 'button' : 'div'
+  const attrs = isProject
+    ? `type="button" class="pj-card pj-card--project" data-id="${escapeHtml(item.id)}" style="--pc:${accent};--ar:${ar}" aria-label="${escapeHtml(item.title)}. Dive in for details."`
+    : `class="pj-card pj-card--art" data-id="${escapeHtml(item.id)}" style="--pc:${accent};--ar:${ar}" aria-hidden="true"`
 
-// One row in the right-hand explore list.
-function listItem(p, i) {
-  const meta = p.tags.slice(0, 3).join(' · ')
-  return `
-    <button class="pj-item${i === 0 ? ' is-active' : ''}" type="button" role="tab"
-            aria-selected="${i === 0}" data-i="${i}" style="--pc:${p.accent}">
-      <span class="pj-item-index">${pad(i + 1)}</span>
-      <span class="pj-item-main">
-        <span class="pj-item-title">${p.title}</span>
-        <span class="pj-item-meta">${meta}</span>
-      </span>
-      ${p.badge ? `<span class="pj-item-badge">${svgIcon('trophy', 12)}</span>` : ''}
-      <span class="pj-item-go">${svgIcon('arrowRight', 16)}</span>
-    </button>`
+  const media = item.mediaType === 'video'
+    ? `<img class="pj-card-poster" alt="${escapeHtml(item.alt || '')}" loading="lazy" decoding="async" data-src="${escapeHtml(item.poster)}" />
+       <video class="pj-card-video" muted loop playsinline preload="none" poster="${escapeHtml(item.poster || '')}" data-src="${escapeHtml(item.src)}"></video>`
+    : `<img class="pj-card-poster" alt="${escapeHtml(item.alt || '')}" loading="lazy" decoding="async" data-src="${escapeHtml(item.src || item.poster)}" />`
+
+  const teaser = isProject
+    ? `<span class="pj-card-teaser">
+         <span class="pj-card-title">${escapeHtml(item.title)}</span>
+         <span class="pj-card-sub">${escapeHtml(item.subtitle)}</span>
+         <span class="pj-card-cta">dive in ${svgIcon('arrowRight', 14)}</span>
+       </span>`
+    : `<span class="pj-card-label">${escapeHtml(item.title)}</span>`
+
+  const badge = item.badge
+    ? `<span class="pj-card-badge">${svgIcon('trophy', 12)} ${escapeHtml(item.badge)}</span>`
+    : ''
+
+  const ph = isProject
+    ? `<span class="pj-card-ph" aria-hidden="true">${svgIcon('mountain', 36)}</span>`
+    : ''
+
+  return `<${tag} ${attrs}>
+    <span class="pj-card-media">
+      ${ph}
+      ${media}
+    </span>
+    ${badge}
+    ${teaser}
+  </${tag}>`
 }
 
 export const PROJECTS_HTML = `
-  <div class="pj-spread" style="--pc:${PROJECTS[0].accent}">
-    <section class="pj-feature" aria-live="polite">
-      <div class="pj-stage">
-        <div class="pj-stage-glow" aria-hidden="true"></div>
-        <span class="pj-stage-index" aria-hidden="true">${pad(1)}</span>
-        <div class="pj-stage-ph" aria-hidden="true">${svgIcon('mountain', 52)}</div>
-        <img class="pj-stage-poster" alt="" aria-hidden="true" />
-        <video class="pj-stage-video" muted loop playsinline preload="none"></video>
-        <span class="pj-stage-badge" hidden>${svgIcon('trophy', 13)} <span class="pj-stage-badge-txt"></span></span>
-      </div>
-      <div class="pj-feature-body">
-        <div class="pj-feature-eyebrow">
-          <span class="pj-kicker">Featured</span>
-          <span class="pj-counter">${pad(1)} / ${pad(PROJECTS.length)}</span>
-        </div>
-        <h3 class="pj-feature-title"></h3>
-        <div class="pj-feature-sub"></div>
-        <p class="pj-feature-blurb"></p>
-        <div class="pj-feature-tags"></div>
-        <div class="pj-feature-links"></div>
-      </div>
-    </section>
-
-    <div class="pj-list" role="tablist" aria-label="Projects" aria-orientation="vertical">
-      ${PROJECTS.map(listItem).join('')}
+  <div class="pj-collage" data-island-dispose>
+    <div class="pj-scroller" tabindex="0" aria-label="Project gallery. Scroll horizontally. Use arrow keys to move between projects.">
+      <div class="pj-track"></div>
     </div>
+    <div class="pj-sheet-scrim" hidden aria-hidden="true"></div>
+    <aside class="pj-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="pj-sheet-title">
+      <button type="button" class="pj-sheet-close" aria-label="Close details">${svgIcon('close', 18)}</button>
+      <div class="pj-sheet-media"></div>
+      <div class="pj-sheet-body">
+        <p class="pj-sheet-kicker"></p>
+        <h3 id="pj-sheet-title" class="pj-sheet-title"></h3>
+        <p class="pj-sheet-sub"></p>
+        <p class="pj-sheet-blurb"></p>
+        <div class="pj-sheet-tags"></div>
+        <div class="pj-sheet-links"></div>
+      </div>
+    </aside>
   </div>
 `
 
+function hydrateImages(root) {
+  root.querySelectorAll('img.pj-card-poster[data-src]').forEach((img) => {
+    const url = img.getAttribute('data-src')
+    if (!url) return
+    img.onload = () => {
+      const card = img.closest('.pj-card')
+      if (!card) return
+      card.classList.add('has-media')
+      // Art: lock tile width to the photo’s real aspect — never crop
+      if (card.classList.contains('pj-card--art') && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        const ar = img.naturalWidth / img.naturalHeight
+        card.style.setProperty('--ar', String(ar))
+      }
+    }
+    img.onerror = () => img.closest('.pj-card')?.classList.add('has-fallback')
+    img.src = url
+  })
+}
+
 export function initProjects(root) {
-  const spread = root.querySelector('.pj-spread')
-  if (!spread) return
+  const collage = root.querySelector('.pj-collage')
+  const scroller = root.querySelector('.pj-scroller')
+  const track = root.querySelector('.pj-track')
+  const sheet = root.querySelector('.pj-sheet')
+  const scrim = root.querySelector('.pj-sheet-scrim')
+  if (!collage || !scroller || !track || !sheet) return
 
-  const items   = [...root.querySelectorAll('.pj-item')]
-  const feature = root.querySelector('.pj-feature')
-  const stage   = root.querySelector('.pj-stage')
-  const video   = root.querySelector('.pj-stage-video')
-  const poster  = root.querySelector('.pj-stage-poster')
-  const idxEl   = root.querySelector('.pj-stage-index')
-  const badgeEl = root.querySelector('.pj-stage-badge')
-  const badgeTx = root.querySelector('.pj-stage-badge-txt')
+  const ac = new AbortController()
+  const { signal } = ac
+  let layoutState = null
+  let sheetOpen = false
+  let lastFocus = null
+  let drag = null
+  let momentumId = 0
+  let vel = 0
+  const nearIds = new Set()
 
-  const titleEl = root.querySelector('.pj-feature-title')
-  const subEl   = root.querySelector('.pj-feature-sub')
-  const blurbEl = root.querySelector('.pj-feature-blurb')
-  const tagsEl  = root.querySelector('.pj-feature-tags')
-  const linksEl = root.querySelector('.pj-feature-links')
-  const cntEl   = root.querySelector('.pj-counter')
-
-  let current = -1
-  let videoGen = 0
-  let videoTimer = 0
-
-  const clearVideo = () => {
-    video.pause()
-    video.removeAttribute('src')
-    video.load()
-    stage.classList.remove('has-media')
+  const pauseAllVideos = () => {
+    collage.querySelectorAll('video').forEach((v) => {
+      try {
+        v.pause()
+        v.currentTime = 0
+      } catch { /* ignore */ }
+    })
   }
 
-  /** Attach/play demo video after open animation — poster shows immediately. */
-  const attachVideo = (p, gen) => {
-    if (gen !== videoGen) return
-    const videoUrl = `${BASE}projects/${p.slug}.webm`
+  let clearSpotlight = () => {}
+  let clearTimer = 0
+
+  const dispose = () => {
+    cancelAnimationFrame(momentumId)
+    pauseAllVideos()
+    clearSpotlight()
+    ac.abort()
+    ro.disconnect()
+    io.disconnect()
+  }
+  root._disposeIsland = dispose
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const id = entry.target.getAttribute('data-id')
+        if (!id) continue
+        if (entry.isIntersecting) nearIds.add(id)
+        else {
+          nearIds.delete(id)
+          const video = entry.target.querySelector('video.pj-card-video')
+          if (video) {
+            video.pause()
+            try { video.currentTime = 0 } catch { /* ignore */ }
+            entry.target.classList.remove('is-playing')
+          }
+        }
+      }
+    },
+    { root: scroller, rootMargin: '200px', threshold: 0.01 },
+  )
+
+  const ensureVideoSrc = (video) => {
+    if (!video || video.getAttribute('src')) return
+    const url = video.getAttribute('data-src')
+    if (url) video.src = url
+  }
+
+  const playCardVideo = (card) => {
+    if (REDUCE || sheetOpen) return
+    const video = card.querySelector('video.pj-card-video')
+    if (!video) return
+    const id = card.getAttribute('data-id')
+    if (id && !nearIds.has(id)) return
+    ensureVideoSrc(video)
     video.muted = true
     video.playsInline = true
-    video.src = videoUrl
-    video.oncanplay = () => {
-      if (gen !== videoGen) return
-      stage.classList.add('has-media')
-      video.play().catch(() => {})
-    }
-    video.onerror = () => {
-      if (gen !== videoGen) return
-      stage.classList.remove('has-media')
-    }
-    video.play().catch(() => {})
+    video.play()?.catch(() => {})
+    card.classList.add('is-playing')
   }
 
-  const fillFeature = (p, i, { deferVideo = true } = {}) => {
-    spread.style.setProperty('--pc', p.accent)
-    idxEl.textContent = pad(i + 1)
-    cntEl.textContent = `${pad(i + 1)} / ${pad(PROJECTS.length)}`
+  const stopCardVideo = (card) => {
+    const video = card.querySelector('video.pj-card-video')
+    if (!video) return
+    video.pause()
+    try { video.currentTime = 0 } catch { /* ignore */ }
+    card.classList.remove('is-playing')
+  }
 
-    titleEl.textContent = p.title
-    subEl.innerHTML = `<span>${p.role}</span><span class="pj-dot"></span><span>${p.year}</span>`
-    blurbEl.textContent = p.blurb
+  // ── Detail sheet (defined before layout bind so click handlers are safe) ──
+  const sheetEls = {
+    media: sheet.querySelector('.pj-sheet-media'),
+    kicker: sheet.querySelector('.pj-sheet-kicker'),
+    title: sheet.querySelector('.pj-sheet-title'),
+    sub: sheet.querySelector('.pj-sheet-sub'),
+    blurb: sheet.querySelector('.pj-sheet-blurb'),
+    tags: sheet.querySelector('.pj-sheet-tags'),
+    links: sheet.querySelector('.pj-sheet-links'),
+    close: sheet.querySelector('.pj-sheet-close'),
+  }
 
-    tagsEl.innerHTML = p.tags.map(t => `<span class="tag">${t}</span>`).join('') +
-      (p.badge ? `<span class="tag tag--accent">${svgIcon('trophy', 13)} ${p.badge}</span>` : '')
+  const closeSheet = () => {
+    if (!sheetOpen) return
+    sheetOpen = false
+    sheet.hidden = true
+    scrim.hidden = true
+    collage.classList.remove('is-sheet-open')
+    sheetEls.media.innerHTML = ''
+    if (lastFocus?.focus) lastFocus.focus()
+    lastFocus = null
+  }
+
+  const openSheet = (id) => {
+    const p = PROJECT_BY_ID[id]
+    if (!p) return
+    clearSpotlight()
+    lastFocus = document.activeElement
+    sheetOpen = true
+    collage.classList.add('is-sheet-open')
+    pauseAllVideos()
+
+    sheet.style.setProperty('--pc', p.accent)
+    sheetEls.kicker.textContent = 'Project'
+    sheetEls.title.textContent = p.title
+    sheetEls.sub.textContent = p.subtitle
+    sheetEls.blurb.textContent = p.blurb
+    sheetEls.tags.innerHTML = (p.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('')
+      + (p.badge ? `<span class="tag tag--accent">${svgIcon('trophy', 13)} ${escapeHtml(p.badge)}</span>` : '')
 
     const links = [
-      p.href ? `<a class="pj-btn pj-btn--primary" href="${p.href}" target="_blank" rel="noopener noreferrer">${svgIcon('external', 15)} Visit live</a>` : '',
-      p.repo ? `<a class="pj-btn" href="${p.repo}" target="_blank" rel="noopener noreferrer">${svgIcon('github', 15)} Source</a>` : '',
+      p.href ? `<a class="pj-btn pj-btn--primary" href="${escapeHtml(p.href)}" target="_blank" rel="noopener noreferrer">${svgIcon('external', 15)} Visit live</a>` : '',
+      p.repo ? `<a class="pj-btn" href="${escapeHtml(p.repo)}" target="_blank" rel="noopener noreferrer">${svgIcon('github', 15)} Source</a>` : '',
     ].filter(Boolean).join('')
-    linksEl.innerHTML = links
+    sheetEls.links.innerHTML = links
 
-    // Stage media: poster immediately; video after card open (or on project switch).
-    clearTimeout(videoTimer)
-    videoGen += 1
-    const gen = videoGen
-    clearVideo()
-    poster.removeAttribute('src')
-    stage.classList.remove('has-poster')
-
-    const posterUrl = `${BASE}projects/${p.slug}.jpg`
-    poster.onload  = () => { if (gen === videoGen) stage.classList.add('has-poster') }
-    poster.onerror = () => { if (gen === videoGen) stage.classList.remove('has-poster') }
-    poster.src = posterUrl
-    video.poster = posterUrl
-
-    if (p.badge) { badgeTx.textContent = p.badge; badgeEl.hidden = false }
-    else badgeEl.hidden = true
-
-    const startVideo = () => attachVideo(p, gen)
-    if (deferVideo) {
-      const schedule = (fn) => {
-        if ('requestIdleCallback' in window) requestIdleCallback(fn, { timeout: 500 })
-        else videoTimer = setTimeout(fn, 320)
-      }
-      schedule(startVideo)
+    const poster = p.poster || p.src
+    if (p.mediaType === 'video' && p.src) {
+      sheetEls.media.innerHTML = `
+        <img class="pj-sheet-poster" alt="${escapeHtml(p.alt || '')}" src="${escapeHtml(poster)}" />
+        <video class="pj-sheet-video" muted loop playsinline preload="metadata" poster="${escapeHtml(poster)}" src="${escapeHtml(p.src)}"></video>`
+      const v = sheetEls.media.querySelector('video')
+      if (v && !REDUCE) v.play().catch(() => {})
     } else {
-      startVideo()
+      sheetEls.media.innerHTML = `<img class="pj-sheet-poster" alt="${escapeHtml(p.alt || '')}" src="${escapeHtml(poster)}" />`
+      const img = sheetEls.media.querySelector('img')
+      if (img) img.onerror = () => { img.style.opacity = '0' }
     }
+
+    sheet.hidden = false
+    scrim.hidden = false
+    requestAnimationFrame(() => sheetEls.close?.focus())
   }
 
-  const select = (i, focus = false) => {
-    if (i === current) return
-    current = i
-    items.forEach((el, k) => {
-      const on = k === i
-      el.classList.toggle('is-active', on)
-      el.setAttribute('aria-selected', String(on))
+  sheetEls.close?.addEventListener('click', closeSheet, { signal })
+  scrim?.addEventListener('click', closeSheet, { signal })
+
+  // ── Spotlight hover — FLIP enlarge + make-way (max 2 row-slots) ───────────
+  const PUSH_PAD = 10
+  const PUSH_MAX = 72
+  const FLIP_MS = 520
+  const FLIP_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+  const flipTransition = () => `transform ${FLIP_MS}ms ${FLIP_EASE}`
+
+  let spotlight = null // { card, ghost, pushed: [{ el, tx }] }
+  let flipGen = 0
+
+  const cancelScheduledClear = () => {
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = 0 }
+  }
+
+  /** Two frames so the invert paint commits before Play. */
+  const afterPaint = (fn) => {
+    requestAnimationFrame(() => requestAnimationFrame(fn))
+  }
+
+  const resetCardBox = (card) => {
+    card.classList.remove('is-spotlight', 'is-flipping')
+    card.style.position = ''
+    card.style.left = ''
+    card.style.top = ''
+    card.style.width = ''
+    card.style.height = ''
+    card.style.zIndex = ''
+    card.style.transform = ''
+    card.style.transformOrigin = ''
+    card.style.transition = ''
+  }
+
+  /** Instant teardown (dispose / relayout / sheet open). */
+  const hardClearSpotlight = () => {
+    cancelScheduledClear()
+    flipGen += 1
+    if (!spotlight) return
+    const { card, ghost, pushed } = spotlight
+    ;(pushed || []).forEach(({ el }) => {
+      el.style.transition = ''
+      el.style.transform = ''
+      el.classList.remove('is-pushed', 'is-flipping')
     })
-    if (focus) items[i].focus()
-
-    if (REDUCE) { fillFeature(PROJECTS[i], i, { deferVideo: false }); return }
-    // Quick crossfade: fade body+stage down, swap content, fade back up.
-    feature.classList.add('is-swapping')
-    const swap = () => {
-      fillFeature(PROJECTS[i], i, { deferVideo: false })
-      requestAnimationFrame(() => feature.classList.remove('is-swapping'))
-    }
-    // ~150ms out, matching the CSS transition
-    clearTimeout(select._t)
-    select._t = setTimeout(swap, 150)
+    resetCardBox(card)
+    ghost?.remove()
+    spotlight = null
+    collage.classList.remove('has-spotlight')
   }
 
-  items.forEach((el, i) => {
-    el.addEventListener('click', () => select(i))
-  })
+  clearSpotlight = hardClearSpotlight
 
-  // Roving keyboard: ↑/↓ (and ←/→) move selection through the list.
-  spread.addEventListener('keydown', e => {
-    const k = e.key
-    if (k === 'ArrowDown' || k === 'ArrowRight') {
-      e.preventDefault(); select((current + 1) % items.length, true)
-    } else if (k === 'ArrowUp' || k === 'ArrowLeft') {
-      e.preventDefault(); select((current - 1 + items.length) % items.length, true)
-    } else if (k === 'Home') {
-      e.preventDefault(); select(0, true)
-    } else if (k === 'End') {
-      e.preventDefault(); select(items.length - 1, true)
+  /** Reverse FLIP back to resting layout. */
+  const flipLeave = () => {
+    cancelScheduledClear()
+    if (!spotlight || spotlight.leaving) return
+    const { card, ghost, pushed } = spotlight
+    const gen = ++flipGen
+
+    if (REDUCE) {
+      hardClearSpotlight()
+      return
     }
-  })
 
-  // Text + poster now; video waits for idle / ~320ms so E-open stays smooth.
-  fillFeature(PROJECTS[0], 0, { deferVideo: true })
-  current = 0
+    const expRect = card.getBoundingClientRect()
+
+    ;(pushed || []).forEach(({ el, tx }) => {
+      el.style.transition = 'none'
+      el.style.transform = `translate3d(${tx}px, 0, 0)`
+    })
+    resetCardBox(card)
+    ghost?.remove()
+    const restRect = card.getBoundingClientRect()
+
+    const dx = expRect.left - restRect.left
+    const dy = expRect.top - restRect.top
+    const sx = expRect.width / Math.max(1, restRect.width)
+    const sy = expRect.height / Math.max(1, restRect.height)
+
+    card.style.transition = 'none'
+    card.style.transformOrigin = '0 0'
+    card.style.zIndex = '12'
+    card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
+    card.classList.add('is-flipping')
+    void card.offsetWidth
+
+    spotlight = { card, ghost: null, pushed: pushed || [], leaving: true }
+
+    afterPaint(() => {
+      if (gen !== flipGen) return
+      card.style.transition = flipTransition()
+      card.style.transform = 'translate(0px, 0px) scale(1, 1)'
+      ;(pushed || []).forEach(({ el }) => {
+        el.style.transition = flipTransition()
+        el.style.transform = 'translate3d(0px, 0px, 0)'
+      })
+      window.setTimeout(() => {
+        if (gen !== flipGen) return
+        ;(pushed || []).forEach(({ el }) => {
+          el.style.transform = ''
+          el.style.transition = ''
+          el.classList.remove('is-pushed', 'is-flipping')
+        })
+        card.classList.remove('is-flipping')
+        card.style.transform = ''
+        card.style.transformOrigin = ''
+        card.style.transition = ''
+        card.style.zIndex = ''
+        if (spotlight?.card === card) {
+          spotlight = null
+          collage.classList.remove('has-spotlight')
+        }
+      }, FLIP_MS + 48)
+    })
+  }
+
+  const scheduleClear = (card) => {
+    cancelScheduledClear()
+    clearTimer = setTimeout(() => {
+      clearTimer = 0
+      if (spotlight?.card === card && card.matches(':hover')) return
+      if (spotlight?.card === card) flipLeave()
+    }, 120)
+  }
+
+  const activateSpotlight = (card) => {
+    if (COARSE || sheetOpen) return
+    if (drag?.moved) return
+    cancelScheduledClear()
+    if (spotlight?.card === card && !spotlight.leaving) return
+
+    if (spotlight) hardClearSpotlight()
+
+    const row = card.parentElement
+    if (!row?.classList.contains('pj-row') || !track.contains(card)) return
+
+    const metrics = [...track.querySelectorAll('.pj-card')].map((el) => {
+      const r = el.parentElement
+      return {
+        el,
+        left: el.offsetLeft + r.offsetLeft,
+        top: r.offsetTop,
+        w: el.offsetWidth,
+        h: el.offsetHeight,
+      }
+    })
+    const self = metrics.find((m) => m.el === card)
+    if (!self || self.w < 8 || self.h < 8) return
+
+    const rowH = layoutState?.rowHeight || self.h
+    const gap = layoutState?.gap ?? 10
+    const rows = layoutState?.rowCount || track.querySelectorAll('.pj-row').length
+
+    // Max 2 slots; modest width growth
+    const expH = rows >= 2 ? rowH * 2 + gap : Math.round(self.h * 1.06)
+    let expW = self.w * (expH / self.h)
+    expW = Math.min(expW, scroller.clientWidth * 0.28)
+    expW = Math.max(expW, self.w * 1.08)
+
+    const centerX = self.left + self.w / 2
+    let expLeft = centerX - expW / 2
+    const maxLeft = Math.max(0, track.offsetWidth - expW)
+    expLeft = Math.max(0, Math.min(expLeft, maxLeft))
+    const expRight = expLeft + expW
+    const expTop = 0
+
+    const firstLeft = self.left
+    const firstTop = self.top
+    const firstW = self.w
+    const firstH = self.h
+
+    const pushed = []
+    metrics.forEach((m) => {
+      if (m.el === card) return
+      const oL = m.left
+      const oR = m.left + m.w
+      if (oR < expLeft - 4 || oL > expRight + 4) return
+      const oCenter = oL + m.w / 2
+      let tx = 0
+      if (oCenter < centerX) tx = Math.min(0, expLeft - PUSH_PAD - oR)
+      else tx = Math.max(0, expRight + PUSH_PAD - oL)
+      tx = Math.max(-PUSH_MAX, Math.min(PUSH_MAX, tx))
+      if (Math.abs(tx) < 1) return
+      pushed.push({ el: m.el, tx })
+    })
+
+    const ghost = document.createElement('span')
+    ghost.className = 'pj-card-ghost'
+    ghost.setAttribute('aria-hidden', 'true')
+    ghost.style.width = `${firstW}px`
+    card.before(ghost)
+
+    const gen = ++flipGen
+    card.classList.add('is-spotlight', 'is-flipping')
+    collage.classList.add('has-spotlight')
+
+    // Last layout (absolute at expanded box)
+    card.style.position = 'absolute'
+    card.style.left = `${expLeft}px`
+    card.style.top = `${expTop}px`
+    card.style.width = `${expW}px`
+    card.style.height = `${expH}px`
+    card.style.zIndex = '12'
+    card.style.transformOrigin = '0 0'
+
+    const dx = firstLeft - expLeft
+    const dy = firstTop - expTop
+    const sx = firstW / expW
+    const sy = firstH / expH
+
+    if (REDUCE) {
+      card.style.transform = 'translate(0,0) scale(1)'
+      pushed.forEach(({ el, tx }) => {
+        el.classList.add('is-pushed')
+        el.style.transform = `translate3d(${tx}px, 0, 0)`
+      })
+      spotlight = { card, ghost, pushed }
+      return
+    }
+
+    // Invert — paint still matches First
+    card.style.transition = 'none'
+    card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
+    pushed.forEach(({ el }) => {
+      el.classList.add('is-pushed', 'is-flipping')
+      el.style.transition = 'none'
+      el.style.transform = 'translate3d(0px, 0px, 0)'
+    })
+    void card.offsetWidth
+
+    spotlight = { card, ghost, pushed }
+
+    // Play — double rAF so invert is on screen before easing to Last
+    afterPaint(() => {
+      if (gen !== flipGen || spotlight?.card !== card) return
+      card.style.transition = flipTransition()
+      card.style.transform = 'translate(0px, 0px) scale(1, 1)'
+      pushed.forEach(({ el, tx }) => {
+        el.style.transition = flipTransition()
+        el.style.transform = `translate3d(${tx}px, 0, 0)`
+      })
+      window.setTimeout(() => {
+        if (gen !== flipGen) return
+        card.classList.remove('is-flipping')
+        pushed.forEach(({ el }) => el.classList.remove('is-flipping'))
+      }, FLIP_MS + 48)
+    })
+  }
+
+  const bindCards = () => {
+    track.querySelectorAll('.pj-card').forEach((card) => {
+      const isProject = card.classList.contains('pj-card--project')
+
+      // Art is decorative only — no spotlight / zoom. Projects get make-way hover.
+      if (!isProject) return
+
+      card.addEventListener('pointerenter', () => {
+        activateSpotlight(card)
+        playCardVideo(card)
+      }, { signal })
+
+      card.addEventListener('pointerleave', (e) => {
+        const next = e.relatedTarget?.closest?.('.pj-card--project')
+        if (next && track.contains(next)) {
+          stopCardVideo(card)
+          return
+        }
+        scheduleClear(card)
+        stopCardVideo(card)
+      }, { signal })
+
+      card.addEventListener('focus', () => {
+        activateSpotlight(card)
+        playCardVideo(card)
+      }, { signal })
+      card.addEventListener('blur', () => {
+        scheduleClear(card)
+        stopCardVideo(card)
+      }, { signal })
+      card.addEventListener('click', (e) => {
+        e.preventDefault()
+        hardClearSpotlight()
+        openSheet(card.getAttribute('data-id'))
+      }, { signal })
+    })
+  }
+
+  const renderLayout = (layout) => {
+    clearSpotlight()
+    layoutState = layout
+    const { rows, contentWidth, rowHeight, gap } = layout
+    track.style.width = `${contentWidth}px`
+    track.style.setProperty('--pj-row-h', `${rowHeight}px`)
+    track.style.setProperty('--pj-gap', `${gap}px`)
+
+    track.innerHTML = rows.map((row) => {
+      const cards = row.items.map(cardHtml).join('')
+      return `<div class="pj-row" style="height:${rowHeight}px;padding-left:${row.lead}px;padding-right:${row.trail}px;gap:${gap}px">${cards}</div>`
+    }).join('')
+
+    hydrateImages(track)
+    io.disconnect()
+    track.querySelectorAll('.pj-card').forEach((el) => io.observe(el))
+    bindCards()
+  }
+
+  const measureAndLayout = () => {
+    const rect = scroller.getBoundingClientRect()
+    const next = layoutCollage(GALLERY, {
+      width: rect.width || scroller.clientWidth,
+      height: rect.height || scroller.clientHeight,
+    })
+    if (!shouldRelayout(layoutState, next) && track.children.length) return
+    const scrollRatio = scroller.scrollWidth
+      ? scroller.scrollLeft / Math.max(1, scroller.scrollWidth)
+      : 0
+    renderLayout(next)
+    requestAnimationFrame(() => {
+      scroller.scrollLeft = scrollRatio * scroller.scrollWidth
+    })
+  }
+
+  const ro = new ResizeObserver(() => {
+    if (signal.aborted) return
+    requestAnimationFrame(measureAndLayout)
+  })
+  ro.observe(scroller)
+
+  // ── Scroll / drag (art + empty track only — never on project cards) ────────
+  // Capture phase so trackpad wheel still works while hovering project cards.
+  collage.addEventListener('wheel', (e) => {
+    if (sheetOpen) return
+    if (!collage.contains(e.target)) return
+    const max = scroller.scrollWidth - scroller.clientWidth
+    if (max <= 0) return
+
+    // Prefer native horizontal; otherwise map vertical trackpad/mouse to X
+    let dx = e.deltaX
+    let dy = e.deltaY
+    // deltaMode 1 = lines (mouse wheels) — scale up
+    if (e.deltaMode === 1) { dx *= 16; dy *= 16 }
+    if (e.deltaMode === 2) { dx *= scroller.clientWidth; dy *= scroller.clientHeight }
+
+    const dominant = Math.abs(dx) > Math.abs(dy) ? dx : dy
+    if (!dominant) return
+
+    const atStart = scroller.scrollLeft <= 0
+    const atEnd = scroller.scrollLeft >= max - 1
+    if ((dominant < 0 && atStart) || (dominant > 0 && atEnd)) return
+
+    e.preventDefault()
+    // Only drop spotlight on a deliberate scroll, not trackpad jitter
+    if (spotlight && Math.abs(dominant) > 24) clearSpotlight()
+    scroller.scrollLeft += dominant
+  }, { signal, passive: false, capture: true })
+
+  const stopMomentum = () => {
+    cancelAnimationFrame(momentumId)
+    momentumId = 0
+    vel = 0
+  }
+
+  const tickMomentum = () => {
+    if (Math.abs(vel) < 0.25) {
+      stopMomentum()
+      return
+    }
+    scroller.scrollLeft += vel
+    vel *= 0.92
+    momentumId = requestAnimationFrame(tickMomentum)
+  }
+
+  scroller.addEventListener('pointerdown', (e) => {
+    if (sheetOpen || e.button !== 0) return
+    if (e.target.closest('.pj-sheet, .pj-sheet-scrim')) return
+    // Project cards own their click — do not start drag / capture
+    if (e.target.closest('.pj-card--project')) return
+    stopMomentum()
+    drag = {
+      id: e.pointerId,
+      x: e.clientX,
+      scroll: scroller.scrollLeft,
+      moved: false,
+      captured: false,
+      lastX: e.clientX,
+      lastT: performance.now(),
+    }
+  }, { signal })
+
+  scroller.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return
+    const dx = e.clientX - drag.x
+    if (!drag.moved) {
+      if (Math.abs(dx) < DRAG_THRESHOLD) return
+      drag.moved = true
+      try {
+        scroller.setPointerCapture(e.pointerId)
+        drag.captured = true
+      } catch { /* ignore */ }
+      scroller.classList.add('is-dragging')
+    }
+    scroller.scrollLeft = drag.scroll - dx
+    const now = performance.now()
+    const dt = Math.max(8, now - drag.lastT)
+    vel = ((drag.lastX - e.clientX) / dt) * 14
+    drag.lastX = e.clientX
+    drag.lastT = now
+  }, { signal })
+
+  const endDrag = (e) => {
+    if (!drag || (e.pointerId != null && e.pointerId !== drag.id)) return
+    const didDrag = drag.moved
+    drag = null
+    scroller.classList.remove('is-dragging')
+    if (didDrag && !REDUCE && Math.abs(vel) > 0.4) {
+      momentumId = requestAnimationFrame(tickMomentum)
+    } else {
+      vel = 0
+    }
+  }
+
+  scroller.addEventListener('pointerup', endDrag, { signal })
+  scroller.addEventListener('pointercancel', endDrag, { signal })
+
+  // ── Keyboard ──────────────────────────────────────────────────────────────
+  const projectCards = () => [...track.querySelectorAll('.pj-card--project')]
+
+  const focusCard = (i) => {
+    const cards = projectCards()
+    if (!cards.length) return
+    const idx = ((i % cards.length) + cards.length) % cards.length
+    const el = cards[idx]
+    el.focus({ preventScroll: true })
+    el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' })
+  }
+
+  collage.addEventListener('keydown', (e) => {
+    if (sheetOpen) return
+    const cards = projectCards()
+    const active = document.activeElement
+    const i = cards.indexOf(active)
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      focusCard(i < 0 ? 0 : i + 1)
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      focusCard(i < 0 ? 0 : i - 1)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      focusCard(0)
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      focusCard(cards.length - 1)
+    } else if ((e.key === 'Enter' || e.key === ' ') && active?.classList?.contains('pj-card--project')) {
+      e.preventDefault()
+      openSheet(active.getAttribute('data-id'))
+    }
+  }, { signal })
+
+  // Capture so sheet Esc wins over the global panel-close handler
+  document.addEventListener('keydown', (e) => {
+    if (!sheetOpen || e.key !== 'Escape') return
+    e.preventDefault()
+    e.stopPropagation()
+    closeSheet()
+  }, { signal, capture: true })
+
+  if (COARSE) collage.classList.add('is-coarse')
+  if (REDUCE) collage.classList.add('is-reduce')
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      measureAndLayout()
+    })
+  })
 }

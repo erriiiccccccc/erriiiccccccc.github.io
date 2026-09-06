@@ -155,6 +155,9 @@ export class UI {
       this._panel.classList.add('hidden')
       return
     }
+    // Tear down island listeners/observers immediately (videos, IO, etc.)
+    this._content._disposeIsland?.()
+    this._content._disposeIsland = null
     this._panel.classList.remove('is-open')
     this._panel.classList.add('is-closing')
     this._closeTimer = setTimeout(() => {

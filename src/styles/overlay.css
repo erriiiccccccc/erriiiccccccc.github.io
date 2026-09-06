@@ -804,10 +804,21 @@ html.glass-solid {
 
 /* Wider card variant for two-column / carousel layouts */
 .wp-card.wp--wide { width: min(1060px, 100%); max-height: min(88vh, 820px); }
-/* Projects — featured spread: a definite height lets the explore list scroll on
-   its own while the featured panel stays put (like tech/travel). */
-.wp-card.wp--projects { width: min(1340px, 96vw); height: min(92vh, 900px); max-height: 94vh; }
-.wp-card.wp--projects .wp-content { overflow: hidden; }
+/* Projects — editorial collage: near-fullscreen canvas for large tiles */
+.wp-card.wp--projects { width: min(1760px, 98vw); height: min(96vh, 1040px); max-height: 98vh; }
+.wp-card.wp--projects .wp-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.35rem 0.5rem 0.55rem;
+}
+/* .wp-body is display:contents globally — collage flexes as content child */
+.wp-card.wp--projects .pj-collage {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
 /* Travel log wants to breathe — biggest panel, near full-screen on desktop.
    A definite height (not just max-height) lets the two columns own their own
    scroll: the map stays full-height & fixed while the right column scrolls. */
@@ -824,193 +835,378 @@ html.glass-solid {
 .wp-card.wp--tech .wp-content { overflow: hidden; }   /* the groups column scrolls, not the card */
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PROJECTS — featured spread (master–detail). Big featured project on the left
-   (media stage + write-up), a clickable explore list on the right. --pc is the
-   per-project accent, set by JS as you flick through.
+   PROJECTS — sharp paste-up collage (flush-left rows, variable widths).
+   No card borders / radius; grow-shrink hover; --pc accents the detail sheet.
    ═══════════════════════════════════════════════════════════════════════════ */
-.pj-spread {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 2rem;
-  height: 100%;
+.pj-collage {
+  position: relative;
+  flex: 1;
   min-height: 0;
-}
-
-/* ── Featured (left) ───────────────────────────────────────────────────────── */
-.pj-feature {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
-  padding-right: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-stroke) transparent;
 }
-.pj-feature::-webkit-scrollbar { width: 6px; }
-.pj-feature::-webkit-scrollbar-thumb { background: var(--glass-stroke); border-radius: 4px; }
 
-/* The media stage — real photo/video drops in here; mountain placeholder until */
-.pj-stage {
+.pj-scroller {
   position: relative;
-  aspect-ratio: 16 / 10;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  cursor: grab;
+  outline: none;
+  /* room for hover grow + quiet bottom scrollbar */
+  padding: 28px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.pj-scroller::-webkit-scrollbar {
+  height: 6px;
+  display: block;
+}
+.pj-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pj-scroller::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+.pj-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+.pj-scroller.is-dragging { cursor: grabbing; user-select: none; }
+.pj-scroller:focus-visible {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ic) 45%, transparent);
+}
+
+.pj-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--pj-gap, 10px);
+  min-height: 100%;
+}
+
+.pj-row {
+  display: flex;
+  flex-direction: row;
   flex-shrink: 0;
-  border-radius: var(--r-md);
+  align-items: stretch;
+  box-sizing: content-box;
+}
+
+/* Holds the flex seat while a card spotlights (absolute over the track) */
+.pj-card-ghost {
+  flex: 0 0 auto;
+  height: 100%;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.pj-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--pj-row-h, 200px) * var(--ar, 1.4));
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--pc) 36%, var(--glass-stroke));
-  background: linear-gradient(155deg,
-    color-mix(in srgb, var(--pc) 30%, #0b0720) 0%,
-    #0a0620 72%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
-              0 14px 36px rgba(0, 0, 0, 0.42);
-  transition: border-color 0.4s var(--ease-out);
+  background: #0a0620;
+  color: #fff;
+  cursor: pointer;
+  transform: translate3d(0, 0, 0);
+  transform-origin: center center;
+  /* FLIP sets transition inline; keep a calm default for shadow */
+  transition: box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  scroll-snap-align: none;
 }
-/* soft accent glow drifting from a corner so the empty stage still has life */
-.pj-stage-glow {
+.pj-card--art {
+  cursor: grab;
+  /* Decorative — never spotlight / expand */
+  pointer-events: auto;
+}
+
+.pj-card.is-flipping {
+  will-change: transform;
+  z-index: 12;
+}
+
+/* Spotlight: up to 2 rows tall; siblings keep size and ease aside (JS FLIP) */
+.pj-card.is-spotlight {
+  z-index: 12;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+}
+.pj-card.is-spotlight .pj-card-teaser {
+  opacity: 1;
+  transform: none;
+}
+.pj-card.is-spotlight .pj-card-poster,
+.pj-card.is-spotlight .pj-card-video {
+  transform: scale(1.02);
+}
+
+.pj-card-media {
   position: absolute;
-  width: 120%; height: 120%;
-  top: -40%; right: -30%;
-  background: radial-gradient(ellipse 42% 42% at 50% 50%,
-    color-mix(in srgb, var(--pc) 60%, transparent) 0%, transparent 70%);
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  pointer-events: none;
-  transition: opacity 0.4s var(--ease-out);
+  inset: 0;
+  overflow: hidden;
 }
-/* huge ghost numeral, watermark style */
-.pj-stage-index {
-  position: absolute;
-  left: 0.7rem; bottom: -0.55rem;
-  font-family: var(--font-display);
-  font-size: clamp(5rem, 12vw, 8rem);
-  font-weight: 600;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.06);
-  letter-spacing: -0.02em;
-  pointer-events: none;
-  user-select: none;
-}
-.pj-stage-ph {
+.pj-card-ph {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--pc) 55%, #fff);
-  opacity: 0.4;
-  pointer-events: none;
+  color: color-mix(in srgb, var(--pc) 50%, #fff);
+  opacity: 0.35;
+  z-index: 0;
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--pc, var(--ic)) 28%, #0b0720) 0%,
+    #0a0620 75%);
 }
-/* poster photo: the fallback backdrop. Shows as soon as the .jpg loads and
-   stays put if the video never arrives — the video just fades in on top. */
-.pj-stage-poster {
+.pj-card-poster,
+.pj-card-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Show full frame — tile --ar matches media, so no letterbox / crop */
+  object-fit: contain;
+  object-position: center;
   display: block;
-  opacity: 0;
-  transition: opacity 0.4s var(--ease-out);
+  transform: scale(1.001);
+  transition: transform 0.55s var(--ease-out), opacity 0.35s var(--ease-out);
+  background: #0a0620;
 }
-.pj-stage.has-poster .pj-stage-poster { opacity: 1; }
-.pj-stage.has-poster .pj-stage-ph { opacity: 0; }
-.pj-stage.has-poster .pj-stage-glow { opacity: 0; }
-.pj-stage-video {
+.pj-card-poster { opacity: 0; z-index: 1; }
+.pj-card-video  { opacity: 0; z-index: 2; }
+.pj-card.has-media .pj-card-poster { opacity: 1; }
+.pj-card.has-media .pj-card-ph { opacity: 0; }
+.pj-card.is-playing .pj-card-video { opacity: 1; }
+.pj-card.has-fallback .pj-card-ph { opacity: 0.45; }
+
+.pj-card-badge {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  opacity: 0;
-  transition: opacity 0.4s var(--ease-out);
-}
-.pj-stage.has-media .pj-stage-video { opacity: 1; }
-.pj-stage.has-media .pj-stage-glow { opacity: 0; }
-.pj-stage-badge {
-  position: absolute;
-  top: 0.7rem; right: 0.7rem;
-  z-index: 2;
+  top: 0.55rem; right: 0.55rem;
+  z-index: 5;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-  font-size: 0.72rem;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 0;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #fff;
-  background: color-mix(in srgb, var(--pc) 60%, rgba(10, 8, 24, 0.6));
-  border: 1px solid color-mix(in srgb, var(--pc) 70%, transparent);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--pc) 40%, transparent);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--pc) 70%, rgba(10, 8, 24, 0.55));
 }
 
-/* Write-up below the stage */
-.pj-feature-body {
+.pj-card-teaser {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 4;
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
-  padding-top: 1.1rem;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 2.6rem 0.95rem 0.85rem;
+  background: linear-gradient(180deg, transparent 0%, rgba(6, 4, 16, 0.78) 55%, rgba(6, 4, 16, 0.94) 100%);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+  pointer-events: none;
+  text-align: left;
 }
-.pj-feature-eyebrow {
+.pj-card-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #fff;
+}
+.pj-card-sub {
+  font-size: 0.74rem;
+  color: var(--txt-soft);
+  letter-spacing: 0.02em;
+}
+.pj-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pc) 55%, #fff);
+}
+.pj-card-label {
+  position: absolute;
+  left: 0.55rem; bottom: 0.5rem;
+  z-index: 4;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.pj-card--project:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--pc) 70%, #fff);
+  outline-offset: 2px;
+}
+
+.pj-card--art:hover .pj-card-label { opacity: 0.85; }
+
+/* Coarse / touch: keep project teasers faintly visible (no spotlight hover) */
+.pj-collage.is-coarse .pj-card--project .pj-card-teaser {
+  opacity: 0.92;
+  transform: none;
+  padding-top: 1.6rem;
+}
+.pj-collage.is-coarse .pj-card-cta { display: none; }
+
+/* Reduced motion */
+.pj-collage.is-reduce .pj-card,
+.pj-collage.is-reduce .pj-card-poster,
+.pj-collage.is-reduce .pj-card-video,
+.pj-collage.is-reduce .pj-card-teaser {
+  transition: none !important;
+}
+
+/* Sheet open: quiet the collage */
+.pj-collage.is-sheet-open .pj-scroller {
+  pointer-events: none;
+  filter: blur(2px) brightness(0.55);
+}
+
+/* ── Detail sheet ──────────────────────────────────────────────────────────── */
+.pj-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(4, 2, 12, 0.45);
+  backdrop-filter: blur(2px);
+  border-radius: 0;
+}
+.pj-sheet {
+  position: absolute;
+  z-index: 21;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(820px, calc(100% - 1.25rem));
+  max-height: min(82%, 620px);
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--pc, var(--ic)) 35%, var(--glass-stroke));
+  background: color-mix(in srgb, #120a28 92%, transparent);
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.58),
+    0 0 40px color-mix(in srgb, var(--pc, var(--ic)) 16%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+.pj-sheet[hidden],
+.pj-sheet-scrim[hidden] { display: none !important; }
+
+.pj-sheet-close {
+  position: absolute;
+  top: 0.65rem; right: 0.65rem;
+  z-index: 3;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.45rem;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-stroke);
+  background: var(--glass-raise);
+  color: var(--txt);
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
 }
-.pj-kicker {
+.pj-sheet-close:hover { background: var(--glass-raise-2); transform: scale(1.05); }
+.pj-sheet-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--pc) 70%, #fff);
+  outline-offset: 2px;
+}
+
+.pj-sheet-media {
+  position: relative;
+  min-height: 220px;
+  background: #0a0620;
+  overflow: hidden;
+}
+.pj-sheet-poster,
+.pj-sheet-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pj-sheet-video { z-index: 1; }
+
+.pj-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.35rem 1.4rem 1.25rem;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-stroke) transparent;
+}
+.pj-sheet-kicker {
   font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--pc) 45%, #fff);
+  color: color-mix(in srgb, var(--pc) 50%, #fff);
+  margin: 0;
 }
-.pj-counter {
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--txt-mute);
-  font-variant-numeric: tabular-nums;
-}
-.pj-feature-title {
+.pj-sheet-title {
   font-family: var(--font-display);
-  font-size: clamp(1.55rem, 2.8vw, 2.1rem);
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
   font-weight: 600;
   color: #fff;
-  line-height: 1.12;
+  line-height: 1.15;
+  margin: 0;
+  padding-right: 2rem;
 }
-.pj-feature-sub {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.45rem;
+.pj-sheet-sub {
+  margin: 0.15rem 0 0;
   font-size: 0.84rem;
   color: var(--txt-soft);
 }
-.pj-dot {
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: var(--txt-mute);
-}
-.pj-feature-blurb {
-  margin-top: 0.85rem;
-  font-size: 0.98rem;
-  line-height: 1.65;
+.pj-sheet-blurb {
+  margin: 0.65rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
   color: var(--txt-soft);
-  max-width: 56ch;
 }
-.pj-feature-tags {
+.pj-sheet-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 0.85rem;
+  margin-top: 0.75rem;
 }
-.pj-feature-links {
+.pj-sheet-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  padding-top: 1.2rem;
+  gap: 0.55rem;
+  margin-top: auto;
+  padding-top: 1rem;
 }
+
 .pj-btn {
   display: inline-flex;
   align-items: center;
@@ -1035,116 +1231,6 @@ html.glass-solid {
 .pj-btn--primary:hover {
   background: var(--pc);
   box-shadow: 0 10px 26px color-mix(in srgb, var(--pc) 45%, transparent);
-}
-
-/* Crossfade when switching the featured project */
-.pj-feature .pj-stage,
-.pj-feature .pj-feature-body {
-  transition: opacity 0.16s ease, transform 0.16s var(--ease-out);
-}
-.pj-feature.is-swapping .pj-stage,
-.pj-feature.is-swapping .pj-feature-body {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-/* ── Explore list (right) ──────────────────────────────────────────────────── */
-.pj-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-stroke) transparent;
-}
-.pj-list::-webkit-scrollbar { width: 6px; }
-.pj-list::-webkit-scrollbar-thumb { background: var(--glass-stroke); border-radius: 4px; }
-
-.pj-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  width: 100%;
-  text-align: left;
-  padding: 0.95rem 1.05rem;
-  border-radius: var(--r-sm);
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--txt-soft);
-  cursor: pointer;
-  overflow: hidden;
-  transition: background 0.2s, border-color 0.2s, transform 0.2s var(--ease-out);
-}
-/* accent rail on active/hover */
-.pj-item::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--pc);
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 0.24s var(--ease-out);
-}
-.pj-item:hover {
-  background: var(--glass-raise);
-  border-color: var(--glass-stroke);
-}
-.pj-item:hover::before { transform: scaleY(0.55); }
-.pj-item.is-active {
-  background: color-mix(in srgb, var(--pc) 12%, transparent);
-  border-color: color-mix(in srgb, var(--pc) 40%, var(--glass-stroke));
-}
-.pj-item.is-active::before { transform: scaleY(1); }
-
-.pj-item-index {
-  flex-shrink: 0;
-  font-family: var(--font-display);
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: var(--txt-mute);
-  font-variant-numeric: tabular-nums;
-  transition: color 0.2s;
-}
-.pj-item.is-active .pj-item-index { color: color-mix(in srgb, var(--pc) 55%, #fff); }
-.pj-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pj-item-title {
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: var(--txt);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pj-item.is-active .pj-item-title { color: #fff; }
-.pj-item-meta {
-  font-size: 0.76rem;
-  color: var(--txt-mute);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pj-item-badge {
-  flex-shrink: 0;
-  display: flex;
-  color: color-mix(in srgb, var(--pc) 60%, #fff);
-}
-.pj-item-go {
-  flex-shrink: 0;
-  display: flex;
-  color: var(--txt-faint);
-  transform: translateX(-3px);
-  opacity: 0;
-  transition: transform 0.2s var(--ease-out), opacity 0.2s, color 0.2s;
-}
-.pj-item:hover .pj-item-go,
-.pj-item.is-active .pj-item-go {
-  opacity: 1;
-  transform: none;
-  color: color-mix(in srgb, var(--pc) 55%, #fff);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1856,11 +1942,16 @@ html.glass-solid {
   .tech-layout { grid-template-columns: 1fr; height: auto; gap: 1.1rem; }
   .tech-photo { height: 200px; }
   .tech-groups { height: auto; overflow: visible; padding-right: 0; }
-  /* Projects: stack — featured on top, explore list below; scroll as one */
-  .wp-card.wp--projects { height: auto; max-height: 92vh; }
-  .wp-card.wp--projects .wp-content { overflow-y: auto; }
-  .pj-spread { grid-template-columns: 1fr; height: auto; gap: 1.2rem; }
-  .pj-list { overflow: visible; padding-right: 0; }
+  /* Projects collage: keep a definite height for row math; sheet stacks */
+  .wp-card.wp--projects { height: min(92vh, 860px); max-height: 96vh; width: min(98vw, 100%); }
+  .wp-card.wp--projects .wp-content { overflow: hidden; padding: 0.25rem 0.35rem 0.45rem; }
+  .pj-sheet {
+    grid-template-columns: 1fr;
+    max-height: min(85%, 640px);
+    width: min(560px, calc(100% - 1rem));
+    border-radius: 0;
+  }
+  .pj-sheet-media { min-height: 160px; max-height: 200px; }
   /* Experience: shrink the logo tile, tighten spacing */
   .exp-item { grid-template-columns: 40px 1fr; gap: 0.9rem; }
   .exp-tile { width: 40px; height: 40px; border-radius: 10px; }
