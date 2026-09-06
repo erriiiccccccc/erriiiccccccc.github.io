@@ -23,6 +23,9 @@ import { HelpOverlay } from './ui/HelpOverlay.js'
 import { IntroOverlay } from './ui/IntroOverlay.js'
 import { SettingsOverlay } from './ui/SettingsOverlay.js'
 import { AboutOverlay } from './ui/AboutOverlay.js'
+import { GalleryOverlay } from './ui/GalleryOverlay.js'
+import { DrawOverlay } from './ui/DrawOverlay.js'
+import { QuestMarker } from './scene/QuestMarker.js'
 import { LoadDirector } from './loading/LoadDirector.js'
 import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
 import {
@@ -163,6 +166,18 @@ const helpOverlay     = new HelpOverlay()
 const introOverlay    = new IntroOverlay()
 const settingsOverlay = new SettingsOverlay()
 const aboutOverlay    = new AboutOverlay()
+
+// The telescope's doodle wall. Built up front (cheap DOM, no network) so the
+// first F press opens instantly and only then hits the API.
+const galleryOverlay  = new GalleryOverlay()
+const drawOverlay     = new DrawOverlay()
+galleryOverlay.onDraw = () => drawOverlay.open()
+drawOverlay.onPosted  = (item) => galleryOverlay.addLocal(item)
+drawOverlay.onClose   = () => {
+  // The pad sits on top of the wall, so closing it lands you back on the wall
+  if (!galleryOverlay.isOpen()) galleryOverlay.open()
+}
+
 aboutOverlay.onStartClose = () => {
   // 1. Lights snap off first (quick) — character goes dark while still zoomed in.
   aboutLightsOn = false
@@ -280,8 +295,12 @@ hudBtnsEl.querySelector('#btn-settings').addEventListener('click', () => setting
 function isAnyOverlayOpen() {
   return mapOverlay.isOpen() || helpOverlay.isOpen()
       || settingsOverlay.isOpen() || aboutOverlay.isOpen()
+      || galleryOverlay.isOpen() || drawOverlay.isOpen()
 }
 function closeAnyOpenOverlay() {
+  // Innermost first: pad sits on the wall, wall sits on the world
+  if (drawOverlay.isOpen())     { drawOverlay.close();     return true }
+  if (galleryOverlay.isOpen())  { galleryOverlay.close();  return true }
   if (aboutOverlay.isOpen())    { aboutOverlay.close();    return true }
   if (settingsOverlay.isOpen()) { settingsOverlay.close(); return true }
   if (helpOverlay.isOpen())     { helpOverlay.close();     return true }
@@ -658,6 +677,22 @@ perfMark('world_download_start')
     }
     await yieldToMain()
 
+    // ── Doodle-wall quest marker over the meadow telescope ──────────────────
+    // The GLB carries a node literally called "telescope"; if a future world
+    // export renames it we just skip the marker rather than break the island.
+    {
+      const scope = model.getObjectByName(TELESCOPE_NODE)
+      if (scope) {
+        questMarker = new QuestMarker({ color: 0xFBBF24 })
+        const r = questMarker.attachTo(scope, planetGroup)
+        // Trigger radius scales off the prop so it survives a world re-export
+        telescopeRange = Math.max(2.6, r * 2.2)
+      } else if (import.meta.env.DEV) {
+        console.warn(`[world] no "${TELESCOPE_NODE}" node — doodle wall marker skipped`)
+      }
+    }
+    await yieldToMain()
+
     if (_loaderTriggered) return
     _loaderTriggered = true
 
@@ -743,6 +778,17 @@ const meshToIsland  = new Map()  // Mesh → islandName (built after GLB spatial
 
 let islandUIState    = 'exploring'  // 'exploring' | 'near' | 'detail'
 let activeIslandName = null         // set by sampleSurfaceHeight (see animate raycast cache)
+
+// ─── Point of interest: the meadow telescope → doodle wall ───────────────────
+// A second, nested prompt that only appears once you're already standing on
+// the island the telescope belongs to.
+const TELESCOPE_NODE   = 'telescope'
+const TELESCOPE_ISLAND = 'meadow_island'
+let questMarker    = null
+let telescopeRange = 3.2        // world units; recomputed from the prop's size
+let nearTelescope  = false
+let _subPromptOn   = false
+let _scopeFound    = false      // has the wall been opened at least once
 let _prevActiveIslandForLerp = null
 let _islandLerpSettling = 0
 let _forceIslandLerp = true
@@ -1056,8 +1102,35 @@ function closeIslandPanel() {
   if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName])
 }
 
+// ─── The telescope's doodle wall ─────────────────────────────────────────────
+function openDoodleWall() {
+  if (!nearTelescope || isAnyOverlayOpen() || ui.isPanelOpen()) return
+  _scopeFound = true
+  questMarker?.setDiscovered(true)
+  _subPromptOn = false
+  ui.hideSubPopup()
+  galleryOverlay.open()
+}
+
 // Popup tap / click callback (works for both mouse and touch)
-ui.onPopupTap = openIslandPanel
+ui.onPopupTap    = openIslandPanel
+ui.onSubPopupTap = openDoodleWall
+
+if (import.meta.env.DEV) {
+  // Dev-only probe for tuning the telescope trigger. Stripped from the build.
+  window.__ew = {
+    get scope() {
+      return {
+        island: activeIslandName,
+        range:  telescopeRange,
+        dist:   questMarker ? questMarker.distanceTo(modelGroup.position) : null,
+        near:   nearTelescope,
+        found:  _scopeFound,
+      }
+    },
+    openWall: () => { nearTelescope = true; openDoodleWall() },
+  }
+}
 // ✕ / backdrop click inside the world panel → run the canonical close so
 // islandUIState resyncs and the approach prompt returns.
 ui.onClosePanel = closeIslandPanel
@@ -1080,6 +1153,8 @@ document.addEventListener('keydown', e => {
     if (islandUIState === 'detail') closeIslandPanel()
     else openIslandPanel()
   }
+  // F opens whatever point of interest you're standing next to
+  if (key === 'f') openDoodleWall()
   // While a detail panel is open, only Esc / E / X act — ignore the map key
   if (key === 'm' && !ui.isPanelOpen()) mapOverlay.toggle()
 })
@@ -1672,6 +1747,31 @@ function animate() {
       ui._lastIsland = null
       ui.closePanel()
       ui.hidePopup()
+    }
+  }
+
+  // ── Telescope point of interest (nested prompt above the island one) ──────
+  if (questMarker) {
+    // The character never moves in world space, the planet turns under it, so
+    // a plain world-distance check is all the proximity test we need.
+    nearTelescope = activeIslandName === TELESCOPE_ISLAND
+      && questMarker.distanceTo(modelGroup.position) < telescopeRange
+    questMarker.update(dt, nearTelescope, reducedMotion)
+
+    const wantSub = nearTelescope && islandUIState === 'near' && !isInputLocked()
+    if (wantSub !== _subPromptOn) {
+      _subPromptOn = wantSub
+      if (wantSub) {
+        ui.showSubPopup({
+          iconKey: 'telescope',
+          title:   'The Doodle Wall',
+          sub:     _scopeFound ? 'look again' : 'someone left drawings here',
+          color:   '#FBBF24',
+          keycap:  'F',
+        })
+      } else {
+        ui.hideSubPopup()
+      }
     }
   }
 

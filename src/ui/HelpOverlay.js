@@ -73,6 +73,10 @@ export class HelpOverlay {
                 <span>Open island</span>
               </div>
               <div class="help-mob-row">
+                <div class="help-mob-badge">F</div>
+                <span>Open a marked spot</span>
+              </div>
+              <div class="help-mob-row">
                 <div class="help-mob-badge">Esc</div>
                 <span>Close panel</span>
               </div>
@@ -127,6 +131,10 @@ export class HelpOverlay {
               <div class="help-mob-row">
                 <div class="help-mob-badge">Tap popup</div>
                 <span>Open island</span>
+              </div>
+              <div class="help-mob-row">
+                <div class="help-mob-badge">Tap gold prompt</div>
+                <span>Open a marked spot</span>
               </div>
               <div class="help-mob-row">
                 <div class="help-mob-badge">Map button</div>

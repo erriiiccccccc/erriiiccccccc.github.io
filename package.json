@@ -21,6 +21,7 @@
     "smoke": "node scripts/smoke-load.mjs"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "gsap": "^3.12.5",
     "three": "^0.170.0",
     "three-mesh-bvh": "^0.8.3",

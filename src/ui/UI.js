@@ -33,6 +33,32 @@ export class UI {
       this.onPopupTap?.()
     }, { passive: false })
 
+    // ── Secondary prompt (stacks above the island capsule) ─────────────────────
+    // For things worth finding *on* an island, so the island's own prompt keeps
+    // its meaning and this one reads as the extra.
+    this._sub = document.createElement('div')
+    this._sub.id = 'sub-popup'
+    this._sub.className = 'hidden'
+    this._sub.innerHTML = `
+      <div class="sp-inner">
+        <span class="sp-spark" aria-hidden="true"></span>
+        <span class="sp-icon"></span>
+        <div class="sp-names">
+          <div class="sp-title"></div>
+          <div class="sp-sub"></div>
+        </div>
+        <div class="sp-key">
+          <span class="sp-keycap"></span>
+        </div>
+      </div>
+    `
+    document.body.appendChild(this._sub)
+    this._sub.addEventListener('click', () => { this.onSubPopupTap?.() })
+    this._sub.addEventListener('touchend', e => {
+      e.preventDefault()
+      this.onSubPopupTap?.()
+    }, { passive: false })
+
     this._panel    = document.getElementById('world-panel')
     this._icon     = document.getElementById('wp-icon')
     this._eyebrow  = document.getElementById('wp-eyebrow')
@@ -51,8 +77,9 @@ export class UI {
 
     this._closeTimer = null
     this._openGen = 0
-    this.onPopupTap   = null
-    this.onClosePanel = null
+    this.onPopupTap    = null
+    this.onSubPopupTap = null
+    this.onClosePanel  = null
 
     const badge = document.getElementById('landmark-badge')
     const hint  = document.getElementById('hint-text')
@@ -83,6 +110,32 @@ export class UI {
 
   hidePopup() {
     this._popup.classList.add('hidden')
+  }
+
+  /**
+   * Secondary prompt for a point of interest sitting on the active island.
+   * @param {{ iconKey: string, title: string, sub: string, color: string, keycap: string }} cfg
+   */
+  showSubPopup({ iconKey, title, sub, color, keycap }) {
+    this._sub.querySelector('.sp-icon').innerHTML   = svgIcon(iconKey, 18)
+    this._sub.querySelector('.sp-title').textContent = title
+    this._sub.querySelector('.sp-sub').textContent   = sub
+    this._sub.style.setProperty('--ic', color)
+
+    const cap = this._sub.querySelector('.sp-keycap')
+    if (IS_TOUCH) {
+      cap.textContent = 'Tap'
+      cap.classList.add('sp-keycap--tap')
+    } else {
+      cap.textContent = keycap
+      cap.classList.remove('sp-keycap--tap')
+    }
+
+    this._sub.classList.remove('hidden')
+  }
+
+  hideSubPopup() {
+    this._sub.classList.add('hidden')
   }
 
   /**

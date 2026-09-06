@@ -18,6 +18,9 @@ Thumbs.db
 # Generated at build time — do not commit
 public/travel-stats.json
 
+# Local doodle-wall store (dev stand-in for Vercel Blob)
+.gallery-dev/
+
 # Intermediate world optimisation output
 assets/source/world.optimized.tmp.glb
 
