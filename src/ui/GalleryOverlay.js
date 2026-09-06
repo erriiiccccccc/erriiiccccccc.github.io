@@ -33,6 +33,10 @@ export class GalleryOverlay {
     this._offline = false
     this._newId   = null
     this._lastFocus = null
+    // Just-posted drawings, held until the server actually lists them. The GET
+    // is edge-cached for ~10s, so the refetch right after a post comes back
+    // without the new drawing and would otherwise wipe it off the wall.
+    this._pending = new Map()
 
     this._build()
   }
@@ -176,6 +180,7 @@ export class GalleryOverlay {
     if (card) {
       card.classList.add('is-gone')
       setTimeout(() => {
+        this._pending.delete(id)
         this._items = this._items.filter(d => d.id !== id)
         this._render()
       }, 260)
@@ -206,7 +211,13 @@ export class GalleryOverlay {
 
   async refresh() {
     const { items, offline } = await fetchDoodles()
-    this._items   = items
+
+    // Anything the server now knows about stops being pending.
+    for (const d of items) this._pending.delete(d.id)
+    const stillPending = [...this._pending.values()]
+      .filter(d => !items.some(x => x.id === d.id))
+
+    this._items   = [...stillPending, ...items].sort((a, b) => b.at - a.at)
     this._offline = offline
     this._loaded  = true
     this._el.querySelector('#dg-offline').hidden = !offline
@@ -216,6 +227,7 @@ export class GalleryOverlay {
   /** Called after a post so the new drawing shows up without a full reload. */
   addLocal(item) {
     this._newId = item.id
+    this._pending.set(item.id, item)
     this._items = [item, ...this._items.filter(d => d.id !== item.id)]
     this._loaded = true
     this._render()
