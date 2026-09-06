@@ -244,12 +244,12 @@
       ]
     }
   ],
-  "landmarks": 1017,
+  "landmarks": 1038,
   "worldPct": 12,
-  "updatedAt": "2026-09-05T07:27:22.251Z",
+  "updatedAt": "2026-09-06T07:41:15.689Z",
   "logs": [
     "Fetching KML...",
-    "Found 1017 placemarks — running point-in-polygon...",
+    "Found 1038 placemarks — running point-in-polygon...",
     "Countries (24): China, Croatia, Denmark, France, Germany, Hong Kong, Hungary, Iceland, Ireland, Italy, Latvia, Malaysia, Malta, Montenegro, Morocco, Poland, Portugal, Singapore, Spain, Sweden, Switzerland, Thailand, Türkiye, United Kingdom"
   ]
 }
