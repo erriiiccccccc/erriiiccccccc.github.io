@@ -246,7 +246,7 @@
   ],
   "landmarks": 1038,
   "worldPct": 12,
-  "updatedAt": "2026-10-21T08:19:01.192Z",
+  "updatedAt": "2026-10-22T08:21:03.224Z",
   "logs": [
     "Fetching KML...",
     "Found 1038 placemarks — running point-in-polygon...",
