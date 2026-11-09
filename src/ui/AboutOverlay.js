@@ -44,7 +44,7 @@ export class AboutOverlay {
       <!-- Interact hint — floats below the brand sign -->
       <div class="about-hint" aria-hidden="true">
         <span class="about-hint-dot"></span>
-        move your cursor — he's watching
+        move your cursor, he's watching
       </div>
 
       <!-- Hero nameplate dock -->
@@ -56,9 +56,9 @@ export class AboutOverlay {
               <div class="about-eyebrow">About Me</div>
               <div class="about-name-row">
                 <h2 class="about-name">Eric Ng Min Chern</h2>
-                <span class="about-status"><span class="about-status-dot"></span>Open to Work</span>
+                <span class="about-status"><span class="about-status-dot"></span>Now at Barclays</span>
               </div>
-              <p class="about-role">Final-year CS @ University of Edinburgh · Graduating 2026 · Ex-Barclays &amp; BlackRock</p>
+              <p class="about-role">AI Audit Technology Analyst at Barclays, London · First Class CS, University of Edinburgh</p>
             </div>
           </div>
           <div class="about-actions">
@@ -78,11 +78,11 @@ export class AboutOverlay {
           </div>
         </div>
         <div class="about-dock-row about-dock-bottom">
-          <p class="about-tagline">I build things that are useful, interactive, or just a bit unexpected — like this whole world, written from scratch in Three.js.</p>
+          <p class="about-tagline">I build things that are useful, interactive, or just a bit unexpected. Like this whole world, built from scratch in Three.js.</p>
           <div class="about-meta">
             <span><b>6</b> islands</span>
             <span class="about-meta-dot">·</span>
-            <span><b>100%</b> procedural</span>
+            <span><b>1</b> tiny world</span>
             <span class="about-meta-dot">·</span>
             <span>built in <b>Three.js</b></span>
           </div>

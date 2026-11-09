@@ -350,7 +350,7 @@ export class LoadDirector {
     this._clearStallWatch()
     this._stallTimer = setTimeout(() => {
       if (this._readyFired || this.state === 'Fatal' || this.state === 'Live' || this.state === 'Revealing') return
-      this.fail('Still loading — check your connection, then retry.')
+      this.fail('Still loading. Check your connection, then retry.')
     }, STALL_MS)
   }
 

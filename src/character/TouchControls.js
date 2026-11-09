@@ -54,7 +54,7 @@ export class TouchControls {
       <div id="touch-btns">
         <button class="touch-btn touch-btn--map"  id="touch-map-btn"  aria-label="World Map">${svgIcon('map', 20)}</button>
         <button class="touch-btn touch-btn--jump" id="touch-jump-btn" aria-label="Jump">↑</button>
-        <button class="touch-btn touch-btn--e"    id="touch-e-btn"    aria-label="Explore">E</button>
+        <button class="touch-btn touch-btn--e"    id="touch-e-btn"    aria-label="Dive in">E</button>
       </div>
     `
     document.body.appendChild(el)

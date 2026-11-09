@@ -104,7 +104,7 @@ export const TRAVEL_HTML = `
 
       <div class="tp-cloud-head">
         <span class="tp-cloud-title">Countries visited</span>
-        <span class="tp-cloud-count" id="tp-cloud-count">–</span>
+        <span class="tp-cloud-count" id="tp-cloud-count">·</span>
       </div>
       <div class="tp-flags" id="tp-flags" aria-label="Countries visited"></div>
     </div>
@@ -116,14 +116,14 @@ function statBox({ label, value, sub, link }) {
     return `
       <button type="button" class="tp-box tp-box--link" data-scroll="flags" aria-label="Jump to the countries visited">
         <p class="tp-label">${label}</p>
-        <p class="tp-value">${value ?? '–'}</p>
+        <p class="tp-value">${value ?? '·'}</p>
         <p class="tp-sub">${sub ?? ''} ${svgIcon('arrowRight', 11)}</p>
       </button>`
   }
   return `
     <div class="tp-box">
       <p class="tp-label">${label}</p>
-      <p class="tp-value">${value ?? '–'}</p>
+      <p class="tp-value">${value ?? '·'}</p>
       <p class="tp-sub">${sub ?? ''}</p>
     </div>`
 }
@@ -140,12 +140,12 @@ function renderStats(stats) {
   const furthest = data.length ? furthestFrom(data) : null
 
   const boxes = [
-    { label: 'Countries',     value: stats.countries ?? (list.length || '–'), sub: 'visited', link: true },
-    { label: 'Continents',    value: continents ?? '–',                       sub: 'of 7' },
-    { label: 'Places pinned', value: stats.landmarks != null ? stats.landmarks.toLocaleString('en-GB') : '–', sub: 'on the map' },
-    { label: '% of world',    value: stats.worldPct != null ? `${stats.worldPct}%` : '–', sub: 'explored' },
+    { label: 'Countries',     value: stats.countries ?? (list.length || '·'), sub: 'visited', link: true },
+    { label: 'Continents',    value: continents ?? '·',                       sub: 'of 7' },
+    { label: 'Places pinned', value: stats.landmarks != null ? stats.landmarks.toLocaleString('en-GB') : '·', sub: 'on the map' },
+    { label: '% of world',    value: stats.worldPct != null ? `${stats.worldPct}%` : '·', sub: 'explored' },
     { label: 'New 7 Wonders', value: `${wonders}/7`,                          sub: 'seen' },
-    { label: 'Furthest flung', value: furthest ? furthest.name : '–',
+    { label: 'Furthest flung', value: furthest ? furthest.name : '·',
       sub: furthest ? `${(Math.round(furthest.km / 10) * 10).toLocaleString('en-GB')} km from home` : '' },
   ]
 
@@ -190,7 +190,7 @@ function makeFlagEl({ name, iso }) {
 function renderFlags(data) {
   const wall  = q('tp-flags')
   const count = q('tp-cloud-count')
-  if (count) count.textContent = data.length || '–'
+  if (count) count.textContent = data.length || '·'
   if (!wall) return
   if (!data.length) { wall.replaceChildren(); return }
 
@@ -215,12 +215,12 @@ function renderEmpty(message) {
   const grid = q('tp-stats')
   if (grid) {
     grid.innerHTML = [
-      { label: 'Countries',     value: '–', sub: 'visited' },
-      { label: 'Continents',    value: '–', sub: 'of 7' },
-      { label: 'Places pinned', value: '–', sub: 'on the map' },
-      { label: '% of world',    value: '–', sub: 'explored' },
-      { label: 'New 7 Wonders', value: '–', sub: 'seen' },
-      { label: 'Furthest flung', value: '–', sub: '' },
+      { label: 'Countries',     value: '·', sub: 'visited' },
+      { label: 'Continents',    value: '·', sub: 'of 7' },
+      { label: 'Places pinned', value: '·', sub: 'on the map' },
+      { label: '% of world',    value: '·', sub: 'explored' },
+      { label: 'New 7 Wonders', value: '·', sub: 'seen' },
+      { label: 'Furthest flung', value: '·', sub: '' },
     ].map(statBox).join('')
   }
   const status = q('travel-status')

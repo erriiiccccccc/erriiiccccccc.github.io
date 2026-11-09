@@ -75,8 +75,8 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 - Controls hint: `WASD move  *  Space jump  *  Shift sprint  *  RMB camera  *  Scroll zoom`
 
 **Popups and prompts:**
-- Desktop CTA: `[E] to explore`
-- Mobile CTA: `Tap to explore ->`
+- Desktop CTA: `[E] Dive in`
+- Mobile CTA: `Tap` keycap (dives in)
 - Help tip: `Step onto a glowing island and press E to dive in.`
 
 **Overlays:**

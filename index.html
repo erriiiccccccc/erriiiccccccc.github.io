@@ -130,7 +130,7 @@
         }
       }
       window.addEventListener('error', function (e) {
-        showFatal((e.message || 'Unknown error') + ' — ' + ((e.filename || '').split('/').pop() || '') + ':' + (e.lineno || '?'))
+        showFatal((e.message || 'Unknown error') + ' · ' + ((e.filename || '').split('/').pop() || '') + ':' + (e.lineno || '?'))
       })
       window.addEventListener('unhandledrejection', function (e) {
         var msg = (e.reason && (e.reason.message || e.reason)) || 'Module import failed'
@@ -140,7 +140,7 @@
       // (does NOT silently reveal an unfinished scene).
       setTimeout(function () {
         if (window.__PHF_LOAD_OWNED__) return
-        showFatal('Still starting up — tap Reload if this persists.')
+        showFatal('Still starting up. Tap Reload if this persists.')
       }, 20000)
     })()
   </script>

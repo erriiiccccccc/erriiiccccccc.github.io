@@ -102,7 +102,7 @@ export class UI {
     } else {
       keycap.textContent = 'E'
       keycap.classList.remove('pu-keycap--tap')
-      label.textContent = 'Explore'
+      label.textContent = 'Dive in'
     }
 
     this._popup.classList.remove('hidden')

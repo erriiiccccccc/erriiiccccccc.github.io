@@ -82,7 +82,7 @@ export const CONTACT_HTML = `
         <p class="ca-blurb">Got a project, a role, or just wanna say hi? Drop me a line.
         I read everything and reply fast.</p>
         <div class="ca-pills">
-          <span class="ca-pill ca-pill--live"><span class="ca-dot"></span>Open to work</span>
+          <span class="ca-pill ca-pill--live"><span class="ca-dot"></span>Open to chat</span>
           <span class="ca-pill">${svgIcon('mapPin', 13)}London, UK</span>
           <span class="ca-pill">${svgIcon('clock', 13)}Replies in ~a day</span>
         </div>
@@ -147,7 +147,7 @@ export function initContact(root) {
           <div class="cf-success">
             <div class="cf-success-ic">${svgIcon('mail', 26)}</div>
             <h4>Message sent!</h4>
-            <p>Thanks for reaching out — I'll get back to you soon.</p>
+            <p>Thanks for reaching out. I'll get back to you soon.</p>
           </div>`
       } else {
         throw new Error(data.message || `HTTP ${res.status}`)

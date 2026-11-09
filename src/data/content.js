@@ -13,15 +13,15 @@ export const ISLANDS = {
     section: 'About Me',
     color: '#4CAF50',
     html: `
-      <p>Hey, I'm <strong>Eric Ng Min Chern</strong> — a final-year Computer Science student
-      at the University of Edinburgh (graduating June 2026), originally from Malaysia.</p>
-      <p>I've interned at Barclays and BlackRock, built real products for real businesses,
+      <p>Hey, I'm <strong>Eric Ng Min Chern</strong>. I'm an AI Audit Technology Analyst at Barclays
+      in London, with a First in Computer Science from the University of Edinburgh. Originally from Malaysia.</p>
+      <p>Before that I interned at Barclays and BlackRock, built real products for real businesses,
       and I love making things that are useful, interactive, or just a bit unexpected.</p>
       <div class="tag-row">
-        <span class="tag">CS @ Edinburgh</span>
-        <span class="tag">Ex-Barclays &amp; BlackRock</span>
+        <span class="tag">AI Audit @ Barclays</span>
+        <span class="tag">CS First @ Edinburgh</span>
         <span class="tag">Full-Stack Dev</span>
-        <span class="tag">Open to Work</span>
+        <span class="tag">London</span>
       </div>
     `,
   },
