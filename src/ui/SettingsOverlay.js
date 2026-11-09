@@ -29,6 +29,7 @@ export class SettingsOverlay {
     this._quality       = ['low', 'auto', 'high'].includes(saved.quality) ? saved.quality : 'auto'
     this._reducedMotion = typeof saved.reducedMotion === 'boolean' ? saved.reducedMotion : prefersReduced
     this._hintsVisible  = typeof saved.hintsVisible  === 'boolean' ? saved.hintsVisible  : true
+    this._soundOn       = typeof saved.soundOn       === 'boolean' ? saved.soundOn       : true
 
     // Reflect persisted reduced-motion to body class so CSS can react globally
     if (this._reducedMotion) document.body.classList.add('reduced-motion')
@@ -38,6 +39,7 @@ export class SettingsOverlay {
     this.onQualityChange       = null
     this.onReducedMotionChange = null
     this.onHintsChange         = null
+    this.onSoundChange         = null
 
     this._lastFocus = null
     this._build()
@@ -48,6 +50,7 @@ export class SettingsOverlay {
     this.onQualityChange?.(this._quality)
     this.onReducedMotionChange?.(this._reducedMotion)
     this.onHintsChange?.(this._hintsVisible)
+    this.onSoundChange?.(this._soundOn)
   }
 
   _persist() {
@@ -55,12 +58,14 @@ export class SettingsOverlay {
       quality:       this._quality,
       reducedMotion: this._reducedMotion,
       hintsVisible:  this._hintsVisible,
+      soundOn:       this._soundOn,
     })
   }
 
   _build() {
     const rm = this._reducedMotion
     const hv = this._hintsVisible
+    const sd = this._soundOn
     const el = document.createElement('div')
     el.id        = 'settings-overlay'
     el.className = 'overlay-modal'
@@ -98,8 +103,8 @@ export class SettingsOverlay {
         </div>
         <div class="settings-row">
           <span class="settings-label">Sound</span>
-          <button class="stoggle" disabled type="button" aria-disabled="true" style="opacity:.35;cursor:default">OFF</button>
-          <span class="settings-note">coming soon</span>
+          <button class="stoggle${sd ? ' active' : ''}" id="sound-toggle" type="button" aria-pressed="${sd}">${sd ? 'ON' : 'OFF'}</button>
+          <span class="settings-note">the jukebox, in the meadow</span>
         </div>
       </div>
     `
@@ -129,6 +134,16 @@ export class SettingsOverlay {
       document.body.classList.toggle('reduced-motion', this._reducedMotion)
       this._persist()
       this.onReducedMotionChange?.(this._reducedMotion)
+    })
+
+    const soundBtn = el.querySelector('#sound-toggle')
+    soundBtn.addEventListener('click', () => {
+      this._soundOn = !this._soundOn
+      soundBtn.textContent = this._soundOn ? 'ON' : 'OFF'
+      soundBtn.classList.toggle('active', this._soundOn)
+      soundBtn.setAttribute('aria-pressed', String(this._soundOn))
+      this._persist()
+      this.onSoundChange?.(this._soundOn)
     })
 
     const hintsBtn = el.querySelector('#hints-toggle')
@@ -163,4 +178,5 @@ export class SettingsOverlay {
   get quality()       { return this._quality }
   get reducedMotion() { return this._reducedMotion }
   get hintsVisible()  { return this._hintsVisible }
+  get soundOn()       { return this._soundOn }
 }

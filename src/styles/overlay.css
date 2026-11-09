@@ -4004,3 +4004,708 @@ body.reduced-motion .sp-spark { animation: none; }
   .dr-paper-wrap { --paper-h: 42vh; }
   .dr-post     { flex: 1 1 100%; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE JUKEBOX — a shelf of loops other people left, plus the invitation
+   ═══════════════════════════════════════════════════════════════════════════ */
+.jb-inner {
+  --ic: #7C3AED;              /* purple, so the jukebox reads apart from the wall */
+  width: min(1040px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;      /* the shelf scrolls, not the shell */
+}
+.jb-inner .overlay-sub { margin-bottom: 1rem; }
+.jb-inner .overlay-title--icon svg { color: var(--ic); }
+
+/* Author `display` beats the UA sheet's [hidden] rule, so restate it here.
+   Without this the offline pill never goes away and the empty-shelf message
+   keeps reserving its 200px under a shelf that already has cards on it. */
+#jukebox-overlay [hidden] { display: none !important; }
+
+.jb-offline {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--glass-stroke);
+  font-size: 0.66rem;
+  color: var(--txt-mute);
+  vertical-align: middle;
+}
+
+.jb-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 236px;
+  gap: 18px;
+  align-items: start;
+  min-height: 0;
+}
+
+/* ── The shelf ──────────────────────────────────────────────────────────── */
+.jb-shelf {
+  min-height: 220px;
+  max-height: min(56vh, 480px);
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124,58,237,0.4) transparent;
+}
+.jb-shelf::-webkit-scrollbar { width: 8px; }
+.jb-shelf::-webkit-scrollbar-thumb {
+  background: rgba(124,58,237,0.35);
+  border-radius: 4px;
+}
+
+.jb-state {
+  display: grid;
+  place-content: center;
+  min-height: 200px;
+  text-align: center;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--txt-mute);
+}
+.jb-state strong { color: var(--txt); font-weight: 600; }
+
+.jb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 10px;
+}
+
+/* A card is a record sleeve, not a pinned drawing: flat and dark, and it
+   lights up along its own sixteen steps while it plays. */
+.jb-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-specular);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease-out), opacity 0.24s ease;
+}
+.jb-card:hover,
+.jb-card:focus-within {
+  background: rgba(255,255,255,0.075);
+  border-color: var(--glass-stroke-2);
+  transform: translateY(-2px);
+}
+.jb-card.is-playing {
+  background: color-mix(in srgb, var(--ic) 16%, rgba(255,255,255,0.04));
+  border-color: color-mix(in srgb, var(--ic) 52%, transparent);
+}
+.jb-card.is-new {
+  outline: 2px solid var(--ic);
+  outline-offset: 3px;
+  animation: jb-pop 0.5s var(--ease-out);
+}
+@keyframes jb-pop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.jb-card.is-gone { opacity: 0; transform: scale(0.94); pointer-events: none; }
+.jb-card.is-pinned { border-color: color-mix(in srgb, #FBBF24 40%, var(--glass-stroke)); }
+
+.jb-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ic) 40%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ic) 22%, transparent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.16s var(--ease-out), box-shadow 0.2s ease;
+}
+.jb-play:hover  { background: color-mix(in srgb, var(--ic) 40%, transparent); transform: scale(1.06); }
+.jb-play:active { transform: scale(1); }
+.jb-card.is-playing .jb-play {
+  background: var(--ic);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ic) 22%, transparent);
+}
+/* Spin while the pattern is still coming down the wire */
+.jb-card.is-loading .jb-play svg { animation: jb-spin 0.9s linear infinite; }
+@keyframes jb-spin { to { transform: rotate(360deg); } }
+
+.jb-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.jb-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.jb-card-who {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jb-card-who.is-anon { font-style: italic; font-weight: 400; color: var(--txt-soft); }
+.jb-card-pin {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, #FBBF24 26%, transparent);
+  color: #FBBF24;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.jb-card-meta {
+  font-size: 0.64rem;
+  color: var(--txt-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sixteen steps of the loop, drawn across the card as it plays. */
+.jb-card-steps {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  margin-top: 3px;
+  height: 4px;
+}
+.jb-step {
+  border-radius: 1px;
+  background: rgba(255,255,255,0.10);
+  transition: background 0.1s linear;
+}
+.jb-step.is-beat { background: rgba(255,255,255,0.18); }
+.jb-step.is-now  { background: var(--ic); box-shadow: 0 0 6px var(--ic); }
+
+.jb-remix,
+.jb-flag {
+  position: absolute;
+  top: 8px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: rgba(20,14,40,0.62);
+  color: rgba(255,255,255,0.72);
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.jb-remix {
+  right: 36px;
+  height: 22px;
+  padding: 0 9px;
+  letter-spacing: 0.04em;
+}
+.jb-flag {
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+}
+.jb-card:hover .jb-remix,
+.jb-card:hover .jb-flag,
+.jb-card:focus-within .jb-remix,
+.jb-card:focus-within .jb-flag,
+.jb-remix:focus-visible,
+.jb-flag:focus-visible { opacity: 1; }
+.jb-remix:hover     { background: color-mix(in srgb, var(--ic) 78%, transparent); color: #fff; }
+.jb-flag:hover      { background: rgba(229,57,53,0.8); color: #fff; }
+.jb-flag.is-armed   { opacity: 1; background: #E53935; color: #fff; }
+.jb-flag:disabled   { opacity: 1; background: rgba(20,14,40,0.62); cursor: default; }
+
+/* ── The invitation ─────────────────────────────────────────────────────── */
+.jb-cta {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 1.4rem 1.1rem 1.2rem;
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--ic) 16%, rgba(255,255,255,0.05)),
+    rgba(255,255,255,0.02));
+  border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke));
+  box-shadow: var(--glass-specular);
+}
+.jb-cta-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 74px;
+  margin-bottom: 0.2rem;
+  color: #fff;
+}
+.jb-cta-art svg { position: relative; z-index: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)); }
+.jb-cta-disc {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #2A1F3D 0 24%, var(--ic) 25% 100%);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+.jb-cta-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+.jb-cta-sub {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--txt-soft);
+}
+.jb-cta-btn {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.7rem 1rem;
+  border: none;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #A78BFA, var(--ic));
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ic) 40%, transparent);
+  transition: transform 0.16s var(--ease-out), box-shadow 0.2s ease, filter 0.2s ease;
+}
+.jb-cta-btn:hover  { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 10px 26px color-mix(in srgb, var(--ic) 50%, transparent); }
+.jb-cta-btn:active { transform: translateY(0); }
+.jb-cta-foot {
+  font-size: 0.66rem;
+  color: var(--txt-mute);
+}
+
+@media (max-width: 720px) {
+  .jb-body { grid-template-columns: minmax(0, 1fr); }
+  .jb-cta  { position: static; order: -1; padding: 1rem; }
+  .jb-shelf { max-height: 42vh; }
+  /* No hover on touch, so the card actions have to be there already */
+  .jb-remix, .jb-flag { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE STUDIO — sixteen steps, three lanes, no wrong notes
+   ═══════════════════════════════════════════════════════════════════════════ */
+.studio-inner {
+  --ic: #7C3AED;
+  --lead:  #A78BFA;
+  --bass:  #7C3AED;
+  --drums: #FBBF24;
+  --jb-gutter: 46px;
+  --jb-cell-h: clamp(17px, 3vh, 28px);
+  width: min(900px, 94vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.studio-inner .overlay-sub { margin-bottom: 0.9rem; }
+.studio-inner .overlay-title--icon svg { color: var(--ic); }
+
+.st-stage {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+/* ── Tool rail ──────────────────────────────────────────────────────────── */
+.st-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.7rem 0.6rem;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-stroke);
+  align-self: start;
+}
+.st-rail-div {
+  height: 1px;
+  background: var(--glass-stroke);
+  margin: 0.1rem 0;
+}
+
+.st-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0.6rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ic) 40%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--ic) 22%, transparent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.16s var(--ease-out);
+}
+.st-play:hover  { background: color-mix(in srgb, var(--ic) 40%, transparent); transform: translateY(-1px); }
+.st-play:active { transform: translateY(0); }
+.st-play.is-on  { background: var(--ic); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ic) 20%, transparent); }
+
+/* Moods reskin the scale and the voicing together, so they earn real estate */
+.st-moods { display: flex; flex-direction: column; gap: 5px; }
+.jb-mood {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0.42rem 0.6rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.jb-mood:hover { background: rgba(255,255,255,0.1); }
+.jb-mood.is-on {
+  background: color-mix(in srgb, var(--ic) 22%, transparent);
+  border-color: color-mix(in srgb, var(--ic) 50%, transparent);
+}
+.jb-mood-name {
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--txt-soft);
+}
+.jb-mood.is-on .jb-mood-name { color: #fff; }
+.jb-mood-blurb { font-size: 0.6rem; color: var(--txt-mute); }
+
+.st-bpm { display: flex; flex-direction: column; gap: 5px; }
+.st-bpm-top { display: flex; align-items: baseline; justify-content: space-between; }
+.st-bpm-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--txt-mute);
+}
+.st-bpm-val {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.st-bpm-range {
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  cursor: pointer;
+}
+.st-bpm-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.16);
+}
+.st-bpm-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.16);
+}
+.st-bpm-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5.5px;
+  border: none;
+  border-radius: 50%;
+  background: var(--ic);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ic) 26%, transparent);
+}
+.st-bpm-range::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border: none;
+  border-radius: 50%;
+  background: var(--ic);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ic) 26%, transparent);
+}
+
+.st-tools { display: flex; flex-direction: column; gap: 5px; }
+.st-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0.42rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
+  color: var(--txt-soft);
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.st-tool svg { flex-shrink: 0; }
+.st-tool:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.st-tool--go {
+  background: color-mix(in srgb, var(--drums) 16%, transparent);
+  border-color: color-mix(in srgb, var(--drums) 34%, transparent);
+  color: #fff;
+}
+.st-tool--go:hover { background: color-mix(in srgb, var(--drums) 30%, transparent); }
+.st-tool--warn:hover { background: rgba(229,57,53,0.22); color: #ffb4b2; }
+
+/* ── The grid ───────────────────────────────────────────────────────────── */
+.st-grid-wrap {
+  position: relative;
+  align-self: start;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.st-ticks {
+  display: grid;
+  grid-template-columns: var(--jb-gutter) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.st-ticks-row {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+}
+.jb-tick {
+  height: 4px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.10);
+  transition: background 0.1s linear;
+}
+.jb-tick.is-beat { background: rgba(255,255,255,0.2); }
+.jb-tick.is-now  { background: var(--ic); box-shadow: 0 0 7px var(--ic); }
+
+.st-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 9px;
+  border-radius: var(--r-md);
+  background: rgba(10,6,24,0.42);
+  border: 1px solid var(--glass-stroke);
+  touch-action: none;   /* pointer events own the gesture, not the browser */
+}
+
+.jb-lane {
+  display: grid;
+  grid-template-columns: var(--jb-gutter) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.jb-lane-name {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  text-align: right;
+}
+.jb-lane[data-lane="lead"]  { --ln: var(--lead); }
+.jb-lane[data-lane="bass"]  { --ln: var(--bass); }
+.jb-lane[data-lane="drums"] { --ln: var(--drums); }
+/* Each lane sits on its own faintly tinted strip. Sixteen identical rows in a
+   row otherwise read as one big grid and you lose track of which lane you are
+   drawing in. */
+.jb-lane-cells {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  padding: 3px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--ln) 8%, rgba(255,255,255,0.015));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ln) 15%, transparent);
+}
+
+.jb-cell {
+  height: var(--jb-cell-h);
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.055);
+  cursor: pointer;
+  transition: background 0.12s ease, box-shadow 0.16s ease;
+}
+/* Every fourth column is a beat, so sixteen cells still read as four beats */
+.jb-cell.is-beat  { background: rgba(255,255,255,0.16); }
+.jb-cell:hover    { background: rgba(255,255,255,0.28); }
+.jb-cell.is-on {
+  background: var(--ln);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--ln) 55%, transparent);
+}
+.jb-cell.is-on:hover { filter: brightness(1.12); }
+.jb-cell:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.st-grid-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--txt-mute);
+  pointer-events: none;
+  transition: opacity 0.24s ease;
+}
+.st-grid-hint.is-gone { opacity: 0; }
+
+/* ── Signature row ──────────────────────────────────────────────────────── */
+.st-sign {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+.st-name-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1 1 190px;
+  min-width: 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-stroke);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.st-name-field:focus-within {
+  border-color: color-mix(in srgb, var(--ic) 55%, transparent);
+  background: rgba(255,255,255,0.08);
+}
+.st-name-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--txt-mute);
+  flex-shrink: 0;
+}
+.st-name {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+}
+.st-name::placeholder { color: var(--txt-faint); }
+.st-name:disabled { color: var(--txt-mute); font-style: italic; }
+
+.st-anon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--glass-stroke);
+  background: rgba(255,255,255,0.04);
+  color: var(--txt-soft);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.st-anon:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.st-anon.is-on {
+  background: color-mix(in srgb, var(--drums) 26%, transparent);
+  border-color: color-mix(in srgb, var(--drums) 55%, transparent);
+  color: #fff;
+}
+
+.st-post {
+  flex-shrink: 0;
+  padding: 0.62rem 1.3rem;
+  border: none;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #A78BFA, var(--ic));
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ic) 38%, transparent);
+  transition: transform 0.16s var(--ease-out), filter 0.2s ease, opacity 0.2s ease;
+}
+.st-post:hover:not(:disabled)  { transform: translateY(-2px); filter: brightness(1.08); }
+.st-post:active:not(:disabled) { transform: translateY(0); }
+.st-post:disabled { opacity: 0.55; cursor: default; }
+
+.st-note {
+  margin-top: 0.55rem;
+  font-size: 0.7rem;
+  color: var(--txt-mute);
+  min-height: 1.1em;
+}
+.st-note--warn { color: #FFB4A2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jb-card.is-loading .jb-play svg { animation: none; }
+}
+body.reduced-motion .jb-card.is-loading .jb-play svg { animation: none; }
+
+@media (max-width: 720px) {
+  .studio-inner { --jb-gutter: 34px; --jb-cell-h: clamp(20px, 2.6vh, 26px); }
+  .st-stage { grid-template-columns: minmax(0, 1fr); }
+  .st-rail {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.7rem;
+    padding: 0.6rem 0.7rem;
+  }
+  .st-rail-div { display: none; }
+  .st-play  { width: auto; flex: 0 0 auto; padding: 0.5rem 0.9rem; }
+  .st-moods { flex-direction: row; flex: 1 1 100%; }
+  .jb-mood  { flex: 1; align-items: center; text-align: center; }
+  .jb-mood-blurb { display: none; }
+  .st-bpm   { flex: 1 1 130px; }
+  .st-tools { flex-direction: row; flex: 1 1 auto; justify-content: flex-end; }
+  .st-tool span { display: none; }
+  .st-tool  { padding: 0.42rem 0.6rem; }
+  .st-post  { flex: 1 1 100%; }
+}

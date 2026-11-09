@@ -21,6 +21,9 @@ public/travel-stats.json
 # Local doodle-wall store (dev stand-in for Vercel Blob)
 .gallery-dev/
 
+# Local jukebox store (dev stand-in for Vercel Blob)
+.jukebox-dev/
+
 # Intermediate world optimisation output
 assets/source/world.optimized.tmp.glb
 

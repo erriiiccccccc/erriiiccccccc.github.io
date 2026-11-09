@@ -25,7 +25,11 @@ import { SettingsOverlay } from './ui/SettingsOverlay.js'
 import { AboutOverlay } from './ui/AboutOverlay.js'
 import { GalleryOverlay } from './ui/GalleryOverlay.js'
 import { DrawOverlay } from './ui/DrawOverlay.js'
+import { JukeboxOverlay } from './ui/JukeboxOverlay.js'
+import { StudioOverlay } from './ui/StudioOverlay.js'
+import { audio } from './jukebox/AudioEngine.js'
 import { QuestMarker } from './scene/QuestMarker.js'
+import { Jukebox } from './scene/Jukebox.js'
 import { LoadDirector } from './loading/LoadDirector.js'
 import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
 import {
@@ -178,6 +182,23 @@ drawOverlay.onClose   = () => {
   if (!galleryOverlay.isOpen()) galleryOverlay.open()
 }
 
+// The jukebox and its studio, the wall and pad's twin. Same shape, same
+// reasons: cheap DOM up front, no network until the first F press.
+const jukeboxOverlay  = new JukeboxOverlay()
+const studioOverlay   = new StudioOverlay()
+jukeboxOverlay.onWrite = () => studioOverlay.open()
+jukeboxOverlay.onRemix = (pattern) => {
+  // Always a new track: the studio starts from someone's loop, it never
+  // writes back over it.
+  studioOverlay.loadPattern(pattern)
+  studioOverlay.open()
+}
+studioOverlay.onPosted = (item) => jukeboxOverlay.addLocal(item)
+studioOverlay.onClose  = () => {
+  // The studio sits on top of the shelf, so closing it lands you on the shelf
+  if (!jukeboxOverlay.isOpen()) jukeboxOverlay.open()
+}
+
 aboutOverlay.onStartClose = () => {
   // 1. Lights snap off first (quick) — character goes dark while still zoomed in.
   aboutLightsOn = false
@@ -269,6 +290,9 @@ const controlsHintEl = document.getElementById('controls-hint')
 const HINT_IDLE_SHOW = 5   // seconds idle before the hint fades back in
 let   hintsEnabled   = true
 let   hintShown      = true
+// Sound: the jukebox is the only thing in the world that makes any, so the
+// toggle simply arms or silences its engine.
+settingsOverlay.onSoundChange = (on) => audio.setSoundOn(on)
 settingsOverlay.onHintsChange = (visible) => {
   hintsEnabled = visible
   if (!controlsHintEl) return
@@ -296,11 +320,15 @@ function isAnyOverlayOpen() {
   return mapOverlay.isOpen() || helpOverlay.isOpen()
       || settingsOverlay.isOpen() || aboutOverlay.isOpen()
       || galleryOverlay.isOpen() || drawOverlay.isOpen()
+      || jukeboxOverlay.isOpen() || studioOverlay.isOpen()
 }
 function closeAnyOpenOverlay() {
-  // Innermost first: pad sits on the wall, wall sits on the world
+  // Innermost first: pad sits on the wall, studio sits on the shelf, and both
+  // of those sit on the world
   if (drawOverlay.isOpen())     { drawOverlay.close();     return true }
   if (galleryOverlay.isOpen())  { galleryOverlay.close();  return true }
+  if (studioOverlay.isOpen())   { studioOverlay.close();   return true }
+  if (jukeboxOverlay.isOpen())  { jukeboxOverlay.close();  return true }
   if (aboutOverlay.isOpen())    { aboutOverlay.close();    return true }
   if (settingsOverlay.isOpen()) { settingsOverlay.close(); return true }
   if (helpOverlay.isOpen())     { helpOverlay.close();     return true }
@@ -677,18 +705,67 @@ perfMark('world_download_start')
     }
     await yieldToMain()
 
-    // ── Doodle-wall quest marker over the meadow telescope ──────────────────
-    // The GLB carries a node literally called "telescope"; if a future world
-    // export renames it we just skip the marker rather than break the island.
+    // ── Meadow points of interest ───────────────────────────────────────────
+    // The doodle wall hangs off a node the GLB carries literally called
+    // "telescope". If a future world export renames it we skip that marker
+    // rather than break the island.
     {
       const scope = model.getObjectByName(TELESCOPE_NODE)
       if (scope) {
-        questMarker = new QuestMarker({ color: 0xFBBF24 })
-        const r = questMarker.attachTo(scope, planetGroup)
-        // Trigger radius scales off the prop so it survives a world re-export
-        telescopeRange = Math.max(2.6, r * 2.2)
+        addPoi({
+          key:      'wall',
+          target:   scope,
+          island:   MEADOW_ISLAND,
+          color:    0xFBBF24,
+          iconKey:  'telescope',
+          title:    'The Doodle Wall',
+          sub:      'someone left drawings here',
+          foundSub: 'look again',
+          open:     () => galleryOverlay.open(),
+        })
       } else if (import.meta.env.DEV) {
         console.warn(`[world] no "${TELESCOPE_NODE}" node — doodle wall marker skipped`)
+      }
+
+      // The jukebox is not in the GLB at all, it is assembled from primitives
+      // and dropped onto the meadow's surface, opposite the telescope so the
+      // two prompts never overlap and the island has something at either end.
+      const spot = dropOntoIsland(MEADOW_ISLAND, scope ? new THREE.Vector3().setFromMatrixPosition(scope.matrixWorld) : null)
+      if (spot) {
+        jukeboxProp = new Jukebox()
+        jukeboxProp.group.position.copy(spot.position)
+        jukeboxProp.group.quaternion.setFromUnitVectors(WORLD_UP, spot.normal)
+        planetGroup.add(jukeboxProp.group)
+        addPoi({
+          key:      'jukebox',
+          target:   jukeboxProp.group,
+          island:   MEADOW_ISLAND,
+          color:    0x7C3AED,          // purple, so it reads apart from the scope's gold
+          iconKey:  'music',
+          title:    'The Jukebox',
+          sub:      'someone left loops here',
+          foundSub: 'have another listen',
+          open:     () => jukeboxOverlay.open(),
+        })
+      } else if (import.meta.env.DEV) {
+        console.warn(`[world] could not find a spot on "${MEADOW_ISLAND}" — jukebox skipped`)
+      }
+
+      // The props and markers were placed in planetGroup space, but the globe
+      // itself (model) stays hidden and then slides in during the loader
+      // arrival. Left as planetGroup siblings they float in empty space before
+      // the planet lands. Moving them inside the model makes them appear and
+      // arrive with it. attach() keeps their world transform, and the model is
+      // still at its resting pose here. The surface and obstacle rays walk the
+      // model's whole tree, so the props opt out of raycasting: they were never
+      // walkable before the move, and the marker's halo Sprite throws without
+      // a raycaster camera.
+      const noRaycast = (root) => root.traverse(o => { o.raycast = () => {} })
+      const adopt = (obj) => { model.attach(obj); noRaycast(obj) }
+      if (jukeboxProp) adopt(jukeboxProp.group)
+      for (const poi of POIS) {
+        adopt(poi.marker.group)
+        adopt(poi.marker.anchor)
       }
     }
     await yieldToMain()
@@ -779,19 +856,111 @@ const meshToIsland  = new Map()  // Mesh → islandName (built after GLB spatial
 let islandUIState    = 'exploring'  // 'exploring' | 'near' | 'detail'
 let activeIslandName = null         // set by sampleSurfaceHeight (see animate raycast cache)
 
-// ─── Point of interest: the meadow telescope → doodle wall ───────────────────
+// ─── Points of interest: the props you can walk up to and open ──────────────
 // A second, nested prompt that only appears once you're already standing on
-// the island the telescope belongs to.
-const TELESCOPE_NODE   = 'telescope'
-const TELESCOPE_ISLAND = 'meadow_island'
-let questMarker    = null
-let telescopeRange = 3.2        // world units; recomputed from the prop's size
-let nearTelescope  = false
-let _subPromptOn   = false
-let _scopeFound    = false      // has the wall been opened at least once
+// the island the prop belongs to. Every prop with an overlay of its own lives
+// in POIS, so the F key and the sub-popup stay a single pair however many get
+// added: the render loop picks the nearest one and that is the one F opens.
+const TELESCOPE_NODE = 'telescope'
+const MEADOW_ISLAND  = 'meadow_island'
+/** @type {Array<{key,island,marker,range,near,found,iconKey,title,sub,foundSub,color,open}>} */
+const POIS = []
+const WORLD_UP = new THREE.Vector3(0, 1, 0)
+let activePoi     = null   // the one you're closest to right now, or null
+let _subPromptPoi = null   // whose prompt is currently on screen
+/** @type {import('./scene/Jukebox.js').Jukebox | null} */
+let jukeboxProp   = null
 let _prevActiveIslandForLerp = null
 let _islandLerpSettling = 0
 let _forceIslandLerp = true
+
+/**
+ * Hang a quest marker over `target` and make F open something when you stand
+ * next to it. Call once the prop is inside planetGroup and its world matrix
+ * is up to date.
+ * @param {object}         o
+ * @param {string}         o.key       stable id, for the dev probe
+ * @param {THREE.Object3D} o.target    the prop the marker floats above
+ * @param {string}         o.island    only triggers while you're on this island
+ * @param {number}         o.color     marker accent, hex
+ * @param {string}         o.iconKey   icons.js key for the prompt
+ * @param {string}         o.title     prompt title
+ * @param {string}         o.sub       prompt line before the first open
+ * @param {string}         o.foundSub  prompt line after it
+ * @param {Function}       o.open      what F actually does
+ */
+function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, open }) {
+  const marker = new QuestMarker({ color })
+  const r = marker.attachTo(target, planetGroup)
+  const poi = {
+    key, island, marker, iconKey, title, sub, foundSub, open,
+    color: `#${color.toString(16).padStart(6, '0').toUpperCase()}`,
+    // Trigger radius scales off the prop so it survives a world re-export
+    range: Math.max(2.6, r * 2.2),
+    near:  false,
+    found: false,        // has it been opened at least once
+  }
+  POIS.push(poi)
+  return poi
+}
+
+const _dropRay = new THREE.Raycaster()
+
+/**
+ * Find a spot to stand a procedural prop on, somewhere on `islandName`.
+ *
+ * The planet's core is planetGroup's origin, so the outward normal at any
+ * point is just that point's direction from the core. That gives a tangent
+ * plane to slide along, and a ray to fire back down at the island.
+ *
+ * @param {string}          islandName
+ * @param {THREE.Vector3}  [awayFrom] world point to sit opposite, so two props
+ *                                    on one island end up at either end of it
+ * @returns {{ position: THREE.Vector3, normal: THREE.Vector3 }|null} planetGroup-local
+ */
+function dropOntoIsland(islandName, awayFrom = null) {
+  const meshes = islandMeshes[islandName]
+  if (!meshes?.length) return null
+  planetGroup.updateMatrixWorld(true)
+
+  const box = new THREE.Box3()
+  for (const m of meshes) box.expandByObject(m)
+  if (box.isEmpty()) return null
+
+  const centre = box.getCenter(new THREE.Vector3())
+  const size   = box.getSize(new THREE.Vector3())
+  const reach  = Math.max(size.x, size.y, size.z) * 0.5
+
+  const core   = new THREE.Vector3().setFromMatrixPosition(planetGroup.matrixWorld)
+  const normal = centre.clone().sub(core).normalize()
+
+  // A tangent direction pointing away from `awayFrom`, or any tangent at all.
+  let slide = new THREE.Vector3()
+  if (awayFrom) {
+    slide.copy(centre).sub(awayFrom)
+    slide.addScaledVector(normal, -slide.dot(normal))   // flatten onto the plane
+  }
+  if (slide.lengthSq() < 1e-4) {
+    const seed = Math.abs(normal.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)
+    slide.crossVectors(normal, seed)
+  }
+  slide.normalize()
+
+  // Walk back in from the island's edge until the ray actually lands on it.
+  const above = core.distanceTo(centre) + reach + 30
+  for (const frac of [0.55, 0.42, 0.30, 0.18, 0]) {
+    const target = centre.clone().addScaledVector(slide, reach * frac)
+    const dir    = target.clone().sub(core).normalize()
+    const from   = core.clone().addScaledVector(dir, above)
+    _dropRay.set(from, dir.clone().negate())
+    _dropRay.layers.enableAll()     // island floors may sit on the terrain layer
+    const hit = _dropRay.intersectObjects(meshes, true)[0]
+    if (!hit) continue
+    const local = planetGroup.worldToLocal(hit.point.clone())
+    return { position: local, normal: local.clone().normalize() }
+  }
+  return null
+}
 
 // --- Starfield ---
 const stars = new Starfield()
@@ -1102,33 +1271,37 @@ function closeIslandPanel() {
   if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName])
 }
 
-// ─── The telescope's doodle wall ─────────────────────────────────────────────
-function openDoodleWall() {
-  if (!nearTelescope || isAnyOverlayOpen() || ui.isPanelOpen()) return
-  _scopeFound = true
-  questMarker?.setDiscovered(true)
-  _subPromptOn = false
+// ─── Opening whatever point of interest you're standing next to ─────────────
+function openPoi(poi = activePoi) {
+  if (!poi || isAnyOverlayOpen() || ui.isPanelOpen()) return
+  poi.found = true
+  poi.marker.setDiscovered(true)
+  _subPromptPoi = null
   ui.hideSubPopup()
-  galleryOverlay.open()
+  poi.open()
 }
 
 // Popup tap / click callback (works for both mouse and touch)
 ui.onPopupTap    = openIslandPanel
-ui.onSubPopupTap = openDoodleWall
+ui.onSubPopupTap = () => openPoi()
 
 if (import.meta.env.DEV) {
-  // Dev-only probe for tuning the telescope trigger. Stripped from the build.
+  // Dev-only probe for tuning the poi triggers. Stripped from the build.
   window.__ew = {
-    get scope() {
-      return {
-        island: activeIslandName,
-        range:  telescopeRange,
-        dist:   questMarker ? questMarker.distanceTo(modelGroup.position) : null,
-        near:   nearTelescope,
-        found:  _scopeFound,
-      }
+    get island() { return activeIslandName },
+    get near()   { return activePoi?.key ?? null },
+    get pois() {
+      return POIS.map(p => ({
+        key:    p.key,
+        island: p.island,
+        range:  +p.range.toFixed(2),
+        dist:   +p.marker.distanceTo(modelGroup.position).toFixed(2),
+        near:   p.near,
+        found:  p.found,
+      }))
     },
-    openWall: () => { nearTelescope = true; openDoodleWall() },
+    // Force one open without walking to it: __ew.openPoi('wall')
+    openPoi: (key) => openPoi(POIS.find(p => p.key === key)),
   }
 }
 // ✕ / backdrop click inside the world panel → run the canonical close so
@@ -1154,7 +1327,7 @@ document.addEventListener('keydown', e => {
     else openIslandPanel()
   }
   // F opens whatever point of interest you're standing next to
-  if (key === 'f') openDoodleWall()
+  if (key === 'f') openPoi()
   // While a detail panel is open, only Esc / E / X act — ignore the map key
   if (key === 'm' && !ui.isPanelOpen()) mapOverlay.toggle()
 })
@@ -1750,23 +1923,35 @@ function animate() {
     }
   }
 
-  // ── Telescope point of interest (nested prompt above the island one) ──────
-  if (questMarker) {
+  // ── Points of interest (nested prompt above the island one) ───────────────
+  if (POIS.length) {
     // The character never moves in world space, the planet turns under it, so
-    // a plain world-distance check is all the proximity test we need.
-    nearTelescope = activeIslandName === TELESCOPE_ISLAND
-      && questMarker.distanceTo(modelGroup.position) < telescopeRange
-    questMarker.update(dt, nearTelescope, reducedMotion)
+    // a plain world-distance check is all the proximity test we need. Two props
+    // on one island can overlap, so the closest one wins the prompt and the key.
+    let nearest     = null
+    let nearestDist = Infinity
+    for (const poi of POIS) {
+      const dist = poi.island === activeIslandName
+        ? poi.marker.distanceTo(modelGroup.position)
+        : Infinity
+      poi.near = dist < poi.range
+      poi.marker.update(dt, poi.near, reducedMotion)
+      if (poi.near && dist < nearestDist) { nearest = poi; nearestDist = dist }
+    }
+    activePoi = nearest
+    jukeboxProp?.update(dt, reducedMotion)
 
-    const wantSub = nearTelescope && islandUIState === 'near' && !isInputLocked()
-    if (wantSub !== _subPromptOn) {
-      _subPromptOn = wantSub
+    const wantSub = (activePoi && islandUIState === 'near' && !isInputLocked())
+      ? activePoi
+      : null
+    if (wantSub !== _subPromptPoi) {
+      _subPromptPoi = wantSub
       if (wantSub) {
         ui.showSubPopup({
-          iconKey: 'telescope',
-          title:   'The Doodle Wall',
-          sub:     _scopeFound ? 'look again' : 'someone left drawings here',
-          color:   '#FBBF24',
+          iconKey: wantSub.iconKey,
+          title:   wantSub.title,
+          sub:     wantSub.found ? wantSub.foundSub : wantSub.sub,
+          color:   wantSub.color,
           keycap:  'F',
         })
       } else {

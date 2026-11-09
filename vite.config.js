@@ -13,14 +13,31 @@ const OUT_PATH   = join(__dirname, 'public', 'travel-stats.json')
 const DEV_GALLERY_DIR  = join(__dirname, '.gallery-dev')
 const DEV_GALLERY_FILE = join(DEV_GALLERY_DIR, 'index.json')
 
-function readDevGallery() {
-  try { return JSON.parse(readFileSync(DEV_GALLERY_FILE, 'utf8')) }
+// Same idea for api/jukebox.mjs. Patterns are tiny, so the whole shelf fits in
+// one gitignored JSON file and the pattern rides back as a data: URL — which
+// is exactly the shape the real thing has, an immutable public URL holding
+// nothing but the pattern.
+const DEV_JUKEBOX_DIR  = join(__dirname, '.jukebox-dev')
+const DEV_JUKEBOX_FILE = join(DEV_JUKEBOX_DIR, 'index.json')
+
+function readDevStore(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')) }
   catch { return [] }
 }
 
-function writeDevGallery(items) {
-  if (!existsSync(DEV_GALLERY_DIR)) mkdirSync(DEV_GALLERY_DIR, { recursive: true })
-  writeFileSync(DEV_GALLERY_FILE, JSON.stringify(items, null, 2))
+function writeDevStore(dir, file, items) {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+  writeFileSync(file, JSON.stringify(items, null, 2))
+}
+
+function readDevGallery() { return readDevStore(DEV_GALLERY_FILE) }
+function writeDevGallery(items) { writeDevStore(DEV_GALLERY_DIR, DEV_GALLERY_FILE, items) }
+
+function readDevJukebox() { return readDevStore(DEV_JUKEBOX_FILE) }
+function writeDevJukebox(items) { writeDevStore(DEV_JUKEBOX_DIR, DEV_JUKEBOX_FILE, items) }
+
+function patternUrl(pattern) {
+  return `data:application/json;base64,${Buffer.from(JSON.stringify(pattern), 'utf8').toString('base64')}`
 }
 
 function readJsonBody(req) {
@@ -112,6 +129,72 @@ export default defineConfig({
             }
             writeDevGallery([item, ...items])
             return send(201, { item: { id: item.id, name: item.name, at: item.at, url: item.dataUrl } })
+          }
+
+          send(405, { error: 'method not allowed' })
+        } catch (err) {
+          send(500, { error: err.message })
+        }
+      })
+    }
+  }, {
+    name: 'jukebox-api',
+    configureServer(server) {
+      server.middlewares.use('/api/jukebox', async (req, res) => {
+        const send = (code, body) => {
+          res.statusCode = code
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(JSON.stringify(body))
+        }
+
+        try {
+          if (req.method === 'GET') {
+            const items = readDevJukebox().filter(t => (t.flags || 0) < 2)
+
+            // The CORS fallback path, so it gets exercised locally too.
+            const track = /[?&]action=track\b/.test(req.url || '')
+            if (track) {
+              const id  = decodeURIComponent(/[?&]id=([^&]*)/.exec(req.url || '')?.[1] || '')
+              const hit = items.find(t => t.id === id)
+              return hit ? send(200, { pattern: hit.pattern }) : send(404, { error: 'no such track' })
+            }
+
+            return send(200, {
+              items: items
+                .map(({ id, name, at, bpm, pattern, pinned }) =>
+                  ({ id, name, at, bpm, pinned, url: patternUrl(pattern) }))
+                .sort((a, b) => b.at - a.at),
+            })
+          }
+
+          if (req.method === 'POST') {
+            const body     = await readJsonBody(req)
+            const isReport = /[?&]action=report\b/.test(req.url || '')
+            const items    = readDevJukebox()
+
+            if (isReport) {
+              const hit = items.find(t => t.id === body.id)
+              if (hit) hit.flags = (hit.flags || 0) + 1
+              writeDevJukebox(items)
+              return send(200, { ok: true })
+            }
+
+            const pattern = body.pattern
+            if (!pattern || typeof pattern !== 'object' || !pattern.lanes) {
+              return send(400, { error: 'expected a pattern with at least one note' })
+            }
+            const item = {
+              id:   `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              name: String(body.name || '').slice(0, 24),
+              at:   Date.now(),
+              bpm:  pattern.bpm,
+              pattern,
+            }
+            writeDevJukebox([item, ...items])
+            return send(201, {
+              item: { id: item.id, name: item.name, at: item.at, bpm: item.bpm, url: patternUrl(pattern) },
+            })
           }
 
           send(405, { error: 'method not allowed' })
