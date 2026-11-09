@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dive · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .pw-world { position: absolute; inset: 0; z-index: 0; transition: transform 700ms var(--ease-out), filter 500ms; }
+  .pw-world .world-bg { position: absolute; inset: 0; }
+  .pw-island { position: absolute; left: var(--ix, 50%); top: var(--iy, 50%); width: 220px; transform: translate(-50%, -50%); z-index: 2; }
+  .pw-island svg { width: 100%; height: auto; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.45)); }
+  .pw-char { position: absolute; left: var(--ix, 50%); top: calc(var(--iy, 50%) - 52px); width: 30px; height: 56px; transform: translateX(-50%); z-index: 3; animation: idle 3s ease-in-out infinite; }
+  @keyframes idle { 50% { transform: translateX(-50%) translateY(-2px); } }
+  .pw-ctl { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 5; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; transition: opacity 200ms; }
+  .pw-ctl .btn { min-height: 44px; }
+  .pw-ctl .kbd { height: 20px; min-width: 20px; font-size: 10px; margin-left: 2px; }
+  .open .pw-ctl { opacity: 0; pointer-events: none; }
+  .ew.pv { display: none; }
+  .ew.pv.show { display: flex; }
+
+  /* skeleton content so the motion is the focus */
+  .sk { padding: 6px 24px 24px; display: grid; gap: 14px; }
+  .sk-hero { height: clamp(140px, 22vh, 220px); border-radius: 16px; background: linear-gradient(120deg, color-mix(in srgb, var(--ic) 40%, transparent), rgba(255,255,255,0.04)); border: 1px solid var(--line); position: relative; overflow: hidden; }
+  .sk-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 2.4s linear infinite; }
+  @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  .sk-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .sk-card { height: 96px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); }
+  .sk-lines { display: grid; gap: 8px; }
+  .sk-lines i { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.07); }
+  .sk-lines i:nth-child(2) { width: 82%; } .sk-lines i:nth-child(3) { width: 64%; }
+  .stg { opacity: 0; transform: translateY(12px); }
+  .in .stg { animation: stg 480ms var(--ease-out) forwards; animation-delay: calc(180ms + var(--n) * 45ms); }
+  @keyframes stg { to { opacity: 1; transform: none; } }
+
+  /* A · iris */
+  .ew.iris { transition: clip-path 640ms var(--ease-out); clip-path: circle(0px at var(--cx) var(--cy)); }
+  .ew.iris.on { clip-path: circle(150% at var(--cx) var(--cy)); }
+  .ew.iris.closing { transition-duration: 380ms; transition-timing-function: var(--ease-in); }
+
+  /* B · side stage */
+  .ss .pw-world { transform: none; }
+  .ss.open .pw-world { transform: translateX(-24%) scale(1.06); }
+  .ew.side { left: 40%; right: 18px; top: 18px; bottom: 18px; inset: 18px 18px 18px 40%; transform: translateX(110%); transition: transform 560ms var(--ease-out); }
+  .ew.side.on { transform: none; }
+  .ew.side.closing { transition-duration: 340ms; transition-timing-function: var(--ease-in); }
+  .handle { display: none; }
+  @media (max-width: 860px) {
+    .ss.open .pw-world { transform: translateY(-22%) scale(0.9); }
+    .ew.side { inset: 14% 0 0 0; border-radius: 24px 24px 0 0; transform: translateY(105%); }
+    .ew.side.on { transform: translateY(var(--drag, 0px)); }
+    .ew.side.dragging { transition: none; }
+    .handle { display: block; position: absolute; top: 8px; left: 50%; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: rgba(255,255,255,0.3); z-index: 5; }
+    .handle-hit { position: absolute; top: 0; left: 0; right: 0; height: 32px; z-index: 4; touch-action: none; cursor: grab; }
+    .sk-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* C · chapter */
+  .ch.open .pw-world { filter: blur(10px) brightness(0.45); transform: scale(1.04); }
+  .ew.chap { inset: 16px; flex-direction: row; opacity: 0; transform: scale(0.98); transition: opacity 360ms, transform 460ms var(--ease-out); }
+  .ew.chap.on { opacity: 1; transform: none; }
+  .rail { width: 210px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .rail .mono { padding: 0 10px 10px; }
+  .rail button { display: grid; grid-template-columns: 28px 1fr 18px; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 12px; background: none; color: var(--ink-3); text-align: left; cursor: pointer; font-size: 14px; }
+  .rail button:hover { background: var(--raise); color: var(--ink); }
+  .rail button[aria-current="true"] { background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--ink); box-shadow: inset 3px 0 0 var(--c); }
+  .rail button code { font-family: var(--f-mono); font-size: 11px; color: var(--c); }
+  .rail button i { color: var(--c); display: grid; place-items: center; }
+  .chap-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .chap-main .ew-body { overflow: hidden; }
+  .slide-l { animation: sl 420ms var(--ease-out); } .slide-r { animation: sr 420ms var(--ease-out); }
+  @keyframes sl { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+  @keyframes sr { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 860px) { .rail { display: none; } }
+
+  /* D · biome */
+  .biome-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .bchip { min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); background: rgba(10,6,24,0.8); color: var(--ink); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .bchip i { color: var(--c); display: grid; place-items: center; }
+  .bchip:hover { background: color-mix(in srgb, var(--c) 18%, rgba(10,6,24,0.8)); }
+
+  /* ANATOMY */
+  .anat { position: relative; height: 380px; border-radius: var(--r-xl); overflow: hidden; border: 1px solid var(--line-2); }
+  .anat .ew { inset: 40px 60px auto 60px; height: 280px; }
+  .pin { position: absolute; z-index: 20; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--space-900); font-family: var(--f-mono); font-size: 12px; font-weight: 700; box-shadow: 0 0 0 4px rgba(251,191,36,0.25); }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 20px; }
+  .rule { display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding: 16px; border-radius: var(--r-md); background: var(--raise); border: 1px solid var(--line); }
+  .rule .pin { position: static; box-shadow: none; }
+  .rule b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .rule p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  @media (max-width: 860px) { .anat .ew { inset: 20px 14px auto 14px; } .pin { display: none; } .rule .pin { display: grid; } }
+</style>
+</head>
+<body class="isl-mountain">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">System · What happens after E</div>
+    <h1 class="cx-h1">Stop floating. <em>Start diving.</em></h1>
+    <p class="cx-lede">Right now pressing E fades the world and a card floats up in the middle. It works, but it feels like a website modal, not a place you went into. Four ways to make the dive feel spatial, plus the shared shell every island would use.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>#world-panel</strong> in overlay.css: a radial scrim dims the planet, a glass card scales from 0.96 to 1 in the centre. Same entrance for all six islands.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>The card comes from nowhere, so there's no link between the island you stood on and what opened. The world vanishes behind a dark scrim. To see another island you close, walk, press E again.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>Open from the island, keep the world in view, and let people hop between islands without closing.</strong></p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Four ways to dive in</div>
+    <h2 class="cx-h2">Pick a <em>dive</em></h2>
+    <p class="cx-sub">Press "Dive in" (or click the scene and press E). Close with Esc or the × button. Placeholder content keeps the focus on the motion.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Dive options">
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-iris"><span class="cx-tab-key">1</span><span class="cx-tab-name">Iris<small>opens out of the island</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-side"><span class="cx-tab-key">2</span><span class="cx-tab-name">Side Stage <span class="cx-rec">My pick</span><small>the world stays in view</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-chap"><span class="cx-tab-key">3</span><span class="cx-tab-name">Chapter<small>hop islands without closing</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-biome"><span class="cx-tab-key">4</span><span class="cx-tab-name">Biome Entrances<small>each island arrives its own way</small></span></button>
+    </div>
+
+    <section class="cx-pane" id="pane-iris" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>A · Iris</h3><p>The panel opens as a circle expanding out of the island's position on screen, the content settles in one block at a time, and closing shrinks it back into the island.</p></div><p class="mono">Spatial continuity</p></div>
+      <div class="cx-stage" data-dive="iris" tabindex="0" aria-label="Iris demo. E to dive in, Escape to close."></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Your eye follows the circle from the island to the content, so the brain files it as "I went into that island". Closing back into it tells you where you are again. It's the cheapest way to fix "it comes from nowhere".</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Motion from the trigger is a core platform rule (modals should grow from what opened them). Exit is faster than entry (380 vs 640ms) so closing feels snappy. Reduced motion uses a plain fade.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Project the island's position to screen coords (you already compute island dirs in main.js), set them as CSS variables, animate clip-path: circle(). Around 30 lines on top of the current panel.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>clip-path on a large blurred glass element can drop frames on weak GPUs. Fall back to opacity on the Low quality preset.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-side" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>B · Side Stage</h3><p>The camera slides the island and your character to the left third, and the panel slides in from the right. The world never disappears, your character idles next to the content. On phones it's a bottom sheet you can drag down.</p></div><p class="mono">Try it narrow too: drag the handle</p></div>
+      <div class="cx-stage" data-dive="side" tabindex="0" aria-label="Side Stage demo. E to dive in, Escape to close."></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>It's how games do shops and menus: the character stays on screen, so you never feel "taken to a website". It's the single biggest thing that makes Eric's World! feel like a game instead of a site with a 3D intro.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>The world staying visible keeps context, so people never feel lost. The sheet is a standard pattern (side sheet on desktop, bottom sheet on mobile) with a clear close and Esc. Focus moves into the sheet and back to the world on close.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Camera.js gets a "framed" mode: offset the orbit target so the island sits left of centre (you already have follow, preview, detail lerps). The panel becomes a right-anchored sheet. No full-screen scrim, so no blur over live WebGL.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Content gets about 60% of the width, so Mountain's video hub may want the full Chapter width. Keep rendering the world at a lower pixel ratio while a panel is open to save battery.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-chap" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>C · Chapter</h3><p>A full-screen takeover with the world softly blurred behind, and a slim rail of all six islands down the side. ← and → hop to the next island without closing, with a directional slide.</p></div><p class="mono">Open it, then press ← →</p></div>
+      <div class="cx-stage" data-dive="chap" tabindex="0" aria-label="Chapter demo. E to dive in, left and right to hop islands, Escape to close."></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Turns six separate modals into one journey. Recruiters in a hurry can read everything in a row with the arrow keys, players can still walk. The rail doubles as a progress tracker.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Forward slides left, back slides right, so direction always matches the key. The current island is marked by a bar and colour, not colour alone. The rail is real buttons.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>The panel keeps its shell and swaps the body via takePanelBody() from content.js (already cached). Behind it, the camera warps to the next island using the Island Map warp you already have.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Hides the world the most, so it's the least "game" of the four. Blur over live WebGL is expensive: use a cheap darkened frame instead on Low quality.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-biome" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>D · Biome Entrances</h3><p>Same layout, but each island arrives with its own one-beat signature: Meadow blooms, Mountain rises, Arctic frosts into focus, Lava cools from a glow, Desert shimmers through heat haze, Pirate washes in like a tide.</p></div><p class="mono">Pick an island below the scene</p></div>
+      <div class="cx-stage" data-dive="biome" tabindex="0" aria-label="Biome entrances demo. Pick an island to replay its entrance."></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>It's "all islands look different" applied to motion, the cheapest way to give each island a soul. Each one lasts under 600ms, a flavour, not a show.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Content is readable at the end of every entrance, never waiting on a long animation. Reduced motion swaps all six for one simple fade.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Six small Web Animations API keyframe sets keyed by island variant, plus one SVG turbulence filter for Desert. Lives next to the existing wp--variant classes.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Six different motions can feel inconsistent if any runs long. Same duration and easing family for all, only the "material" changes.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Side Stage, opened with the Iris, flavoured by the biome, with hop arrows.</h3>
+      <p><strong>Side Stage</strong> is the layout because keeping the world and your character on screen is what makes this a game. The <strong>Iris</strong> is how it opens, so the panel visibly comes out of the island. Each island adds its <strong>biome beat</strong> on top, kept under 600ms. And the shell header gets the <strong>‹ › hop</strong> buttons from Chapter, so people can read all six in a row.</p>
+      <p>On phones it's a bottom sheet with a drag handle. Mountain is the one exception that can widen to full Chapter width, because video needs room.</p>
+    </div>
+  </section>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">The shared shell</div>
+    <h2 class="cx-h2">One shell, <em>six souls</em></h2>
+    <p class="cx-sub">Every island panel uses the same header grammar so people learn it once. What changes per island is the body layout, the accent and the entrance. This is the shell all the island concepts use.</p>
+    <div class="anat isl-mountain" id="anat">
+      <div class="world-bg isl-mountain"><div class="world-planet"></div></div><div class="world-dim"></div>
+      <div class="ew" aria-hidden="true">
+        <header class="ew-head">
+          <div class="ew-titles"><div class="ew-eyebrow"><span>02 / 06</span>·<b>Mountain Island</b></div><h2 class="ew-title">Projects</h2></div>
+          <div class="ew-actions"><span class="ew-esc">ESC</span><span class="ew-iconbtn"><span data-icon="left"></span></span><span class="ew-iconbtn"><span data-icon="right"></span></span><span class="ew-iconbtn"><span data-icon="close"></span></span></div>
+        </header>
+        <div class="ew-body"><div class="sk in"><div class="sk-row"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div><div class="sk-lines"><i></i><i></i></div></div></div>
+      </div>
+      <span class="pin" style="left:76px;top:46px">1</span>
+      <span class="pin" style="left:76px;top:88px">2</span>
+      <span class="pin" id="pin3">3</span>
+      <span class="pin" id="pin4">4</span>
+      <span class="pin" id="pin5">5</span>
+      <span class="pin" style="left:76px;top:180px">6</span>
+    </div>
+    <div class="rules">
+      <div class="rule"><span class="pin">1</span><div><b>Eyebrow says where</b><p>"02 / 06 · Mountain Island" in mono. Number plus island name, accent colour on the name.</p></div></div>
+      <div class="rule"><span class="pin">2</span><div><b>Title says what</b><p>"Projects", in the display serif. A recruiter who skips the game still knows what they're looking at.</p></div></div>
+      <div class="rule"><span class="pin">3</span><div><b>Hop, don't close</b><p>‹ › (and the arrow keys) go to the neighbour island. The world warps behind.</p></div></div>
+      <div class="rule"><span class="pin">4</span><div><b>Esc always works</b><p>Shown as a hint on desktop. Clicking the world outside the panel closes too.</p></div></div>
+      <div class="rule"><span class="pin">5</span><div><b>One close, top right</b><p>40px button with a label. Focus returns to the world when it closes.</p></div></div>
+      <div class="rule"><span class="pin">6</span><div><b>The body is the island's soul</b><p>Each island picks its own layout (hub, strata, globe...). Shared tokens keep it one family.</p></div></div>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="prompt.html"><small>← Previous</small><span>The Prompt</span></a>
+    <a href="meadow.html"><small>Next →</small><span>Meadow</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var ISL = [
+    { n: 'Meadow Island', s: 'About Me', c: '#6BD46F', i: 'leaf', k: 'meadow' },
+    { n: 'Mountain Island', s: 'Projects', c: '#FF8A65', i: 'mountain', k: 'mountain' },
+    { n: 'Arctic Island', s: 'Ask Mochi', c: '#7CC4FF', i: 'snow', k: 'arctic' },
+    { n: 'Lava Island', s: 'Experience', c: '#FF5A1F', i: 'flame', k: 'lava' },
+    { n: 'Desert Island', s: 'Contact', c: '#F6A04D', i: 'sun', k: 'desert' },
+    { n: 'Pirate Ship', s: 'Travel Log', c: '#2BC7D3', i: 'compass', k: 'pirate' }
+  ]
+  var ISLAND_SVG = '<svg viewBox="0 0 240 150" aria-hidden="true"><path d="M40 62 L200 62 L150 140 L104 132 Z" fill="#3b2f52"/><path d="M40 62 L120 62 L104 132 Z" fill="#4d3f66"/><path d="M14 58 L70 40 L130 34 L188 40 L226 58 L184 70 L60 70 Z" fill="var(--ic)"/><path d="M14 58 L70 40 L130 34 L120 66 L60 70 Z" fill="#fff" opacity=".18"/><path d="M130 34 L188 40 L226 58 L184 70 L120 66 Z" fill="#000" opacity=".14"/></svg>'
+  var CHAR_SVG = '<svg viewBox="0 0 40 74" aria-hidden="true"><rect x="13" y="46" width="6" height="22" rx="2" fill="#2B2F45"/><rect x="21" y="46" width="6" height="22" rx="2" fill="#23263a"/><path d="M9 24 L31 24 L33 48 L7 48 Z" fill="#5DB36A"/><circle cx="20" cy="14" r="10" fill="#EBC3A0"/><path d="M10 13 Q11 3 20 3 Q30 3 30 13 Q26 8 20 8 Q14 8 10 13 Z" fill="#1E1B26"/></svg>'
+  function head(x, idx) {
+    return '<header class="ew-head"><div class="ew-titles"><div class="ew-eyebrow"><span>0' + (idx + 1) + ' / 06</span>·<b>' + x.n + '</b></div><h2 class="ew-title">' + x.s + '</h2></div>' +
+      '<div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" data-hop="-1" aria-label="Previous island">' + CX.icon('left') + '</button><button class="ew-iconbtn" data-hop="1" aria-label="Next island">' + CX.icon('right') + '</button><button class="ew-iconbtn" data-close aria-label="Close">' + CX.icon('close') + '</button></div></header>'
+  }
+  var SK = '<div class="sk"><div class="sk-hero stg" style="--n:0"></div><div class="sk-row"><div class="sk-card stg" style="--n:1"></div><div class="sk-card stg" style="--n:2"></div><div class="sk-card stg" style="--n:3"></div></div><div class="sk-lines stg" style="--n:4"><i></i><i></i><i></i></div></div>'
+
+  function dive(stage, mode) {
+    var idx = 1, isOpen = false
+    stage.classList.add(mode === 'side' ? 'ss' : mode === 'chap' ? 'ch' : 'x')
+    var world = document.createElement('div'); world.className = 'pw-world'
+    world.innerHTML = '<div class="world-bg"><div class="world-planet"></div></div><div class="pw-island">' + ISLAND_SVG + '</div><div class="pw-char">' + CHAR_SVG + '</div>'
+    stage.appendChild(world)
+    var ew = document.createElement('div'); ew.className = 'ew pv ' + (mode === 'iris' ? 'iris' : mode === 'side' ? 'side' : mode === 'chap' ? 'chap' : 'bio')
+    ew.setAttribute('role', 'dialog'); ew.setAttribute('aria-modal', 'false')
+    stage.appendChild(ew)
+    var ctl = document.createElement('div'); ctl.className = 'pw-ctl'
+    if (mode === 'biome') ctl.innerHTML = '<div class="biome-chips">' + ISL.map(function (x, i) { return '<button class="bchip" data-b="' + i + '" style="--c:' + x.c + '"><i>' + CX.icon(x.i, 15) + '</i>' + x.n.replace(' Island', '') + '</button>' }).join('') + '</div>'
+    else ctl.innerHTML = '<button class="btn btn--primary" data-open>' + CX.icon('play', 14) + ' Dive in <span class="kbd">E</span></button>'
+    stage.appendChild(ctl)
+    var pos = mode === 'side' ? ['50%', '52%'] : ['50%', '50%']
+    world.style.setProperty('--ix', pos[0]); world.style.setProperty('--iy', pos[1])
+
+    function paint() {
+      var x = ISL[idx]
+      stage.style.setProperty('--ic', x.c); world.querySelector('.world-bg').style.setProperty('--ic', x.c)
+      var body = '<div class="ew-body">' + SK + '</div>'
+      if (mode === 'chap') {
+        ew.innerHTML = '<nav class="rail" aria-label="Islands"><div class="mono">Islands · 3 / 6 found</div>' + ISL.map(function (y, k) { return '<button data-go="' + k + '" style="--c:' + y.c + '" aria-current="' + (k === idx) + '"><code>0' + (k + 1) + '</code><span>' + y.n.replace(' Island', '') + '</span><i>' + ([0, 1, 3].indexOf(k) > -1 ? CX.icon('check', 14) : '') + '</i></button>' }).join('') + '</nav><div class="chap-main">' + head(x, idx) + body + '</div>'
+      } else {
+        ew.innerHTML = (mode === 'side' ? '<div class="handle"></div><div class="handle-hit"></div>' : '') + head(x, idx) + body
+      }
+      ew.style.setProperty('--ic', x.c)
+    }
+    function islandPoint() {
+      var r = world.querySelector('.pw-island').getBoundingClientRect(), er = ew.getBoundingClientRect()
+      return [(r.left + r.width / 2 - er.left) + 'px', (r.top + r.height * 0.35 - er.top) + 'px']
+    }
+    function open(biomeIdx) {
+      if (biomeIdx != null) { idx = biomeIdx; if (isOpen) { replayBiome(); return } }
+      if (isOpen) return
+      isOpen = true; paint()
+      ew.classList.add('show'); stage.classList.add('open')
+      var sk = ew.querySelector('.sk')
+      if (mode === 'iris') {
+        var p = islandPoint(); ew.style.setProperty('--cx', p[0]); ew.style.setProperty('--cy', p[1])
+        ew.classList.remove('closing'); void ew.offsetWidth
+        if (REDUCED) ew.style.clipPath = 'none'
+        ew.classList.add('on')
+      } else if (mode === 'side' || mode === 'chap') {
+        void ew.offsetWidth; ew.classList.add('on')
+      } else replayBiome()
+      requestAnimationFrame(function () { sk.classList.add('in') })
+      setTimeout(function () { var c = ew.querySelector('[data-close]'); if (c) c.focus({ preventScroll: true }) }, 60)
+    }
+    function close() {
+      if (!isOpen) return
+      isOpen = false
+      stage.classList.remove('open')
+      ew.classList.add('closing'); ew.classList.remove('on'); ew.style.removeProperty('--drag')
+      var done = function () { if (!isOpen) { ew.classList.remove('show', 'closing'); ew.style.clipPath = '' } }
+      setTimeout(done, mode === 'biome' ? 260 : 420)
+      if (mode === 'biome') ew.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, fill: 'forwards' })
+      stage.focus({ preventScroll: true })
+    }
+    function hop(d) {
+      if (!isOpen) return
+      idx = (idx + d + ISL.length) % ISL.length; paint()
+      var sk = ew.querySelector('.sk'); sk.classList.add('in')
+      var b = ew.querySelector('.ew-body'), t = ew.querySelector('.ew-titles')
+      ;[b, t].forEach(function (el) { el.classList.add(d > 0 ? 'slide-l' : 'slide-r') })
+      if (mode === 'biome') replayBiome()
+    }
+    function replayBiome() {
+      paint(); ew.classList.add('show')
+      var sk = ew.querySelector('.sk'); requestAnimationFrame(function () { sk.classList.add('in') })
+      if (REDUCED) { ew.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, fill: 'forwards' }); return }
+      var k = ISL[idx].k, a
+      if (k === 'meadow') a = [{ opacity: 0, transform: 'scale(0.9)', filter: 'blur(12px)' }, { opacity: 1, transform: 'scale(1.015)', filter: 'blur(0)', offset: 0.7 }, { opacity: 1, transform: 'none', filter: 'blur(0)' }]
+      if (k === 'mountain') a = [{ opacity: 0.4, clipPath: 'inset(100% 0 0 0 round 24px)', transform: 'translateY(30px)' }, { opacity: 1, clipPath: 'inset(0 0 0 0 round 24px)', transform: 'none' }]
+      if (k === 'arctic') a = [{ opacity: 0, filter: 'blur(14px) brightness(1.9) saturate(0.3)', boxShadow: 'inset 0 0 60px rgba(255,255,255,0.6)' }, { opacity: 1, filter: 'blur(0) brightness(1.2) saturate(0.9)', offset: 0.55 }, { opacity: 1, filter: 'none', boxShadow: 'inset 0 0 0 rgba(255,255,255,0)' }]
+      if (k === 'lava') a = [{ opacity: 0, filter: 'brightness(2) saturate(1.6)', boxShadow: '0 0 90px #FF5A1F, inset 0 0 80px rgba(255,90,31,0.7)' }, { opacity: 1, filter: 'brightness(1.3) saturate(1.2)', offset: 0.4 }, { opacity: 1, filter: 'none', boxShadow: '0 40px 120px rgba(0,0,0,0.55)' }]
+      if (k === 'desert') { haze(); a = [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 1 }] }
+      if (k === 'pirate') a = tide()
+      ew.style.filter = ''; ew.animate(a, { duration: k === 'lava' ? 600 : 520, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'none' })
+    }
+    function tide() {
+      var frames = []
+      for (var f = 0; f <= 10; f++) {
+        var x = -20 + f * 13, pts = []
+        for (var y = 0; y <= 100; y += 10) pts.push((x + Math.sin(y / 14 + f) * 6).toFixed(1) + '% ' + y + '%')
+        frames.push({ clipPath: 'polygon(0% 0%, ' + pts.join(', ') + ', 0% 100%)', offset: f / 10 })
+      }
+      frames[frames.length - 1] = { clipPath: 'polygon(0% 0%, 200% 0%, 200% 100%, 0% 100%)', offset: 1 }
+      return frames
+    }
+    var hazeF = null
+    function haze() {
+      if (!hazeF) {
+        var id = 'haze' + Math.random().toString(36).slice(2, 7)
+        stage.insertAdjacentHTML('beforeend', '<svg width="0" height="0" style="position:absolute"><filter id="' + id + '"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="0"/></filter></svg>')
+        hazeF = { id: id, map: stage.querySelector('#' + id + ' feDisplacementMap') }
+      }
+      ew.style.filter = 'url(#' + hazeF.id + ')'
+      var t0 = performance.now()
+      ;(function step(now) {
+        var t = Math.min(1, (now - t0) / 650), s = 46 * Math.pow(1 - t, 2.2)
+        hazeF.map.setAttribute('scale', s.toFixed(1))
+        if (t < 1) requestAnimationFrame(step); else ew.style.filter = ''
+      })(t0)
+    }
+    ctl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return
+      if (b.hasAttribute('data-open')) open()
+      if (b.dataset.b != null) open(Number(b.dataset.b))
+    })
+    ew.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return
+      if (b.hasAttribute('data-close')) close()
+      if (b.dataset.hop) hop(Number(b.dataset.hop))
+      if (b.dataset.go != null) { var to = Number(b.dataset.go); if (to !== idx) hop(to - idx) }
+    })
+    world.addEventListener('click', function () { if (isOpen) close() })
+    stage.addEventListener('keydown', function (e) {
+      var k = e.key
+      if ((k === 'e' || k === 'E') && !isOpen) { e.preventDefault(); open(mode === 'biome' ? idx : null) }
+      else if (k === 'Escape') { e.preventDefault(); close() }
+      else if (k === 'ArrowRight' && isOpen) { e.preventDefault(); hop(1) }
+      else if (k === 'ArrowLeft' && isOpen) { e.preventDefault(); hop(-1) }
+    })
+    // mobile bottom sheet drag (side stage)
+    if (mode === 'side') {
+      var y0 = null
+      ew.addEventListener('pointerdown', function (e) { if (!e.target.closest('.handle-hit')) return; y0 = e.clientY; ew.classList.add('dragging'); e.target.setPointerCapture(e.pointerId) })
+      ew.addEventListener('pointermove', function (e) { if (y0 === null) return; ew.style.setProperty('--drag', Math.max(0, e.clientY - y0) + 'px') })
+      ew.addEventListener('pointerup', function (e) { if (y0 === null) return; var d = e.clientY - y0; y0 = null; ew.classList.remove('dragging'); if (d > 120) close(); else ew.style.setProperty('--drag', '0px') })
+    }
+    paint()
+    if (/open/.test(location.search) && stage.closest('.cx-pane') && ('#' + stage.closest('.cx-pane').id) === location.hash) setTimeout(function () { open(mode === 'biome' ? 3 : null) }, 300)
+  }
+  document.querySelectorAll('[data-dive]').forEach(function (s) { dive(s, s.dataset.dive) })
+
+  // anatomy pins follow the real header buttons
+  function pins() {
+    var a = document.getElementById('anat'), ar = a.getBoundingClientRect(), btns = a.querySelectorAll('.ew-iconbtn'), esc = a.querySelector('.ew-esc')
+    function put(id, el, dy) { var r = el.getBoundingClientRect(), p = document.getElementById(id); p.style.left = (r.left - ar.left + r.width / 2 - 14) + 'px'; p.style.top = (r.top - ar.top + (dy || -36)) + 'px' }
+    put('pin3', btns[0], 50); put('pin4', esc, -34); put('pin5', btns[2], 50)
+  }
+  window.addEventListener('load', pins); window.addEventListener('resize', pins)
+})()
+</script>
+</body>
+</html>

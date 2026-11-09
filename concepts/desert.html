@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desert Island · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .ct { display: grid; grid-template-columns: 0.92fr 1.08fr; min-height: 100%; }
+  .ct-aside { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 16px 22px 22px; border-right: 1px solid var(--line); }
+  .sky-win { position: relative; height: 210px; border-radius: 18px; overflow: hidden; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
+  .sky-win svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .sky-time { position: absolute; left: 12px; top: 10px; z-index: 2; padding: 5px 10px; border-radius: var(--r-pill); background: rgba(0,0,0,0.35); backdrop-filter: blur(6px); font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.06em; color: #fff; }
+  .sky-scrub { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: var(--r-pill); background: rgba(0,0,0,0.35); backdrop-filter: blur(6px); }
+  .sky-scrub input { flex: 1; accent-color: var(--ic); min-width: 0; }
+  .sky-scrub button { border: 0; background: rgba(255,255,255,0.14); color: #fff; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: var(--r-pill); padding: 5px 10px; cursor: pointer; min-height: 28px; }
+  .sky-scrub button[aria-pressed="true"] { background: var(--ic); color: #2a1406; }
+  .ca-eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ic); }
+  .ca-title { margin: 4px 0 6px; font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 3vw, 42px); line-height: 1.02; }
+  .ca-blurb { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .ca-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ca-local { font-size: 13px; color: var(--ink-3); margin-top: -4px; }
+  .ca-local b { color: var(--ink); font-weight: 600; }
+  .ca-socials { display: grid; gap: 6px; margin-top: auto; }
+  .srow { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; min-height: 52px; padding: 6px 8px 6px 10px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid var(--line); text-decoration: none; transition: background var(--t-fast), border-color var(--t-fast); }
+  .srow:hover { background: rgba(246,160,77,0.08); border-color: rgba(246,160,77,0.3); }
+  .srow .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(246,160,77,0.12); color: var(--ic); }
+  .srow small { display: block; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .srow span.h { font-size: 14px; }
+  .copy { min-height: 36px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(255,255,255,0.06); color: var(--ink); font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .copy:hover { border-color: var(--ic); }
+  .ct-cv { display: flex; gap: 8px; }
+  .ct-cv .btn { flex: 1; min-height: 44px; font-size: 14px; }
+
+  .ct-main { position: relative; padding: 18px 26px 22px; display: flex; flex-direction: column; }
+  .cf-head h3 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1; }
+  .cf-head p { margin: 4px 0 0; color: var(--ink-3); font-size: 14px; }
+  .intent { border: 0; padding: 0; margin: 18px 0 6px; }
+  .intent legend { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; padding: 0; }
+  .intent-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .intent input { position: absolute; opacity: 0; pointer-events: none; }
+  .intent label { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line-2); color: var(--ink-2); font-size: 14px; cursor: pointer; transition: all var(--t-fast); }
+  .intent label:hover { color: var(--ink); background: var(--raise); }
+  .intent input:checked + label { background: var(--ic); color: #2a1406; border-color: transparent; font-weight: 600; box-shadow: 0 8px 24px rgba(246,160,77,0.3); }
+  .intent input:focus-visible + label { outline: 2px solid var(--ic); outline-offset: 3px; }
+  .cf { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 12px; margin-top: 12px; }
+  .cf .full { grid-column: 1 / -1; }
+  .fld { display: flex; flex-direction: column; gap: 6px; }
+  .fld[hidden] { display: none; }
+  .fld label { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+  .fld input, .fld textarea, .fld select { min-height: 46px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0,0,0,0.25); color: var(--ink); font: inherit; font-size: 15px; transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+  .fld textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+  .fld select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+  .fld select option { background: #1a1020; }
+  .fld input:focus, .fld textarea:focus, .fld select:focus { outline: none; border-color: var(--ic); box-shadow: 0 0 0 3px rgba(246,160,77,0.18); }
+  .fld .err { min-height: 0; font-size: 12.5px; color: #FF9A8A; }
+  .fld.bad input, .fld.bad textarea { border-color: #FF7A6A; }
+  .fld.in { animation: fld-in 320ms var(--ease-out) both; }
+  @keyframes fld-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .cf-foot { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+  .cf-foot .btn--primary { min-width: 150px; }
+  .cf-hint { font-family: var(--f-mono); font-size: 11px; color: var(--ink-4); display: flex; align-items: center; gap: 6px; }
+  .cf-draft { margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); opacity: 0; transition: opacity 300ms; }
+  .cf-draft.on { opacity: 1; }
+  .cf-wrap { transition: opacity 300ms, transform 400ms var(--ease-in); }
+  .cf-wrap.gone { opacity: 0; transform: translateY(10px) scale(0.98); pointer-events: none; }
+  .sent { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 30px; opacity: 0; pointer-events: none; transition: opacity 400ms 300ms; }
+  .sent.on { opacity: 1; pointer-events: auto; }
+  .sent b { font-family: var(--f-display); font-weight: 400; font-size: clamp(56px, 7vw, 96px); line-height: 0.9; }
+  .sent p { color: var(--ink-2); font-size: 16px; margin: 10px 0 20px; max-width: 40ch; }
+  .plane { position: absolute; left: 0; top: 0; z-index: 40; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; color: #FFF3E0; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4)); }
+  .toast { position: absolute; left: 50%; bottom: 20px; transform: translate(-50%, 20px); z-index: 50; padding: 10px 16px; border-radius: var(--r-pill); background: rgba(24,12,10,0.95); border: 1px solid var(--line-2); font-size: 13px; opacity: 0; pointer-events: none; transition: all 280ms var(--ease-out); }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .tag-demo { position: absolute; z-index: 3; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 5px; background: var(--gold); color: #2a1406; font-weight: 600; }
+  @media (max-width: 860px) {
+    .ct { grid-template-columns: 1fr; }
+    .ct-aside { border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 14px 16px; order: 2; }
+    .ct-main { order: 1; padding: 14px; }
+    .cf { grid-template-columns: 1fr; }
+    .sky-win { height: 170px; }
+  }
+
+  /* upgrade cards */
+  .ups { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+  .up { position: relative; padding: 22px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .up-n { font-family: var(--f-display); font-size: 44px; line-height: 1; color: var(--ic); }
+  .up h4 { margin: 8px 0 6px; font-size: 16.5px; font-weight: 600; }
+  .up p { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
+  .up .cx-ratings { margin-top: 0; gap: 14px; }
+  .up .badge { position: absolute; top: 20px; right: 20px; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line-2); padding: 3px 7px; border-radius: 6px; }
+</style>
+</head>
+<body class="isl-desert">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">05 · Desert Island · Contact</div>
+    <h1 class="cx-h1">Already good. <em>Now make it true.</em></h1>
+    <p class="cx-lede">Desert works, so this isn't a redesign. It's eight upgrades that make the panel feel alive and get more people to actually press send. All of them are working in the demo below.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/islands/contact.js</strong>: a desert-sunset aside with socials and status pills, plus a Web3Forms message form. Solid and clean.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>The sunset is always a sunset, so it's just decoration. Everyone gets the same blank form whether they're hiring or saying hi. There's no résumé anywhere, the one thing recruiters hunt for.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>Make the scene true, the form smart, the résumé one click away.</strong> The sky shows your real time in London. The form asks what it's about first.</p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">The amplified panel</div>
+    <h2 class="cx-h2">Try it, <em>it's live</em></h2>
+    <p class="cx-sub">Drag the time slider to see the sky over a day. Pick an intent and watch the form change. Copy the email. Hit send with Ctrl + Enter. Nothing actually sends.</p>
+
+    <div class="cx-stage" id="ct-stage">
+      <div class="world-bg isl-desert"><div class="world-planet"></div></div><div class="world-dim"></div>
+      <div class="ew" role="dialog" aria-label="Contact" id="ct-ew">
+        <header class="ew-head">
+          <div class="ew-titles"><div class="ew-eyebrow"><span>05 / 06</span>·<b>Desert Island</b></div><h2 class="ew-title">Contact</h2></div>
+          <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+        </header>
+        <div class="ew-body">
+          <div class="ct">
+            <aside class="ct-aside">
+              <div class="sky-win" id="sky-win">
+                <svg viewBox="0 0 400 210" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop id="s0" offset="0"/><stop id="s1" offset="0.6"/><stop id="s2" offset="1"/></linearGradient>
+                    <radialGradient id="sunG"><stop offset="0" stop-color="#fff8e1"/><stop offset="0.35" stop-color="#ffd27a" stop-opacity="0.9"/><stop offset="1" stop-color="#ff8c42" stop-opacity="0"/></radialGradient>
+                    <filter id="soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+                  </defs>
+                  <rect width="400" height="210" fill="url(#skyG)"/>
+                  <g id="stars"></g>
+                  <g id="sun"><circle r="46" fill="url(#sunG)"/><circle r="15" fill="#fff4d6"/></g>
+                  <g id="moon"><circle r="11" fill="#f1ecff"/><circle r="11" cx="5" cy="-3" fill="#1a1840" id="moon-cut"/></g>
+                  <path id="d3" d="M0 150 Q 90 122 190 140 T 400 128 V210 H0 Z"/>
+                  <path id="d2" d="M0 166 Q 120 140 250 160 T 400 152 V210 H0 Z"/>
+                  <path id="d1" d="M0 186 Q 140 164 270 180 T 400 176 V210 H0 Z"/>
+                </svg>
+                <div class="sky-time" id="sky-time">--:--</div>
+                <div class="sky-scrub"><label class="sr-only" for="scrub">Preview the sky at a time of day</label><input id="scrub" type="range" min="0" max="23.75" step="0.25"><button id="live" type="button" aria-pressed="true">Live</button></div>
+              </div>
+              <div>
+                <div class="ca-eyebrow">Say hey</div>
+                <h3 class="ca-title">Let's build something cool.</h3>
+                <p class="ca-blurb">Got a project, a role, or just wanna say hi? I read everything and reply fast.</p>
+              </div>
+              <div class="ca-pills"><span class="pill pill--live">Open to work</span><span class="pill"><span data-icon="pin" data-size="13"></span>London, UK</span><span class="pill"><span data-icon="clock" data-size="13"></span>Replies in about a day</span></div>
+              <div class="ca-local" id="ca-local"></div>
+              <div class="ca-socials">
+                <div class="srow"><span class="ic"><span data-icon="mail"></span></span><span><small>Email</small><span class="h">ericng8766@gmail.com</span></span><button class="copy" id="copy" type="button"><span data-icon="copy" data-size="14"></span>Copy</button></div>
+                <a class="srow" href="https://www.linkedin.com/in/erriiiccccccc/" target="_blank" rel="noopener"><span class="ic"><span data-icon="user"></span></span><span><small>LinkedIn</small><span class="h">in/erriiiccccccc</span></span><span data-icon="external" data-size="16"></span></a>
+                <a class="srow" href="https://github.com/erriiiccccccc" target="_blank" rel="noopener"><span class="ic"><span data-icon="github"></span></span><span><small>GitHub</small><span class="h">erriiiccccccc</span></span><span data-icon="external" data-size="16"></span></a>
+              </div>
+              <div class="ct-cv"><button class="btn btn--primary" id="cv" type="button"><span data-icon="download" data-size="16"></span>Download résumé</button></div>
+            </aside>
+
+            <div class="ct-main">
+              <div class="cf-wrap" id="cf-wrap">
+                <div class="cf-head"><h3>Drop me a message</h3><p>this goes straight to my inbox :)</p></div>
+                <form id="cf" novalidate>
+                  <fieldset class="intent"><legend>What's this about?</legend>
+                    <div class="intent-row" id="intent">
+                      <input type="radio" name="intent" id="i-hire" value="hire"><label for="i-hire">Hiring</label>
+                      <input type="radio" name="intent" id="i-free" value="free"><label for="i-free">Freelance project</label>
+                      <input type="radio" name="intent" id="i-collab" value="collab"><label for="i-collab">Collab</label>
+                      <input type="radio" name="intent" id="i-hi" value="hi" checked><label for="i-hi">Just saying hi</label>
+                    </div>
+                  </fieldset>
+                  <div class="cf">
+                    <div class="fld"><label for="f-name">Name</label><input id="f-name" name="name" autocomplete="name" required><span class="err" aria-live="polite"></span></div>
+                    <div class="fld"><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email" required><span class="err" aria-live="polite"></span></div>
+                    <div class="fld" data-for="hire" hidden><label for="f-co">Company</label><input id="f-co" name="company" autocomplete="organization"></div>
+                    <div class="fld" data-for="hire" hidden><label for="f-role">Role</label><input id="f-role" name="role" placeholder="e.g. Graduate Software Engineer"></div>
+                    <div class="fld full" data-for="free" hidden><label for="f-when">Timeline</label><select id="f-when" name="timeline"><option>Flexible</option><option>Within a month</option><option>1 to 3 months</option><option>Just exploring</option></select></div>
+                    <div class="fld full"><label for="f-msg">Message</label><textarea id="f-msg" name="message" required></textarea><span class="err" aria-live="polite"></span></div>
+                  </div>
+                  <div class="cf-foot">
+                    <button class="btn btn--primary" type="submit"><span data-icon="send" data-size="16"></span>Send it</button>
+                    <span class="cf-hint"><span class="kbd" style="height:20px;min-width:20px;font-size:10px">Ctrl</span>+<span class="kbd" style="height:20px;min-width:20px;font-size:10px">↵</span></span>
+                    <span class="cf-draft" id="cf-draft" aria-live="polite">draft saved</span>
+                  </div>
+                </form>
+              </div>
+              <div class="sent" id="sent" aria-live="polite">
+                <b>Sent.</b>
+                <p>It's flying to Eric right now. He replies in about a day, usually sooner.</p>
+                <div><button class="btn" id="again" type="button">Send another</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">What changed</div>
+    <h2 class="cx-h2">Eight <em>upgrades</em></h2>
+    <p class="cx-sub">Ranked by how much they help you. All eight are in the demo above except the call booking.</p>
+    <div class="ups">
+      <div class="up"><div class="up-n">01</div><span class="badge">in demo</span><h4>Résumé, one click away</h4><p>Recruiters want this more than anything else on the site. Put a download button where they'll look, and on Lava too.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div></div></div>
+      <div class="up"><div class="up-n">02</div><span class="badge">in demo</span><h4>Intent first</h4><p>One tap says what it's about and reshapes the form: Hiring adds Company and Role, Freelance adds Timeline. You get better messages, they type less.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div></div></div>
+      <div class="up"><div class="up-n">03</div><span class="badge">in demo</span><h4>Copy email</h4><p>Lots of people would rather use their own mail app. One tap copies, a toast confirms. No mailto surprise.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div></div></div>
+      <div class="up"><div class="up-n">04</div><span class="badge">in demo</span><h4>A true sky</h4><p>The scene follows your real time in London, sunrise and sunset included. Visit at midnight, see stars. Decoration becomes information.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div></div></div>
+      <div class="up"><div class="up-n">05</div><span class="badge">in demo</span><h4>Local time, honest reply</h4><p>"It's 2am in London, he'll reply after sunrise." Sets expectations so nobody thinks the form is broken.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div></div></div>
+      <div class="up"><div class="up-n">06</div><span class="badge">in demo</span><h4>Keyboard + drafts</h4><p>Ctrl + Enter sends, the draft autosaves if they close the panel, errors show on blur next to the field. Small stuff, big polish.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div></div></div>
+      <div class="up"><div class="up-n">07</div><span class="badge">in demo</span><h4>Paper plane send</h4><p>On send, a paper plane lifts off the button and flies into the desert sky. The one moment of pure delight, and it confirms the action.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div></div></div>
+      <div class="up"><div class="up-n">08</div><span class="badge">optional</span><h4>Book a call</h4><p>A Cal.com link under the socials for recruiters who'd rather talk. Only add it if you'll keep the calendar honest.</p><div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div></div></div>
+    </div>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Ship 01 to 06 now. 07 is the cherry.</h3>
+      <p>The résumé button and intent chips are the two that actually change outcomes: more recruiters reach you and the messages you get are better. Copy email, local time and keyboard polish are an afternoon. The true sky is what makes Desert feel like a place instead of a form, and it costs about 60 lines.</p>
+      <p>The paper plane is the delight moment, add it once the rest is in. Also drop Instagram from the contact list if you want Desert to read purely professional, and keep "Replies in about a day" only if it stays true.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="lava.html"><small>← Previous</small><span>Lava</span></a>
+    <a href="pirate.html"><small>Next →</small><span>Pirate</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var $ = function (id) { return document.getElementById(id) }
+  var toastEl = $('toast')
+  function toast(t) { toastEl.textContent = t; toastEl.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(function () { toastEl.classList.remove('on') }, 2200) }
+
+  /* ═══ TRUE SKY ═══ */
+  function londonNow() {
+    var d = new Date()
+    var parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(d)
+    var h = 0, m = 0
+    parts.forEach(function (p) { if (p.type === 'hour') h = Number(p.value) % 24; if (p.type === 'minute') m = Number(p.value) })
+    var offset = (h - d.getUTCHours() + 24) % 24
+    return { h: h + m / 60, offset: offset > 12 ? 0 : offset, doy: Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) }
+  }
+  var now = londonNow()
+  var dayLen = 12.2 + 4.4 * Math.sin(2 * Math.PI * (now.doy - 80) / 365)
+  var noon = 12.05 + now.offset
+  var RISE = noon - dayLen / 2, SET = noon + dayLen / 2
+
+  function hex(c) { var n = parseInt(c.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255] }
+  function mix(a, b, t) { var A = hex(a), B = hex(b); return 'rgb(' + A.map(function (v, i) { return Math.round(v + (B[i] - v) * t) }).join(',') + ')' }
+  function mixRgb(a, b, t) { return a.map(function (v, i) { return v + (b[i] - v) * t }) }
+  var K = [
+    [0, '#05061a', '#0d0f2e', '#1a1840', '#241d44', 1],
+    [RISE - 1.2, '#070a24', '#1a1a45', '#2d2350', '#2a2148', 0.9],
+    [RISE - 0.1, '#2a2358', '#a0507a', '#f39a6b', '#4a2a3a', 0.25],
+    [RISE + 0.9, '#4f7cc4', '#9fc2e6', '#f7d6a6', '#c98a55', 0],
+    [noon, '#3d7fd6', '#8cc3ef', '#efe0c0', '#dba66a', 0],
+    [SET - 1.4, '#5a76c0', '#e3a77a', '#ffcf8a', '#c47f45', 0],
+    [SET - 0.05, '#3a2a6b', '#c4566e', '#ff9a55', '#7a3b35', 0.1],
+    [SET + 1.0, '#120f35', '#3a2152', '#6b2f55', '#3a2244', 0.6],
+    [24, '#05061a', '#0d0f2e', '#1a1840', '#241d44', 1]
+  ]
+  var stars = $('stars'), sh = ''
+  for (var i = 0; i < 46; i++) { var x = (i * 97.3) % 400, y = (i * 53.7) % 120; sh += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (i % 5 === 0 ? 1.3 : 0.7) + '" fill="#fff" opacity="' + (0.4 + (i % 3) * 0.25) + '"/>' }
+  stars.innerHTML = sh
+
+  function paint(h) {
+    var a = K[0], b = K[K.length - 1]
+    for (var k = 0; k < K.length - 1; k++) if (h >= K[k][0] && h <= K[k + 1][0]) { a = K[k]; b = K[k + 1]; break }
+    var t = (h - a[0]) / Math.max(0.001, b[0] - a[0])
+    var top = mix(a[1], b[1], t), mid = mix(a[2], b[2], t), bot = mix(a[3], b[3], t)
+    $('s0').setAttribute('stop-color', top); $('s1').setAttribute('stop-color', mid); $('s2').setAttribute('stop-color', bot)
+    $('moon-cut').setAttribute('fill', top)
+    var dune = hex(a[4]).map(function (v, i) { return v + (hex(b[4])[i] - v) * t })
+    var botRgb = bot.match(/\d+/g).map(Number)
+    function rgb(v) { return 'rgb(' + v.map(Math.round).join(',') + ')' }
+    $('d1').setAttribute('fill', rgb(dune))
+    $('d2').setAttribute('fill', rgb(mixRgb(dune, botRgb, 0.3)))
+    $('d3').setAttribute('fill', rgb(mixRgb(dune, botRgb, 0.55)))
+    stars.setAttribute('opacity', a[5] + (b[5] - a[5]) * t)
+    // sun arc
+    var sun = $('sun'), moon = $('moon')
+    if (h > RISE - 0.4 && h < SET + 0.4) {
+      var st = (h - RISE) / (SET - RISE)
+      sun.setAttribute('transform', 'translate(' + (40 + st * 320) + ',' + (170 - Math.sin(Math.PI * Math.max(0, Math.min(1, st))) * 130) + ')')
+      sun.setAttribute('opacity', 1)
+    } else sun.setAttribute('opacity', 0)
+    var nightLen = 24 - (SET - RISE)
+    var nt = ((h - SET + 24) % 24) / nightLen
+    if (nt >= 0 && nt <= 1 && !(h > RISE && h < SET)) {
+      moon.setAttribute('transform', 'translate(' + (40 + nt * 320) + ',' + (160 - Math.sin(Math.PI * nt) * 120) + ')')
+      moon.setAttribute('opacity', 1)
+    } else moon.setAttribute('opacity', 0)
+    var hh = Math.floor(h), mm = Math.round((h - hh) * 60)
+    var label = new Date(2000, 0, 1, hh, mm).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
+    $('sky-time').textContent = label + ' in London'
+    return label
+  }
+  function localLine(h, label) {
+    var msg = h >= 23 || h < 7 ? 'probably asleep, he\'ll reply after sunrise.' : h < 9 ? 'just waking up, coffee first.' : h < 18 ? 'around and replying fast.' : 'winding down, replies tomorrow at the latest.'
+    $('ca-local').innerHTML = 'It\'s <b>' + label + '</b> for Eric, ' + msg
+  }
+  var live = true
+  function tickLive() { if (!live) return; var n = londonNow(); $('scrub').value = n.h; localLine(n.h, paint(n.h)) }
+  tickLive(); setInterval(tickLive, 30000)
+  $('scrub').addEventListener('input', function () { live = false; $('live').setAttribute('aria-pressed', 'false'); var h = Number(this.value); localLine(h, paint(h)) })
+  $('live').addEventListener('click', function () { live = true; this.setAttribute('aria-pressed', 'true'); tickLive() })
+
+  /* ═══ COPY + CV ═══ */
+  $('copy').addEventListener('click', function () {
+    var done = function () { toast('Email copied') }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText('ericng8766@gmail.com').then(done, done)
+    else done()
+  })
+  $('cv').addEventListener('click', function () { toast('placeholder: this downloads your résumé PDF') })
+
+  /* ═══ SMART FORM ═══ */
+  var form = $('cf'), msg = $('f-msg')
+  var PH = {
+    hire: ['Hiring: ', 'What\'s the role and team? Links welcome.'],
+    free: ['Freelance: ', 'What are you building, and roughly what do you need?'],
+    collab: ['Collab: ', 'What do you have in mind?'],
+    hi: ['Hello: ', 'Say hi, ask anything, tell me about your day.']
+  }
+  function setIntent(v, animate) {
+    form.querySelectorAll('.fld[data-for]').forEach(function (f) {
+      var on = f.dataset.for === v
+      if (on && f.hidden && animate) { f.classList.remove('in'); void f.offsetWidth; f.classList.add('in') }
+      f.hidden = !on
+    })
+    msg.placeholder = PH[v][1]
+  }
+  $('intent').addEventListener('change', function (e) { setIntent(e.target.value, true); save() })
+  setIntent('hi', false)
+
+  function err(input, text) {
+    var f = input.closest('.fld'); f.classList.toggle('bad', !!text)
+    var e = f.querySelector('.err'); if (e) e.textContent = text || ''
+    input.setAttribute('aria-invalid', text ? 'true' : 'false')
+  }
+  function validate(input) {
+    var v = input.value.trim(), t = ''
+    if (input.required && !v) t = input.id === 'f-name' ? 'What should he call you?' : input.id === 'f-email' ? 'He needs an email to reply to.' : 'Write a line or two first.'
+    else if (input.type === 'email' && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) t = 'That email looks off. Check for typos.'
+    err(input, t); return !t
+  }
+  var req = [$('f-name'), $('f-email'), msg]
+  req.forEach(function (i) {
+    i.addEventListener('blur', function () { validate(i) })
+    i.addEventListener('input', function () { if (i.closest('.fld').classList.contains('bad')) validate(i) })
+  })
+
+  // drafts
+  var KEY = 'ew-concept-contact-draft', st
+  function save() {
+    clearTimeout(st)
+    st = setTimeout(function () {
+      try {
+        var d = {}; new FormData(form).forEach(function (v, k) { d[k] = v })
+        localStorage.setItem(KEY, JSON.stringify(d))
+        $('cf-draft').classList.add('on'); setTimeout(function () { $('cf-draft').classList.remove('on') }, 1400)
+      } catch (e) {}
+    }, 500)
+  }
+  form.addEventListener('input', save)
+  try {
+    var d = JSON.parse(localStorage.getItem(KEY) || 'null')
+    if (d) {
+      Object.keys(d).forEach(function (k) { var el = form.elements[k]; if (el && el.type !== 'radio' && el.length === undefined) el.value = d[k] })
+      if (d.intent) { var r = form.querySelector('input[name="intent"][value="' + d.intent + '"]'); if (r) { r.checked = true; setIntent(d.intent, false) } }
+    }
+  } catch (e) {}
+
+  form.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); form.requestSubmit() } })
+  form.addEventListener('submit', function (e) {
+    e.preventDefault()
+    var ok = req.map(validate).every(Boolean)
+    if (!ok) { req.filter(function (i) { return i.getAttribute('aria-invalid') === 'true' })[0].focus(); return }
+    fly(form.querySelector('[type=submit]'))
+  })
+
+  /* ═══ PAPER PLANE ═══ */
+  function fly(btn) {
+    var ew = $('ct-ew'), er = ew.getBoundingClientRect(), br = btn.getBoundingClientRect(), sr = $('sky-win').getBoundingClientRect()
+    var x0 = br.left - er.left + br.width / 2, y0 = br.top - er.top + br.height / 2
+    var x2 = sr.left - er.left + sr.width * 0.75, y2 = sr.top - er.top + sr.height * 0.3
+    var x1 = (x0 + x2) / 2, y1 = Math.min(y0, y2) - 140
+    var plane = document.createElement('div'); plane.className = 'plane'
+    plane.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M22 2 2 10.5l7.2 2.4L19 6l-7.6 8.2.2 6.8 3.5-4.6 3.9 2.6z"/></svg>'
+    ew.appendChild(plane)
+    $('cf-wrap').classList.add('gone')
+    var frames = []
+    for (var k = 0; k <= 24; k++) {
+      var t = k / 24, u = 1 - t
+      var x = u * u * x0 + 2 * u * t * x1 + t * t * x2, y = u * u * y0 + 2 * u * t * y1 + t * t * y2
+      var dx = 2 * u * (x1 - x0) + 2 * t * (x2 - x1), dy = 2 * u * (y1 - y0) + 2 * t * (y2 - y1)
+      var ang = Math.atan2(dy, dx) * 180 / Math.PI + 45
+      frames.push({ transform: 'translate(' + x + 'px,' + y + 'px) rotate(' + ang + 'deg) scale(' + (1 - t * 0.65) + ')', opacity: t > 0.9 ? (1 - t) * 10 : 1, offset: t })
+    }
+    var anim = plane.animate(frames, { duration: REDUCED ? 1 : 1500, easing: 'cubic-bezier(.45,0,.25,1)', fill: 'forwards' })
+    anim.onfinish = function () { plane.remove() }
+    $('sent').classList.add('on')
+    try { localStorage.removeItem(KEY) } catch (e) {}
+  }
+  $('again').addEventListener('click', function () {
+    form.reset(); setIntent('hi', false); req.forEach(function (i) { err(i, '') })
+    $('sent').classList.remove('on'); $('cf-wrap').classList.remove('gone')
+  })
+})()
+</script>
+</body>
+</html>

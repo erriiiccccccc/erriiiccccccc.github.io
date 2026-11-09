@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meadow Island · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  /* About overlay: the stage IS the shell. Vignette with a warm clear centre. */
+  .ab { position: absolute; inset: 0; z-index: 5; }
+  .ab-vig { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(42% 58% at 50% 54%, transparent 0%, rgba(6,10,8,0.35) 55%, rgba(4,6,10,0.86) 100%); }
+  .ab-spot { position: absolute; left: 50%; bottom: 96px; width: 340px; height: 70px; transform: translateX(-50%); z-index: 1; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,214,140,0.35), transparent); }
+  .ab-plaque { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 4; padding: 7px 16px; border-radius: 12px; background: #FFF6E5; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+  .ab-plaque img { height: 30px; width: auto; }
+  .ab-close { position: absolute; top: 18px; right: 18px; z-index: 6; }
+  .char { position: absolute; left: 50%; bottom: 104px; z-index: 3; height: min(56%, 380px); aspect-ratio: 200 / 320; transform: translateX(-50%); cursor: pointer; }
+  .char svg { width: 100%; height: 100%; overflow: visible; }
+  .char-tag { position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%); white-space: nowrap; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); }
+  .bubble { position: absolute; left: 50%; bottom: calc(104px + min(56%, 380px) - 8px); z-index: 4; transform: translateX(-10%); max-width: 260px; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: #FFF6E5; color: #1b1a12; font-size: 14px; font-weight: 500; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform-origin: 0 100%; animation: pop 320ms var(--spring) both; }
+  @keyframes pop { from { opacity: 0; transform: translateX(-10%) scale(0.7); } to { opacity: 1; transform: translateX(-10%) scale(1); } }
+  .dock { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 4; width: min(780px, calc(100% - 36px)); display: flex; align-items: center; gap: 16px; padding: 12px 14px 12px 18px; border-radius: 20px; background: linear-gradient(180deg, rgba(20,30,22,0.72), rgba(10,14,12,0.88)); backdrop-filter: blur(16px); border: 1px solid var(--line-2); }
+  .dock h3 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1; white-space: nowrap; }
+  .dock p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); }
+  .dock .grow { flex: 1; min-width: 0; }
+  .dock .socials { display: flex; gap: 6px; }
+  .dock .socials a { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--raise-2); border: 1px solid var(--line); color: var(--ink-2); }
+  .dock .socials a:hover { color: #fff; border-color: var(--ic); }
+  .side { position: absolute; top: 72px; bottom: 96px; z-index: 4; width: min(270px, 24%); display: flex; flex-direction: column; gap: 12px; }
+  .side--l { left: 22px; } .side--r { right: 22px; }
+  .gcard { padding: 14px 16px; border-radius: 18px; background: linear-gradient(180deg, rgba(22,34,24,0.74), rgba(10,16,12,0.86)); backdrop-filter: blur(16px); border: 1px solid var(--line-2); animation: slide-in 520ms var(--ease-out) both; }
+  .side--l .gcard { --from: -18px; } .side--r .gcard { --from: 18px; }
+  .side .gcard:nth-child(2) { animation-delay: 80ms; } .side .gcard:nth-child(3) { animation-delay: 160ms; }
+  @keyframes slide-in { from { opacity: 0; transform: translateX(var(--from)); } to { opacity: 1; transform: none; } }
+  .gcard h4 { margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between; font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ic); }
+  .prow { display: grid; grid-template-columns: 70px 1fr; gap: 8px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .prow:last-child { border-bottom: 0; }
+  .prow span { color: var(--ink-3); font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 2px; }
+  .prow .ph { color: var(--ink-4); font-style: italic; }
+  .emotes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .emo { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,0.04); color: var(--ink); font-size: 13px; cursor: pointer; transition: background var(--t-fast), transform var(--t-tap); }
+  .emo:hover { background: rgba(107,212,111,0.12); border-color: rgba(107,212,111,0.4); }
+  .emo:active { transform: scale(0.96); }
+  .emo .kbd { height: 20px; min-width: 20px; font-size: 10px; margin-left: auto; }
+  .quest { width: 100%; display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 10px; min-height: 36px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font-size: 13px; text-align: left; cursor: pointer; }
+  .quest:hover { background: rgba(255,255,255,0.05); color: var(--ink); }
+  .quest i { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--qc); display: grid; place-items: center; color: #08130a; font-style: normal; }
+  .quest.found i { background: var(--qc); }
+  .quest small { font-family: var(--f-mono); font-size: 10px; color: var(--ink-4); }
+  .np { display: flex; align-items: center; gap: 12px; }
+  .np-btn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--ic); color: #08130a; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+  .np b { display: block; font-size: 14px; }
+  .np small { color: var(--ink-3); font-size: 12px; }
+  .eq { display: flex; align-items: flex-end; gap: 3px; height: 18px; margin-left: auto; }
+  .eq i { width: 4px; height: 20%; border-radius: 2px; background: var(--ic-2); }
+  .eq.on i { animation: eq 0.9s ease-in-out infinite; }
+  .eq.on i:nth-child(2) { animation-delay: 0.15s; } .eq.on i:nth-child(3) { animation-delay: 0.3s; } .eq.on i:nth-child(4) { animation-delay: 0.45s; }
+  @keyframes eq { 0%, 100% { height: 20%; } 50% { height: 100%; } }
+  .toast { position: absolute; left: 50%; top: 70px; transform: translate(-50%, -10px); z-index: 20; padding: 10px 16px; border-radius: var(--r-pill); background: rgba(10,16,12,0.95); border: 1px solid var(--line-2); font-size: 13px; opacity: 0; pointer-events: none; transition: all 280ms var(--ease-out); }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* character motion */
+  .c-root { transform-box: view-box; transform-origin: 100px 310px; animation: c-idle 3.6s ease-in-out infinite; }
+  @keyframes c-idle { 0%, 100% { transform: rotate(-0.6deg); } 50% { transform: rotate(0.6deg) translateY(-1px); } }
+  .c-armr { transform-box: view-box; transform-origin: 138px 148px; transition: transform 300ms var(--spring); }
+  .c-head { transform-box: view-box; transform-origin: 100px 128px; transition: transform 400ms var(--ease-out); }
+  .wave .c-armr { animation: c-wave 520ms ease-in-out 3; }
+  @keyframes c-wave { 0%, 100% { transform: rotate(-150deg); } 50% { transform: rotate(-120deg); } }
+  .jump .c-root { animation: c-jump 700ms var(--ease-out); }
+  @keyframes c-jump { 0% { transform: scale(1.04, 0.94); } 35% { transform: translateY(-60px) scale(0.97, 1.04); } 70% { transform: translateY(0) scale(1.04, 0.95); } 100% { transform: none; } }
+  .dance .c-root { animation: c-dance 460ms ease-in-out 4; }
+  @keyframes c-dance { 0%, 100% { transform: rotate(-7deg) translateY(0); } 50% { transform: rotate(7deg) translateY(-10px); } }
+  .think .c-head { transform: rotate(-10deg); }
+  .think .c-armr { transform: rotate(-125deg); }
+
+  /* ── B · TALK ─────────────────────────────────────────── */
+  .dlg { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; width: min(820px, calc(100% - 36px)); padding: 18px 20px 16px; border-radius: 20px; background: linear-gradient(180deg, rgba(14,22,16,0.86), rgba(6,10,8,0.94)); backdrop-filter: blur(18px); border: 1px solid var(--line-2); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .dlg-name { position: absolute; top: -14px; left: 20px; padding: 4px 12px; border-radius: 8px; background: var(--ic); color: #08130a; font-weight: 700; font-size: 13px; }
+  .dlg-text { min-height: 52px; font-size: 16.5px; line-height: 1.55; color: var(--ink); margin: 4px 0 12px; }
+  .dlg-text::after { content: ''; display: inline-block; width: 8px; height: 16px; margin-left: 3px; vertical-align: -2px; background: var(--ic); animation: caret 1s steps(2) infinite; }
+  .dlg-text.done::after { display: none; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .dlg-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .choice { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,0.04); color: var(--ink); font-size: 14px; text-align: left; cursor: pointer; opacity: 0; animation: choice-in 300ms var(--ease-out) forwards; }
+  .choice:hover, .choice:focus-visible { background: rgba(107,212,111,0.12); border-color: rgba(107,212,111,0.45); outline: none; }
+  .choice .kbd { height: 22px; min-width: 22px; font-size: 11px; }
+  .choice.seen { color: var(--ink-3); }
+  @keyframes choice-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .dlg-meta { position: absolute; top: 14px; right: 18px; font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-4); letter-spacing: 0.08em; }
+  .polas { position: absolute; right: 40px; top: 50%; transform: translateY(-62%); z-index: 4; width: min(230px, 20%); aspect-ratio: 4 / 5; }
+  .pola { position: absolute; inset: 0; padding: 10px 10px 34px; background: #FFF6E5; border-radius: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.45); cursor: pointer; transition: transform 500ms var(--ease-out); border: 0; }
+  .pola img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
+  .pola span { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-family: var(--f-display); font-style: italic; color: #2a2418; font-size: 16px; }
+  .polas-tip { position: absolute; left: 0; right: 0; bottom: -28px; text-align: center; font-family: var(--f-mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.1em; text-transform: uppercase; }
+  .talk-l { position: absolute; left: 30px; top: 50%; transform: translateY(-60%); z-index: 4; width: min(230px, 20%); }
+  .talk-l .gcard p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+  .topics { display: flex; gap: 5px; margin-top: 10px; }
+  .topics i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); }
+  .topics i.on { background: var(--ic); }
+
+  /* ── C · ORBIT ────────────────────────────────────────── */
+  .orbit { position: absolute; inset: 0; z-index: auto; pointer-events: none; }
+  .ochip { position: absolute; left: 0; top: 0; pointer-events: auto; padding: 9px 14px; border-radius: var(--r-pill); background: rgba(14,24,16,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(107,212,111,0.35); color: var(--ink); font-size: 13.5px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background 200ms, border-color 200ms; will-change: transform; }
+  .ochip small { display: none; font-weight: 400; color: var(--ink-2); margin-left: 6px; }
+  .ochip:hover, .ochip:focus-visible { background: rgba(30,52,34,0.95); border-color: var(--ic); outline: none; }
+  .ochip:hover small, .ochip:focus-visible small { display: inline; }
+  .oring { position: absolute; left: 50%; top: 58%; width: 76%; height: 26%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed rgba(107,212,111,0.25); z-index: 2; pointer-events: none; }
+
+  @media (max-width: 860px) {
+    .side { position: absolute; top: auto; bottom: 112px; width: auto; left: 10px; right: 10px; flex-direction: row; overflow-x: auto; gap: 8px; scrollbar-width: none; }
+    .side--r { display: none; }
+    .side .gcard { flex: 0 0 240px; }
+    .char { bottom: 300px; height: 36%; }
+    .bubble { bottom: auto; top: 70px; left: 50%; transform: translateX(-50%); }
+    .dock h3 { font-size: 22px; } .dock p { display: none; }
+    .polas, .talk-l { display: none; }
+    .dlg-choices { grid-template-columns: 1fr; }
+    .ab-plaque img { height: 22px; }
+  }
+</style>
+</head>
+<body class="isl-meadow">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">01 · Meadow Island · About Me</div>
+    <h1 class="cx-h1">He's watching. <em>Give him something to do.</em></h1>
+    <p class="cx-lede">Your character following the cursor is the best moment in the whole world. The empty space around him is the problem. Here are three ways to fill the sides so people stay, play, and leave knowing who you are.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/ui/AboutOverlay.js</strong>: your 3D character in the middle tracking the cursor, the ERIC NG plaque on top, a nameplate dock at the bottom. Left and right are empty vignette.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>About 60% of the screen is darkness. He's interactive, but there's nothing to do with him beyond watch. A few lines of copy are out of date (see the verdict).</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>Make him the controller.</strong> Emotes, dialogue, and a quest log that warps you to other islands. Meadow becomes the hub of the whole world.</p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Three ways to fill the sides</div>
+    <h2 class="cx-h2">Pick a <em>layout</em></h2>
+    <p class="cx-sub">The figure is a stand-in for your real 3D character (his eyes follow your cursor here too). Click into a scene, then try the keys.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="About layouts">
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-select"><span class="cx-tab-key">1</span><span class="cx-tab-name">Character Select <span class="cx-rec">My pick</span><small>profile + emotes left, quest log right</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-talk"><span class="cx-tab-key">2</span><span class="cx-tab-name">Talk to Eric<small>NPC dialogue with choices</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-orbit"><span class="cx-tab-key">3</span><span class="cx-tab-name">Orbit<small>facts circling around you</small></span></button>
+    </div>
+
+    <!-- A · CHARACTER SELECT -->
+    <section class="cx-pane" id="pane-select" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>A · Character Select</h3><p>Like a game's character screen. Left: who you are and emote buttons that make the character move. Right: a quest log of all 6 islands (click to warp) and what's playing on your Jukebox.</p></div>
+        <p class="mono">Click him to talk · keys 1 to 4 emote</p>
+      </div>
+      <div class="cx-stage" id="sel-stage" tabindex="0" aria-label="Character Select demo. Keys 1 to 4 play emotes.">
+        <div class="world-bg isl-meadow"><div class="world-planet"></div></div>
+        <div class="ab">
+          <div class="ab-vig"></div><div class="ab-spot"></div>
+          <div class="ab-plaque"><img src="../public/ericnglogo.png" alt="Eric Ng"></div>
+          <button class="ew-iconbtn ab-close" aria-label="Close"><span data-icon="close"></span></button>
+          <div class="side side--l">
+            <div class="gcard"><h4>Profile</h4>
+              <div class="prow"><span>Class</span><div>Full-stack + creative dev</div></div>
+              <div class="prow"><span>From</span><div>Malaysia</div></div>
+              <div class="prow"><span>Based</span><div>London, UK</div></div>
+              <div class="prow"><span>Studied</span><div>Computer Science, University of Edinburgh</div></div>
+              <div class="prow"><span>Speaks</span><div class="ph">[your languages]</div></div>
+            </div>
+            <div class="gcard"><h4>Emotes</h4>
+              <div class="emotes">
+                <button class="emo" data-emo="wave">Wave<span class="kbd">1</span></button>
+                <button class="emo" data-emo="jump">Jump<span class="kbd">2</span></button>
+                <button class="emo" data-emo="dance">Dance<span class="kbd">3</span></button>
+                <button class="emo" data-emo="think">Think<span class="kbd">4</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="side side--r">
+            <div class="gcard"><h4>Quest log <span id="q-frac">3 / 6</span></h4><div id="quests"></div></div>
+            <div class="gcard"><h4>Now playing</h4>
+              <div class="np"><button class="np-btn" id="np-btn" aria-label="Play Eric's pinned loop"><span data-icon="play" data-size="16"></span></button><div><b>Eric's pinned loop</b><small>from the Jukebox, right here</small></div><div class="eq" id="eq"><i></i><i></i><i></i><i></i></div></div>
+            </div>
+          </div>
+          <div class="char" data-char><span class="char-tag">your 3D character stands here</span></div>
+          <div class="dock">
+            <div class="grow"><h3>Eric Ng Min Chern</h3><p>CS grad, University of Edinburgh · Ex-Barclays and BlackRock · Open to work</p></div>
+            <div class="socials"><a href="mailto:ericng8766@gmail.com" aria-label="Email"><span data-icon="mail" data-size="16"></span></a><a href="https://github.com/erriiiccccccc" target="_blank" rel="noopener" aria-label="GitHub"><span data-icon="github" data-size="16"></span></a></div>
+          </div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Everyone who's played a game knows this screen instantly. Emotes give people a toy, so they stay. The quest log turns About into the hub: from here you can warp anywhere and see what you haven't found yet.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Clear left-right split: who he is on the left, where to go on the right. Emotes have keys and buttons. Found state is shown with a tick, not colour only. Cards slide in from their own side for spatial sense.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Emotes map to AnimationController states you already have (wave, jump, dance from your FBX set). Quest log reads MapOverlay's visited set and calls the existing warp. "Now playing" borrows the shared AudioEngine and your pinned track.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Only add emotes you actually have animations for. Keep the cards narrow so he stays the hero. On phones the cards become a swipe strip under him.</p></div>
+      </div>
+    </section>
+
+    <!-- B · TALK TO ERIC -->
+    <section class="cx-pane" id="pane-talk" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>B · Talk to Eric</h3><p>He's an NPC now. A game dialogue box at the bottom, his lines type out, you pick replies. Your real photos sit on the right as polaroids you can shuffle.</p></div>
+        <p class="mono">Sample lines, rewrite them in your voice</p>
+      </div>
+      <div class="cx-stage" id="talk-stage" tabindex="0" aria-label="Talk demo. Keys 1 to 4 choose a reply, Enter skips typing.">
+        <div class="world-bg isl-meadow"><div class="world-planet"></div></div>
+        <div class="ab">
+          <div class="ab-vig"></div><div class="ab-spot" style="bottom:196px"></div>
+          <div class="ab-plaque"><img src="../public/ericnglogo.png" alt="Eric Ng"></div>
+          <button class="ew-iconbtn ab-close" aria-label="Close"><span data-icon="close"></span></button>
+          <div class="talk-l"><div class="gcard"><h4>Conversation <span id="t-frac">0 / 4</span></h4><p>Ask him anything on the list. He's friendlier than he looks.</p><div class="topics" id="topics"><i></i><i></i><i></i><i></i></div></div></div>
+          <div class="polas" id="polas">
+            <button class="pola" style="transform:rotate(7deg) translate(14px,6px)"><img src="../public/islandphoto/arcticislandphoto.jpeg" alt="Eric's photo from a glacier"><span>out on the ice</span></button>
+            <button class="pola" style="transform:rotate(-5deg) translate(-8px,0)"><img src="../public/islandphoto/travelislandphoto.jpeg" alt="Eric's travel photo"><span>somewhere sunny</span></button>
+            <button class="pola" style="transform:rotate(2deg)"><img src="../public/islandphoto/pirateislandphoto.jpeg" alt="Eric holding a fish he caught"><span>caught one!</span></button>
+            <div class="polas-tip">click to shuffle</div>
+          </div>
+          <div class="char" data-char style="bottom:206px;height:min(44%,300px)"></div>
+          <div class="dlg" id="dlg"><span class="dlg-name">Eric</span><span class="dlg-meta">↵ skip</span><div class="dlg-text" id="dlg-text" aria-live="polite"></div><div class="dlg-choices" id="dlg-choices"></div></div>
+          <div class="toast" data-toast></div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>The most personal option: people hear you, in your voice, the way they'd meet a character in a game. Choices mean visitors control the pace. Polaroids show your life, not your CV.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Numbered choices (1 to 4), Enter skips typing, the text region is aria-live. Seen choices dim so you know what's left. Every answer offers a way back or out.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>A tiny dialogue tree object (lines + choices + next) in a data file. The typewriter is a timer. Talking can trigger the character's talk or nod animations for extra life. Around 140 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Lives or dies on the writing. Cringe lines are worse than none, so keep them short and true. People in a hurry might not click through, so the dock still needs the essentials.</p></div>
+      </div>
+    </section>
+
+    <!-- C · ORBIT -->
+    <section class="cx-pane" id="pane-orbit" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>C · Orbit</h3><p>Facts about you orbit him on a tilted ring, passing behind and in front. Hover one to stop it and read more. Drag sideways to spin the ring yourself.</p></div>
+        <p class="mono">Drag to spin · hover a chip</p>
+      </div>
+      <div class="cx-stage" id="orb-stage">
+        <div class="world-bg isl-meadow"><div class="world-planet"></div></div>
+        <div class="ab">
+          <div class="ab-vig"></div><div class="ab-spot"></div>
+          <div class="ab-plaque"><img src="../public/ericnglogo.png" alt="Eric Ng"></div>
+          <button class="ew-iconbtn ab-close" aria-label="Close"><span data-icon="close"></span></button>
+          <div class="oring"></div>
+          <div class="char" data-char></div>
+          <div class="orbit" id="orbit"></div>
+          <div class="dock">
+            <div class="grow"><h3>Eric Ng Min Chern</h3><p>CS grad, University of Edinburgh · Ex-Barclays and BlackRock · Open to work</p></div>
+            <div class="socials"><a href="mailto:ericng8766@gmail.com" aria-label="Email"><span data-icon="mail" data-size="16"></span></a><a href="https://github.com/erriiiccccccc" target="_blank" rel="noopener" aria-label="GitHub"><span data-icon="github" data-size="16"></span></a></div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="3"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Very 3D, very "world": the facts live in the same space as him, like little moons. Strong first-glance wow, and it fills both sides without cards.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Moving text is hard to read, so hover and focus stop the ring. Chips are real buttons for Tab. Reduced motion freezes the ring in place.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Chips placed on an ellipse in JS each frame, depth from sin(angle) controls scale, opacity and whether they pass behind him. Could become real 3D sprites in Three.js later.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Reading on the move is tiring, and it can tip into gimmick. Gets cluttered past 8 chips. Worst on mobile.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Character Select, and clicking him starts the dialogue.</h3>
+      <p>Character Select fills the sides with things people actually use: who you are on the left, where to go next on the right. Emotes give everyone a toy, and the quest log turns Meadow into the hub of the world. Then steal the best bit of Talk: clicking the character opens a short dialogue in his speech bubble. Two layers, the quick read and the deeper chat.</p>
+      <p><strong>Copy fixes in the current overlay:</strong> the hint "move your cursor &mdash; he's watching" and the tagline both use em dashes, which the brand bans. The dock says "100% procedural", but the world is now a Blender GLB, so that's no longer true. "Graduating 2026" is stale now that it's November 2026. And About says Edinburgh while Contact says London: pick one story (CS grad from Edinburgh, based in London).</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="panel.html"><small>← Previous</small><span>The Dive</span></a>
+    <a href="mountain.html"><small>Next →</small><span>Mountain</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var CHAR = '<svg viewBox="0 0 200 320" role="img" aria-label="Stand-in for Eric\'s 3D character">' +
+    '<ellipse cx="100" cy="312" rx="46" ry="7" fill="rgba(0,0,0,.4)"/>' +
+    '<g class="c-root">' +
+      '<path d="M82 222 L98 222 L97 298 L81 298 Z" fill="#2B2F45"/><path d="M102 222 L118 222 L119 298 L103 298 Z" fill="#23263a"/>' +
+      '<path d="M75 296 L98 296 L98 307 L72 307 Z" fill="#ECE8F2"/><path d="M102 296 L125 296 L128 307 L102 307 Z" fill="#d9d4e2"/>' +
+      '<path d="M64 146 L52 152 L44 214 L58 217 L67 172 Z" fill="#4F9F5B"/><circle cx="51" cy="221" r="7" fill="#E8BE98"/>' +
+      '<path d="M64 140 L100 140 L100 230 L54 230 Z" fill="#5DB36A"/><path d="M100 140 L136 140 L146 230 L100 230 Z" fill="#46904F"/>' +
+      '<path d="M80 136 L120 136 L112 152 L88 152 Z" fill="#3B7A45"/><path d="M78 196 L122 196 L118 214 L82 214 Z" fill="#3f8749" opacity=".7"/>' +
+      '<path d="M92 122 L108 122 L108 140 L92 140 Z" fill="#D9AE88"/>' +
+      '<g class="c-armr"><path d="M136 146 L148 152 L156 214 L142 217 L133 172 Z" fill="#46904F"/><circle cx="149" cy="221" r="7" fill="#E8BE98"/></g>' +
+      '<g class="c-head">' +
+        '<path d="M66 100 L60 108 L68 116 Z" fill="#D9AE88"/><path d="M134 100 L140 108 L132 116 Z" fill="#CFA27C"/>' +
+        '<path d="M72 78 L128 78 L132 104 L122 126 L100 134 L78 126 L68 104 Z" fill="#EBC3A0"/>' +
+        '<path d="M100 78 L128 78 L132 104 L122 126 L100 134 Z" fill="#DFB28E"/>' +
+        '<path d="M66 92 L68 64 L84 48 L108 44 L128 52 L136 72 L134 92 L126 74 L106 68 L86 72 L74 88 Z" fill="#1E1B26"/>' +
+        '<path d="M84 72 L106 68 L96 80 Z" fill="#2a2633"/>' +
+        '<g class="c-pupils"><circle cx="88" cy="100" r="2.8" fill="#1E1B26"/><circle cx="112" cy="100" r="2.8" fill="#1E1B26"/></g>' +
+        '<rect x="77" y="92" width="22" height="15" rx="5" fill="rgba(255,255,255,.08)" stroke="#1E1B26" stroke-width="2.4"/><rect x="101" y="92" width="22" height="15" rx="5" fill="rgba(255,255,255,.08)" stroke="#1E1B26" stroke-width="2.4"/><path d="M99 98 L101 98" stroke="#1E1B26" stroke-width="2.4"/>' +
+        '<path d="M93 117 Q100 122 107 117" fill="none" stroke="#7a4a36" stroke-width="2.2" stroke-linecap="round"/>' +
+      '</g>' +
+    '</g></svg>'
+
+  // mount characters + eye tracking per stage
+  document.querySelectorAll('[data-char]').forEach(function (host) {
+    host.insertAdjacentHTML('afterbegin', CHAR)
+    var stage = host.closest('.cx-stage'), svg = host.querySelector('svg'), pupils = svg.querySelector('.c-pupils'), head = svg.querySelector('.c-head')
+    stage.addEventListener('pointermove', function (e) {
+      var r = svg.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.32
+      var dx = Math.max(-1, Math.min(1, (e.clientX - cx) / (r.width * 1.6))), dy = Math.max(-1, Math.min(1, (e.clientY - cy) / (r.height * 1.2)))
+      pupils.setAttribute('transform', 'translate(' + (dx * 3.2).toFixed(2) + ',' + (dy * 2.4).toFixed(2) + ')')
+      if (!svg.classList.contains('think')) head.style.transform = 'rotate(' + (dx * 5).toFixed(2) + 'deg)'
+    })
+  })
+  function emote(host, name) {
+    var svg = host.querySelector('svg')
+    ;['wave', 'jump', 'dance', 'think'].forEach(function (n) { svg.classList.remove(n) })
+    void svg.getBoundingClientRect()
+    svg.classList.add(name)
+    if (name === 'think') svg.querySelector('.c-head').style.transform = ''
+    clearTimeout(svg._t); svg._t = setTimeout(function () { svg.classList.remove(name) }, name === 'think' ? 1800 : 1700)
+  }
+  function toaster(stage) { var t = stage.querySelector('[data-toast]'); return function (m) { t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove('on') }, 2000) } }
+  function bubble(stage, text) {
+    var old = stage.querySelector('.bubble'); if (old) old.remove()
+    var b = document.createElement('div'); b.className = 'bubble'; b.textContent = text
+    stage.querySelector('.ab').appendChild(b)
+    clearTimeout(stage._bt); stage._bt = setTimeout(function () { b.remove() }, 3600)
+  }
+
+  /* ═══ A · CHARACTER SELECT ═══ */
+  ;(function () {
+    var stage = document.getElementById('sel-stage'), host = stage.querySelector('[data-char]'), toast = toaster(stage)
+    var LINES = { wave: 'hey! welcome to my world.', jump: 'whoa, low gravity up here.', dance: 'the jukebox made me do it.', think: 'hmm, which island next...' }
+    var TALK = ['hi, I\'m Eric. I build things.', 'try the emotes on the left.', 'the quest log warps you anywhere.', 'there\'s a yeti on Arctic. allegedly.', 'ok you can stop clicking me now.']
+    var ti = 0
+    stage.querySelectorAll('.emo').forEach(function (b) { b.addEventListener('click', function () { emote(host, b.dataset.emo); bubble(stage, LINES[b.dataset.emo]) }) })
+    host.addEventListener('click', function () { emote(host, 'jump'); bubble(stage, TALK[ti++ % TALK.length]) })
+    stage.addEventListener('keydown', function (e) {
+      var map = { '1': 'wave', '2': 'jump', '3': 'dance', '4': 'think' }
+      if (map[e.key]) { e.preventDefault(); emote(host, map[e.key]); bubble(stage, LINES[map[e.key]]) }
+    })
+    var Q = [['Meadow Island', 'About Me', '#6BD46F', 1], ['Mountain Island', 'Projects', '#FF8A65', 1], ['Arctic Island', 'Ask Mochi', '#7CC4FF', 0], ['Lava Island', 'Experience', '#FF5A1F', 1], ['Desert Island', 'Contact', '#F6A04D', 0], ['Pirate Ship', 'Travel Log', '#2BC7D3', 0]]
+    var qh = ''
+    Q.forEach(function (q) { qh += '<button class="quest' + (q[3] ? ' found' : '') + '" style="--qc:' + q[2] + '"><i>' + (q[3] ? CX.icon('check', 12) : '') + '</i><span>' + q[0] + '</span><small>' + (q[3] ? 'found' : 'warp') + '</small></button>' })
+    document.getElementById('quests').innerHTML = qh
+    document.getElementById('quests').addEventListener('click', function (e) { var b = e.target.closest('.quest'); if (b) toast('in the game this warps you to ' + b.querySelector('span').textContent) })
+    var np = document.getElementById('np-btn'), eq = document.getElementById('eq'), playing = false
+    np.addEventListener('click', function () {
+      playing = !playing; eq.classList.toggle('on', playing && !REDUCED)
+      np.innerHTML = CX.icon(playing ? 'pause' : 'play', 16); np.setAttribute('aria-label', playing ? 'Pause' : 'Play Eric\'s pinned loop')
+      if (playing) { emote(host, 'dance'); bubble(stage, 'this one\'s mine. made it on the jukebox.') }
+    })
+    document.getElementById('pane-select').addEventListener('cx:pane', function (e) { if (e.detail.visible) setTimeout(function () { emote(host, 'wave'); bubble(stage, 'oh hey! I\'m Eric.') }, 500) })
+  })()
+
+  /* ═══ B · TALK TO ERIC ═══ */
+  ;(function () {
+    var stage = document.getElementById('talk-stage'), host = stage.querySelector('[data-char]'), toast = toaster(stage)
+    var text = document.getElementById('dlg-text'), choices = document.getElementById('dlg-choices'), seen = {}
+    var TREE = {
+      root: { say: 'Hey! I\'m Eric, and this is my world. What do you want to know?', emo: 'wave', opts: [['What do you do?', 'do'], ['What are you looking for?', 'look'], ['Why a planet?', 'why'], ['Tell me a fun fact.', 'fun']] },
+      do: { say: 'I build things that are useful, interactive, or a bit unexpected. Full-stack web, 3D on the web, a little robotics. This whole planet is mine.', emo: 'think', topic: 0 },
+      look: { say: 'My next role. CS grad from Edinburgh, now based in London. Software engineering, creative dev, anything where I get to build real things.', emo: 'jump', topic: 1 },
+      why: { say: 'Because a CV is boring and I like making things people want to poke at. Also it was a great excuse to learn Three.js properly.', emo: 'dance', topic: 2 },
+      fun: { say: 'I\'ve found 24 countries so far. And the jukebox on this island has my own loops on it, go press play.', emo: 'wave', topic: 3 },
+      bye: { say: 'See you around. Go find the other islands!', emo: 'wave', end: true }
+    }
+    var typing = null, full = ''
+    function say(node) {
+      var n = TREE[node]
+      if (n.topic != null) { seen[node] = true; var k = Object.keys(seen).length; document.getElementById('t-frac').textContent = k + ' / 4'; document.querySelectorAll('#topics i').forEach(function (t, i) { t.classList.toggle('on', i < k) }) }
+      if (n.emo) emote(host, n.emo)
+      choices.innerHTML = ''; text.classList.remove('done'); full = n.say
+      var i = 0
+      clearInterval(typing)
+      var finish = function () {
+        clearInterval(typing); typing = null; text.textContent = full; text.classList.add('done')
+        var opts = n.opts || (n.end ? [['Start over', 'root']] : [['Ask something else', 'root'], ['Show me your work', 'work'], ['Bye!', 'bye']])
+        opts.forEach(function (o, k) {
+          var b = document.createElement('button'); b.className = 'choice' + (seen[o[1]] ? ' seen' : ''); b.style.animationDelay = (k * 50) + 'ms'
+          b.innerHTML = '<span class="kbd">' + (k + 1) + '</span>' + o[0]
+          b.addEventListener('click', function () { pick(o[1]) })
+          choices.appendChild(b)
+        })
+      }
+      text._finish = finish
+      if (REDUCED) return finish()
+      typing = setInterval(function () { text.textContent = full.slice(0, ++i); if (i >= full.length) finish() }, 18)
+    }
+    function pick(id) { if (id === 'work') { toast('in the game this warps you to Mountain Island'); return } say(id) }
+    stage.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && typing) { e.preventDefault(); text._finish(); return }
+      if (/^[1-4]$/.test(e.key)) { var b = choices.querySelectorAll('.choice')[Number(e.key) - 1]; if (b) { e.preventDefault(); b.click() } }
+    })
+    host.addEventListener('click', function () { say('root') })
+    // polaroid shuffle: click sends the top card to the back
+    var polas = document.getElementById('polas')
+    polas.addEventListener('click', function (e) {
+      var p = e.target.closest('.pola'); if (!p) return
+      var cards = polas.querySelectorAll('.pola'), top = cards[cards.length - 1]
+      top.style.transform += ' translateX(-120%) rotate(-12deg)'
+      setTimeout(function () { polas.insertBefore(top, polas.firstChild); top.style.transform = 'rotate(' + (Math.random() * 14 - 7).toFixed(1) + 'deg)' }, 260)
+    })
+    document.getElementById('pane-talk').addEventListener('cx:pane', function (e) { if (e.detail.visible && !text.textContent) say('root') })
+  })()
+
+  /* ═══ C · ORBIT ═══ */
+  ;(function () {
+    var stage = document.getElementById('orb-stage'), orbit = document.getElementById('orbit'), host = stage.querySelector('[data-char]')
+    var FACTS = [['CS grad', 'University of Edinburgh'], ['Based in London', 'from Malaysia'], ['Ex-Barclays', 'automated a 45 min task'], ['Ex-BlackRock', 'spring intern, Aladdin'], ['Three.js', 'built this whole world'], ['Robotics TA', 'System Design + Mobile Robotics'], ['24 countries', 'and counting'], ['Open to work', 'say hi on Desert Island']]
+    var chips = FACTS.map(function (f, i) {
+      var b = document.createElement('button'); b.className = 'ochip'; b.innerHTML = f[0] + '<small>' + f[1] + '</small>'
+      b.addEventListener('mouseenter', function () { hover = true }); b.addEventListener('mouseleave', function () { hover = false })
+      b.addEventListener('focus', function () { hover = true }); b.addEventListener('blur', function () { hover = false })
+      orbit.appendChild(b); return b
+    })
+    var ang = 0, hover = false, visible = false, drag = null, vel = 0
+    function place() {
+      var W = stage.clientWidth, H = stage.clientHeight, cx = W / 2, cy = H * 0.58, rx = W * 0.38, ry = H * 0.13
+      chips.forEach(function (c, i) {
+        var a = ang + i / chips.length * Math.PI * 2, s = Math.sin(a), depth = (s + 1) / 2
+        var x = cx + Math.cos(a) * rx - c.offsetWidth / 2, y = cy + s * ry - c.offsetHeight / 2
+        c.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + (0.78 + depth * 0.3).toFixed(3) + ')'
+        c.style.opacity = (0.45 + depth * 0.55).toFixed(2)
+        c.style.zIndex = s > 0 ? 6 : 1
+        orbit.style.zIndex = 'auto'
+      })
+    }
+    // chips behind the character need to sit under it: lift char to z 3, front chips z 6 via orbit's own stacking
+    orbit.style.zIndex = 'auto'
+    function loop() {
+      if (visible && !hover && !drag && !REDUCED) ang += 0.0035 + vel
+      vel *= 0.95
+      place(); requestAnimationFrame(loop)
+    }
+    stage.addEventListener('pointerdown', function (e) { if (e.target.closest('.ochip,a,button')) return; drag = e.clientX })
+    window.addEventListener('pointermove', function (e) { if (drag === null) return; var d = (e.clientX - drag) / 300; ang += d; vel = d * 0.15; drag = e.clientX })
+    window.addEventListener('pointerup', function () { drag = null })
+    host.addEventListener('click', function () { emote(host, 'jump') })
+    document.getElementById('pane-orbit').addEventListener('cx:pane', function (e) { visible = e.detail.visible })
+    requestAnimationFrame(loop)
+  })()
+})()
+</script>
+</body>
+</html>

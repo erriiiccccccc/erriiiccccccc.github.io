@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pirate Ship · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<style>
+  .sea-glint { position: absolute; inset: auto 0 0 0; height: 40%; pointer-events: none; z-index: 1; background: radial-gradient(50% 70% at 50% 120%, rgba(43,199,211,0.25), transparent 70%); }
+
+  /* ── A · NIGHT GLOBE ───────────────────────────────────── */
+  .gl { position: absolute; inset: 0; display: grid; grid-template-columns: 1.15fr 1fr; }
+  .gl-globe { position: relative; display: grid; place-items: center; min-height: 0; padding: 8px; cursor: grab; touch-action: none; }
+  .gl-globe:active { cursor: grabbing; }
+  .gl-globe svg { width: min(100%, 560px); height: auto; max-height: 100%; overflow: visible; filter: drop-shadow(0 0 40px rgba(43,199,211,0.25)); }
+  .g-ocean { fill: url(#oceanGrad); stroke: rgba(166,242,230,0.35); stroke-width: 1; }
+  .g-grat { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 0.6; }
+  .g-land { fill: rgba(255,255,255,0.075); stroke: rgba(255,255,255,0.13); stroke-width: 0.5; transition: fill 300ms; }
+  .g-land.v { fill: #2BC7D3; fill-opacity: 0.82; stroke: #A6F2E6; stroke-width: 0.6; }
+  .g-land.v.hi { fill: #A6F2E6; fill-opacity: 1; }
+  .g-arc { fill: none; stroke: #A6F2E6; stroke-width: 1; stroke-opacity: 0.55; stroke-dasharray: 3 3; }
+  .g-dot { fill: #A6F2E6; stroke: #051f27; stroke-width: 1; }
+  .g-home { fill: #FBBF24; }
+  .g-home-ring { fill: none; stroke: #FBBF24; stroke-width: 1.2; animation: ring 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ring { from { transform: scale(0.6); opacity: 0.9; } to { transform: scale(2.6); opacity: 0; } }
+  .gl-tip { position: absolute; z-index: 4; pointer-events: none; padding: 6px 10px; border-radius: 8px; background: rgba(5,20,28,0.94); border: 1px solid rgba(166,242,230,0.35); font-size: 12.5px; white-space: nowrap; opacity: 0; transition: opacity 150ms; }
+  .gl-tip.on { opacity: 1; }
+  .gl-hint { position: absolute; left: 18px; bottom: 14px; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); }
+  .gl-side { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); }
+  .gl-stats { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+  .gl-stat { padding: 16px 20px; }
+  .gl-stat:nth-child(odd) { border-right: 1px solid var(--line); }
+  .gl-stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .gl-stat b { display: block; font-family: var(--f-display); font-weight: 400; font-size: clamp(34px, 3.6vw, 52px); line-height: 1; font-variant-numeric: tabular-nums; }
+  .gl-stat span { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  .gl-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px 14px; }
+  .gl-group { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ic); padding: 12px 8px 6px; display: flex; justify-content: space-between; }
+  .gl-row { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; min-height: 40px; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); text-align: left; cursor: pointer; font-size: 14px; }
+  .gl-row:hover, .gl-row:focus-visible, .gl-row.hi { background: rgba(43,199,211,0.1); color: var(--ink); outline: none; }
+  .gl-row code { font-family: var(--f-mono); font-size: 11px; color: var(--ic-2); letter-spacing: 0.06em; }
+  .gl-row small { font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-4); }
+  .gl-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+  .gl-foot .btn { min-height: 40px; font-size: 13.5px; }
+  .gl-err { padding: 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+  @media (max-width: 860px) { #pane-globe .ew-body { overflow-y: auto !important; } .gl { position: relative; inset: auto; grid-template-columns: 1fr; grid-template-rows: 300px auto; } .gl-list { overflow: visible; } .gl-side { border-left: 0; border-top: 1px solid var(--line); } .gl-stat { padding: 10px 14px; } }
+
+  /* ── B · TRAVEL WRAPPED ────────────────────────────────── */
+  .wr { position: absolute; inset: 0; overflow: hidden; user-select: none; }
+  .wr-bars { position: absolute; top: 14px; left: 18px; right: 18px; z-index: 5; display: flex; gap: 6px; }
+  .wr-bars i { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.18); overflow: hidden; position: relative; }
+  .wr-bars i b { position: absolute; inset: 0; width: 0; background: #fff; }
+  .wr-card { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 60px clamp(24px, 6vw, 80px) 40px; opacity: 0; transform: scale(1.02); transition: opacity 500ms, transform 700ms var(--ease-out); pointer-events: none; }
+  .wr-card.on { opacity: 1; transform: none; pointer-events: auto; }
+  .wr-card .mono { color: var(--ic-2); }
+  .wr-big { font-family: var(--f-display); font-weight: 400; font-size: clamp(80px, 13vw, 200px); line-height: 0.85; letter-spacing: -0.02em; margin: 10px 0 6px; font-variant-numeric: tabular-nums; }
+  .wr-big em { font-style: italic; color: var(--ic-2); }
+  .wr-line { font-family: var(--f-display); font-size: clamp(26px, 3vw, 42px); line-height: 1.1; color: var(--ink-2); max-width: 22ch; }
+  .wr-cont { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; max-width: 520px; }
+  .wr-cont div { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-2); }
+  .wr-cont i { height: 10px; border-radius: 6px; background: linear-gradient(90deg, #2BC7D3, #A6F2E6); transform-origin: left; transform: scaleX(0); transition: transform 900ms var(--ease-out); }
+  .wr-card.on .wr-cont i { transform: scaleX(var(--w)); }
+  .wr-ring { width: 180px; height: 180px; margin-top: 10px; }
+  .wr-tap { position: absolute; top: 0; bottom: 0; width: 35%; z-index: 4; border: 0; background: none; cursor: pointer; }
+  .wr-tap--l { left: 0; } .wr-tap--r { right: 0; width: 65%; }
+  .wr-tap:focus-visible { outline: 2px solid var(--ic); outline-offset: -6px; }
+  .wr-paused { position: absolute; right: 20px; bottom: 16px; z-index: 5; font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .wr-c1 { background: radial-gradient(80% 80% at 80% 20%, rgba(43,199,211,0.25), transparent 60%); }
+  .wr-c2 { background: radial-gradient(80% 80% at 20% 80%, rgba(124,196,255,0.22), transparent 60%); }
+  .wr-c3 { background: radial-gradient(80% 80% at 70% 70%, rgba(166,242,230,0.18), transparent 60%); }
+  .wr-c4 { background: radial-gradient(80% 80% at 30% 20%, rgba(251,191,36,0.14), transparent 60%); }
+  .wr-c5 { background: radial-gradient(80% 80% at 80% 80%, rgba(43,199,211,0.25), transparent 60%); }
+  .wr-c6 { background: radial-gradient(80% 80% at 50% 0%, rgba(167,139,250,0.2), transparent 60%); }
+
+  /* ── C · LOGBOOK ───────────────────────────────────────── */
+  .lb { padding: 4px 22px 22px; display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 18px; }
+  .lb-photos { display: grid; gap: 14px; align-content: start; }
+  .postcard { position: relative; margin: 0; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; background: #0b2730; border: 1px solid var(--line-2); }
+  .postcard img { width: 100%; height: 100%; object-fit: cover; }
+  .postcard figcaption { position: absolute; inset: auto 0 0 0; padding: 40px 16px 14px; background: linear-gradient(transparent, rgba(2,12,16,0.9)); }
+  .postcard figcaption .mono { color: var(--ic-2); }
+  .postcard figcaption b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1.05; margin-top: 4px; }
+  .postcard--sm { aspect-ratio: 16 / 9; }
+  .lb-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .chipset { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fchip { min-height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+  .fchip[aria-pressed="true"] { background: var(--ink); color: var(--space-900); border-color: transparent; }
+  .lb-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .lb-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line); }
+  .lb-row .sil { width: 40px; height: 32px; display: grid; place-items: center; }
+  .lb-row .sil svg { width: 40px; height: 32px; }
+  .lb-row .sil path { fill: var(--ic); fill-opacity: 0.9; }
+  .lb-row .sil code { font-family: var(--f-mono); font-size: 11px; color: var(--ic-2); }
+  .lb-row b { font-weight: 500; font-size: 14px; }
+  .lb-row small { font-family: var(--f-mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.06em; text-transform: uppercase; }
+  .lb-wish { margin-top: 18px; padding: 14px 16px; border-radius: 14px; border: 1px dashed rgba(166,242,230,0.3); }
+  .lb-wish .mono { color: var(--ic-2); display: flex; justify-content: space-between; }
+  .lb-wish div.w { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .lb-wish span { font-size: 12.5px; padding: 5px 10px; border-radius: var(--r-pill); border: 1px solid var(--line-2); color: var(--ink-3); }
+  @media (max-width: 860px) { .lb { grid-template-columns: 1fr; padding: 4px 12px 14px; } .lb-rows { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="isl-pirate">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">06 · Pirate Ship · Travel Log</div>
+    <h1 class="cx-h1">Less Windows XP, <em>more night sky.</em></h1>
+    <p class="cx-lede">Your travel data is great. The face on it is dated: flags in boxes and an embedded Google map read like 2008. Here are three modern ways to show where you've been, all on your real 24 countries.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/travel/TravelStats.js</strong>: a Google My Maps embed behind a consent click, a photo card, 6 stat boxes, and a wall of flag chips.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>24 flags are 24 different art styles fighting each other, that's the XP feeling. The embed is someone else's UI inside yours. All stats get equal boxes, so nothing lands.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>One hero visual that's yours, a few huge numbers, a calm list.</strong> Kill the flags. Keep My Maps as a link for the deep dive.</p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Three ways to log the voyage</div>
+    <h2 class="cx-h2">Pick a <em>log</em></h2>
+    <p class="cx-sub">Data comes from public/travel-stats.json: 24 countries, 12% of the world, 1,038 pins on your map, home is Malaysia and you're based in London.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Travel options">
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-globe"><span class="cx-tab-key">1</span><span class="cx-tab-name">Night Globe <span class="cx-rec">My pick</span><small>spin the planet, countries light up</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-wrapped"><span class="cx-tab-key">2</span><span class="cx-tab-name">Travel Wrapped<small>year-in-review story cards</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-log"><span class="cx-tab-key">3</span><span class="cx-tab-name">Logbook<small>photos first, silhouettes not flags</small></span></button>
+    </div>
+
+    <!-- A · NIGHT GLOBE -->
+    <section class="cx-pane" id="pane-globe" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>A · Night Globe</h3><p>A dark globe you can spin. Your countries glow, dotted arcs fly out from London and Kuala Lumpur. Hover a country in the list and the globe turns to it.</p></div>
+        <p class="mono">Drag to spin · hover the list</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-pirate"><div class="world-planet"></div></div><div class="world-dim"></div><div class="sea-glint"></div>
+        <div class="ew" role="dialog" aria-label="Travel Log">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>06 / 06</span>·<b>Pirate Ship</b></div><h2 class="ew-title">Travel Log</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" style="overflow:hidden">
+            <div class="gl">
+              <div class="gl-globe" id="gl-globe" aria-label="Globe of countries visited. Use the list to rotate to a country."><div class="gl-tip" id="gl-tip"></div><div class="gl-hint">drag to spin</div></div>
+              <div class="gl-side">
+                <div class="gl-stats">
+                  <div class="gl-stat"><b data-count="24">0</b><span>countries</span></div>
+                  <div class="gl-stat"><b data-count="3">0</b><span>continents</span></div>
+                  <div class="gl-stat"><b data-count="12" data-suffix="%">0</b><span>of the world</span></div>
+                  <div class="gl-stat"><b data-count="1038">0</b><span>pins dropped</span></div>
+                </div>
+                <div class="gl-list" id="gl-list"></div>
+                <div class="gl-foot"><span class="mono">home · Malaysia</span><a class="btn" href="https://www.google.com/maps/d/u/0/viewer?mid=1Jqq0FtlUJEB3a12Xt-tvC5XGCQ9Qqf8" target="_blank" rel="noopener"><span data-icon="pin" data-size="15"></span>Open full map</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>A globe inside a world about a planet is perfect rhyme. It's the modern data-product look (dark globe, glowing arcs) instead of a stock map widget. Four big numbers carry the brag, the list carries the detail.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>The globe is a bonus, never the only way in: the list holds every country as a focusable row, and focusing one turns the globe. Drag works with mouse and touch. Auto-spin stops on interaction and under reduced motion.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Two ways: d3-geo orthographic in SVG like this demo (about 8KB of data), or a real Three.js sphere since you already run Three. Countries come from world-atlas, matched by name to travel-stats.json, so a new country just lights up.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Tiny places (Malta, Singapore, Hong Kong) vanish at this resolution, so they're drawn as dots. Use a lazy import so the map data only loads when the panel opens.</p></div>
+      </div>
+    </section>
+
+    <!-- B · TRAVEL WRAPPED -->
+    <section class="cx-pane" id="pane-wrapped" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>B · Travel Wrapped</h3><p>Story cards that play like a year in review: one huge number at a time, with bars along the top. Tap right for next, left for back, hold to pause.</p></div>
+        <p class="mono">Click the scene · ← → or tap · hold to pause</p>
+      </div>
+      <div class="cx-stage" id="wr-stage" tabindex="0" aria-label="Travel Wrapped story. Left and right arrows move between cards, space pauses.">
+        <div class="world-bg isl-pirate"><div class="world-planet"></div></div><div class="world-dim"></div><div class="sea-glint"></div>
+        <div class="ew" role="dialog" aria-label="Travel Log">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>06 / 06</span>·<b>Pirate Ship</b></div><h2 class="ew-title">Travel Log</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" style="overflow:hidden"><div class="wr" id="wr"></div></div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Everyone knows how to use stories. One number per card means each one lands, and "furthest from home" is a fun fact nobody else shows. Feels fresh every visit.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Tap zones are big buttons, arrows and space work, progress bars show where you are. It pauses on hold, on hover and when hidden. Reduced motion turns off auto-advance.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Cards generated from the same stats TravelStats.js already derives (continents, furthest via haversine, wonders). A tiny player with a timer. Around 120 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Auto-advancing content can annoy people who read slowly, so 6 seconds minimum and pause-on-hover. No way to see the full country list unless you add a final "all countries" card.</p></div>
+      </div>
+    </section>
+
+    <!-- C · LOGBOOK -->
+    <section class="cx-pane" id="pane-log" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>C · Logbook</h3><p>Photo-led and editorial. Your own photos as postcards, then a calm list where every country is its own silhouette instead of a flag, all in one colour.</p></div>
+        <p class="mono">Needs more of your photos to shine</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-pirate"><div class="world-planet"></div></div><div class="world-dim"></div><div class="sea-glint"></div>
+        <div class="ew" role="dialog" aria-label="Travel Log">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>06 / 06</span>·<b>Pirate Ship</b></div><h2 class="ew-title">Travel Log</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body">
+            <div class="lb">
+              <div class="lb-photos">
+                <figure class="postcard"><img src="../public/islandphoto/pirateislandphoto.jpeg" alt="Eric holding a fish he caught off the coast"><figcaption><span class="mono">From the log</span><b>Reeled one in off the coast</b></figcaption></figure>
+                <figure class="postcard postcard--sm"><img src="../public/islandphoto/travelislandphoto.jpeg" alt="A travel photo from Eric's log"><figcaption><span class="mono">Postcard</span><b>[caption this one]</b></figcaption></figure>
+              </div>
+              <div>
+                <div class="lb-head"><div class="chipset" id="lb-chips" role="group" aria-label="Filter by continent"></div><span class="mono" id="lb-count">24 countries</span></div>
+                <div class="lb-rows" id="lb-rows"></div>
+                <div class="lb-wish"><div class="mono"><span>Next up · New 7 Wonders</span><span>0 / 7</span></div><div class="w"><span>Great Wall of China</span><span>Petra</span><span>Christ the Redeemer</span><span>Machu Picchu</span><span>Chichén Itzá</span><span>Colosseum</span><span>Taj Mahal</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Personal beats impressive here. Your photos say more about you than a count. Silhouettes in one colour look like a designed set, which is exactly what flags can't do.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Plain list, plain filters, every row has text, photos have real alt text. The quietest and most readable of the three.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Silhouettes drawn from the same world-atlas data (one path per country, fitted to a small box). Photos go in public/islandphoto/. Around 90 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Lives or dies on photos: two isn't enough. Least "wow" on first open. Also the Unsplash shots on Mountain should move here only if they're replaced by yours.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Night Globe, with Wrapped's big numbers on top.</h3>
+      <p>The globe is the strongest single image on this page and it belongs in a world about a planet. Pair it with four huge numbers and a calm list and the panel goes from "settings screen" to "mission control". It also fixes the biggest design smell: your own visual instead of an embedded Google map.</p>
+      <p><strong>Kill the flag chips.</strong> They're the XP feeling. Use ISO codes or silhouettes in the island colour. Keep the photo card (it's lovely) and add more of your own photos over time, and keep the My Maps link for people who want every pin. If you want a little extra delight later, a "play your year" button can launch the Wrapped cards over the globe.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="desert.html"><small>← Previous</small><span>Desert</span></a>
+    <a href="index.html"><small>Back to →</small><span>Brand Bible</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var C = [["China","cn","Asia",[35,105]],["Croatia","hr","Europe",[45.17,15.5]],["Denmark","dk","Europe",[56,10]],["France","fr","Europe",[46,2]],["Germany","de","Europe",[51,9]],["Hong Kong","hk","Asia",[22.27,114.19]],["Hungary","hu","Europe",[47,20]],["Iceland","is","Europe",[65,-18]],["Ireland","ie","Europe",[53,-8]],["Italy","it","Europe",[42.83,12.83]],["Latvia","lv","Europe",[57,25]],["Malaysia","my","Asia",[2.5,112.5]],["Malta","mt","Europe",[35.83,14.58]],["Montenegro","me","Europe",[42.5,19.3]],["Morocco","ma","Africa",[32,-5]],["Poland","pl","Europe",[52,20]],["Portugal","pt","Europe",[39.5,-8]],["Singapore","sg","Asia",[1.37,103.8]],["Spain","es","Europe",[40,-4]],["Sweden","se","Europe",[62,15]],["Switzerland","ch","Europe",[47,8]],["Thailand","th","Asia",[15,100]],["Türkiye","tr","Asia",[39,35]],["United Kingdom","gb","Europe",[54,-2]]]
+    .map(function (r) { return { name: r[0], iso: r[1], cont: r[2], ll: r[3] } })
+  var ATLAS_NAME = { 'Türkiye': 'Turkey' }
+  var HOMES = [{ name: 'London', ll: [51.51, -0.13] }, { name: 'Kuala Lumpur', ll: [3.14, 101.69] }]
+  var CONTS = ['Europe', 'Asia', 'Africa']
+  function byCont(c) { return C.filter(function (x) { return x.cont === c }) }
+  function hav(a, b) { var R = 6371, t = Math.PI / 180, dLa = (b[0] - a[0]) * t, dLo = (b[1] - a[1]) * t, h = Math.sin(dLa / 2) ** 2 + Math.cos(a[0] * t) * Math.cos(b[0] * t) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)) }
+  var home = C.filter(function (c) { return c.name === 'Malaysia' })[0].ll
+  var furthest = C.reduce(function (best, c) { var k = hav(home, c.ll); return k > best.km ? { name: c.name, km: k } : best }, { name: '', km: 0 })
+
+  // one shared fetch of the world map, used by globe + logbook
+  var atlas = new Promise(function (res, rej) {
+    if (!window.d3 || !window.topojson) return rej(new Error('d3 not loaded'))
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then(function (r) { return r.json() })
+      .then(function (t) { res(topojson.feature(t, t.objects.countries).features) }).catch(rej)
+  })
+  function visitedFeature(features, c) { var n = ATLAS_NAME[c.name] || c.name; return features.filter(function (f) { return f.properties.name === n })[0] }
+
+  /* ═══ A · NIGHT GLOBE ═══ */
+  ;(function () {
+    var host = document.getElementById('gl-globe'), tip = document.getElementById('gl-tip'), list = document.getElementById('gl-list')
+    // list (works even if the globe fails)
+    CONTS.forEach(function (ct) {
+      var items = byCont(ct)
+      list.insertAdjacentHTML('beforeend', '<div class="gl-group"><span>' + ct + '</span><span>' + items.length + '</span></div>')
+      items.forEach(function (c) {
+        list.insertAdjacentHTML('beforeend', '<button class="gl-row" data-n="' + c.name + '"><code>' + c.iso.toUpperCase() + '</code><span>' + c.name + '</span><small>' + (c.name === 'Malaysia' ? 'home' : c.name === 'United Kingdom' ? 'based' : '') + '</small></button>')
+      })
+    })
+    // count-up
+    var counted = false
+    function countUp() {
+      if (counted) return; counted = true
+      document.querySelectorAll('#pane-globe [data-count]').forEach(function (el) {
+        var to = Number(el.dataset.count), suf = el.dataset.suffix || '', t0 = performance.now(), dur = REDUCED ? 1 : 1100
+        ;(function step(now) { var t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3); el.textContent = Math.round(to * e).toLocaleString('en-GB') + suf; if (t < 1) requestAnimationFrame(step) })(t0)
+      })
+    }
+    var paneVisible = false
+    document.getElementById('pane-globe').addEventListener('cx:pane', function (e) { paneVisible = e.detail.visible; if (paneVisible) countUp() })
+
+    atlas.then(function (features) {
+      var S = 560, proj = d3.geoOrthographic().scale(S / 2 - 10).translate([S / 2, S / 2]).clipAngle(90).rotate([-20, -32, 0])
+      var path = d3.geoPath(proj), grat = d3.geoGraticule10()
+      var visitedNames = {}
+      C.forEach(function (c) { visitedNames[ATLAS_NAME[c.name] || c.name] = c })
+      var svg = d3.select(host).append('svg').attr('viewBox', '0 0 ' + S + ' ' + S).attr('role', 'img').attr('aria-label', 'Globe with ' + C.length + ' visited countries highlighted')
+      var defs = svg.append('defs'), g = defs.append('radialGradient').attr('id', 'oceanGrad').attr('cx', '38%').attr('cy', '32%')
+      g.append('stop').attr('offset', '0').attr('stop-color', '#0d3a48'); g.append('stop').attr('offset', '0.7').attr('stop-color', '#061d27'); g.append('stop').attr('offset', '1').attr('stop-color', '#03121a')
+      var ocean = svg.append('path').datum({ type: 'Sphere' }).attr('class', 'g-ocean')
+      var gr = svg.append('path').datum(grat).attr('class', 'g-grat')
+      var lands = svg.append('g').selectAll('path').data(features).enter().append('path')
+        .attr('class', function (d) { return 'g-land' + (visitedNames[d.properties.name] ? ' v' : '') })
+        .on('mousemove', function (ev, d) { var r = host.getBoundingClientRect(); tip.textContent = d.properties.name + (visitedNames[d.properties.name] ? ' · found' : ''); tip.style.left = (ev.clientX - r.left + 12) + 'px'; tip.style.top = (ev.clientY - r.top + 12) + 'px'; tip.classList.add('on') })
+        .on('mouseleave', function () { tip.classList.remove('on') })
+      var arcData = []
+      C.forEach(function (c) {
+        var from = c.cont === 'Asia' ? HOMES[1] : HOMES[0]
+        if (c.name === 'United Kingdom' || c.name === 'Malaysia') return
+        arcData.push({ type: 'LineString', coordinates: [[from.ll[1], from.ll[0]], [c.ll[1], c.ll[0]]] })
+      })
+      var arcs = svg.append('g').selectAll('path').data(arcData).enter().append('path').attr('class', 'g-arc')
+      var small = C.filter(function (c) { return !visitedFeature(features, c) })
+      var dots = svg.append('g').selectAll('circle').data(small).enter().append('circle').attr('class', 'g-dot').attr('r', 3.6)
+      var homeG = svg.append('g').selectAll('g').data(HOMES).enter().append('g')
+      homeG.append('circle').attr('class', 'g-home-ring').attr('r', 6)
+      homeG.append('circle').attr('class', 'g-home').attr('r', 4)
+
+      function render() {
+        ocean.attr('d', path); gr.attr('d', path); lands.attr('d', path); arcs.attr('d', path)
+        var center = proj.invert([S / 2, S / 2])
+        dots.attr('transform', function (c) { var p = proj([c.ll[1], c.ll[0]]); return 'translate(' + p[0] + ',' + p[1] + ')' })
+          .attr('opacity', function (c) { return d3.geoDistance([c.ll[1], c.ll[0]], center) < Math.PI / 2 ? 1 : 0 })
+        homeG.attr('transform', function (h) { var p = proj([h.ll[1], h.ll[0]]); return 'translate(' + p[0] + ',' + p[1] + ')' })
+          .attr('opacity', function (h) { return d3.geoDistance([h.ll[1], h.ll[0]], center) < Math.PI / 2 ? 1 : 0 })
+      }
+      render()
+
+      var idleAt = 0, anim = null
+      d3.timer(function () {
+        if (!paneVisible || REDUCED || anim || performance.now() - idleAt < 2500) return
+        var r = proj.rotate(); proj.rotate([r[0] + 0.12, r[1], r[2]]); render()
+      })
+      d3.select(host).call(d3.drag()
+        .on('start', function () { idleAt = performance.now(); if (anim) { anim.stop(); anim = null } })
+        .on('drag', function (ev) { var r = proj.rotate(), k = 0.32; proj.rotate([r[0] + ev.dx * k, Math.max(-80, Math.min(80, r[1] - ev.dy * k)), r[2]]); render(); idleAt = performance.now() }))
+
+      function turnTo(c) {
+        idleAt = performance.now() + 4000
+        lands.classed('hi', function (d) { return visitedNames[d.properties.name] === c })
+        var from = proj.rotate(), to = [-c.ll[1], -c.ll[0] + 8, 0], it = d3.interpolate(from, to)
+        if (anim) anim.stop()
+        if (REDUCED) { proj.rotate(to); render(); return }
+        anim = d3.timer(function (el) { var t = Math.min(1, el / 900); proj.rotate(it(d3.easeCubicInOut(t))); render(); if (t >= 1) { anim.stop(); anim = null } })
+      }
+      list.addEventListener('mouseover', function (e) { var b = e.target.closest('.gl-row'); if (b) turnTo(C.filter(function (c) { return c.name === b.dataset.n })[0]) })
+      list.addEventListener('focusin', function (e) { var b = e.target.closest('.gl-row'); if (b) turnTo(C.filter(function (c) { return c.name === b.dataset.n })[0]) })
+      list.addEventListener('click', function (e) { var b = e.target.closest('.gl-row'); if (b) turnTo(C.filter(function (c) { return c.name === b.dataset.n })[0]) })
+    }).catch(function () {
+      host.insertAdjacentHTML('beforeend', '<div class="gl-err">The globe needs an internet connection to load map data.<br>The list on the right still works.</div>')
+    })
+  })()
+
+  /* ═══ B · TRAVEL WRAPPED ═══ */
+  ;(function () {
+    var wr = document.getElementById('wr'), stage = document.getElementById('wr-stage')
+    var counts = CONTS.map(function (c) { return [c, byCont(c).length] })
+    var max = Math.max.apply(null, counts.map(function (x) { return x[1] }))
+    var CARDS = [
+      '<div class="mono">Your travel log</div><div class="wr-big">24</div><div class="wr-line">countries found. <em style="color:var(--ic-2)">And counting.</em></div>',
+      '<div class="mono">Spread across</div><div class="wr-big">3 <em>continents</em></div><div class="wr-cont">' + counts.map(function (x) { return '<div><span>' + x[0] + '</span><i style="--w:' + (x[1] / max) + '"></i><b>' + x[1] + '</b></div>' }).join('') + '</div>',
+      '<div class="mono">Furthest from home</div><div class="wr-big">' + Math.round(furthest.km / 100) * 100 + '<em> km</em></div><div class="wr-line">from Malaysia to ' + furthest.name + '. Bring a jacket.</div>',
+      '<div class="mono">On the map</div><div class="wr-big">1,038</div><div class="wr-line">pins dropped. Every café, view and wrong turn.</div>',
+      '<div class="mono">Of the whole world</div><svg class="wr-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="8"/><circle cx="50" cy="50" r="42" fill="none" stroke="#A6F2E6" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + (2 * Math.PI * 42 * 0.12).toFixed(1) + ' 999" transform="rotate(-90 50 50)"/></svg><div class="wr-big" style="font-size:clamp(64px,9vw,130px)">12%</div><div class="wr-line">done. 88% to go.</div>',
+      '<div class="mono">Next up</div><div class="wr-big">0 <em>/ 7</em></div><div class="wr-line">New 7 Wonders seen. The Colosseum is suspiciously close.</div><div style="margin-top:20px"><a class="btn btn--primary" href="https://www.google.com/maps/d/u/0/viewer?mid=1Jqq0FtlUJEB3a12Xt-tvC5XGCQ9Qqf8" target="_blank" rel="noopener">Open the full map</a></div>'
+    ]
+    var bars = '<div class="wr-bars" aria-hidden="true">' + CARDS.map(function () { return '<i><b></b></i>' }).join('') + '</div>'
+    wr.innerHTML = bars + CARDS.map(function (c, i) { return '<div class="wr-card wr-c' + (i + 1) + '" aria-hidden="true">' + c + '</div>' }).join('') +
+      '<button class="wr-tap wr-tap--l" aria-label="Previous card"></button><button class="wr-tap wr-tap--r" aria-label="Next card"></button><div class="wr-paused" id="wr-paused"></div>'
+    var cards = wr.querySelectorAll('.wr-card'), fills = wr.querySelectorAll('.wr-bars b'), paused = document.getElementById('wr-paused')
+    var i = 0, t = 0, last = 0, hold = false, hover = false, visible = false, DUR = 6000
+    function show(k) {
+      i = Math.max(0, Math.min(CARDS.length - 1, k)); t = 0
+      cards.forEach(function (c, j) { c.classList.toggle('on', j === i); c.setAttribute('aria-hidden', j === i ? 'false' : 'true') })
+      fills.forEach(function (f, j) { f.style.width = j < i ? '100%' : '0' })
+    }
+    function loop(now) {
+      var dt = last ? now - last : 0; last = now
+      var stop = hold || hover || !visible || REDUCED
+      paused.textContent = REDUCED ? 'auto-play off' : (hold || hover) ? 'paused' : ''
+      if (!stop) {
+        t += dt; fills[i].style.width = Math.min(100, t / DUR * 100) + '%'
+        if (t >= DUR) { if (i < CARDS.length - 1) show(i + 1); else t = DUR }
+      }
+      requestAnimationFrame(loop)
+    }
+    wr.querySelector('.wr-tap--l').addEventListener('click', function () { show(i - 1) })
+    wr.querySelector('.wr-tap--r').addEventListener('click', function () { if (i === CARDS.length - 1) show(0); else show(i + 1) })
+    wr.addEventListener('pointerdown', function () { hold = true }); window.addEventListener('pointerup', function () { hold = false })
+    wr.addEventListener('mouseenter', function () { hover = true }); wr.addEventListener('mouseleave', function () { hover = false })
+    stage.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); show(i + 1) }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); show(i - 1) }
+      if (e.key === ' ') { e.preventDefault(); hold = !hold }
+    })
+    document.getElementById('pane-wrapped').addEventListener('cx:pane', function (e) { visible = e.detail.visible; if (visible) show(0) })
+    show(0); requestAnimationFrame(loop)
+  })()
+
+  /* ═══ C · LOGBOOK ═══ */
+  ;(function () {
+    var rows = document.getElementById('lb-rows'), chips = document.getElementById('lb-chips'), count = document.getElementById('lb-count')
+    ;['All'].concat(CONTS).forEach(function (c, k) { chips.insertAdjacentHTML('beforeend', '<button class="fchip" aria-pressed="' + (k === 0) + '" data-f="' + c + '">' + c + '</button>') })
+    rows.innerHTML = C.map(function (c) {
+      return '<div class="lb-row" data-c="' + c.cont + '" data-n="' + c.name + '"><span class="sil"><code>' + c.iso.toUpperCase() + '</code></span><b>' + c.name + '</b><small>' + c.cont + '</small></div>'
+    }).join('')
+    chips.addEventListener('click', function (e) {
+      var b = e.target.closest('.fchip'); if (!b) return
+      chips.querySelectorAll('.fchip').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false') })
+      var n = 0
+      rows.querySelectorAll('.lb-row').forEach(function (r) { var on = b.dataset.f === 'All' || r.dataset.c === b.dataset.f; r.hidden = !on; if (on) n++ })
+      count.textContent = n + (n === 1 ? ' country' : ' countries')
+    })
+    atlas.then(function (features) {
+      rows.querySelectorAll('.lb-row').forEach(function (r) {
+        var c = C.filter(function (x) { return x.name === r.dataset.n })[0], f = visitedFeature(features, c)
+        if (!f) return
+        // France and others have far-flung territories: keep only the biggest polygon so the shape reads
+        var geo = f.geometry
+        if (geo.type === 'MultiPolygon') {
+          var best = null, bestA = -1
+          geo.coordinates.forEach(function (poly) { var a = d3.geoArea({ type: 'Polygon', coordinates: poly }); if (a > bestA) { bestA = a; best = poly } })
+          geo = { type: 'Polygon', coordinates: best }
+        }
+        var p = d3.geoMercator().fitSize([38, 30], geo), d = d3.geoPath(p)(geo)
+        r.querySelector('.sil').innerHTML = '<svg viewBox="-1 -1 40 32" aria-hidden="true"><path d="' + d + '"/></svg>'
+      })
+    }).catch(function () {})
+  })()
+})()
+</script>
+</body>
+</html>

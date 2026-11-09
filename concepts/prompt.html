@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Prompt · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  /* ── mini world ────────────────────────────────────────── */
+  .sc { position: absolute; inset: 0; z-index: 2; overflow: hidden; touch-action: pan-y; }
+  .sc-island { position: absolute; left: calc(50% + var(--pan, 0px)); top: var(--top, 44%); width: 240px; transform: translate(-50%, -50%) scale(var(--s, 0.5)); transform-origin: 50% 50%; will-change: transform; }
+  .sc-island svg { width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.45)); }
+  .sc-ring { position: absolute; left: 50%; top: 36%; width: 150px; height: 34px; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid var(--ic); box-shadow: 0 0 20px var(--ic), inset 0 0 14px var(--ic); opacity: 0; transition: opacity 300ms; }
+  .sc.on .sc-ring { opacity: 1; animation: ringpulse 1.8s ease-in-out infinite; }
+  @keyframes ringpulse { 50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.6; } }
+  .sc-char { position: absolute; left: 50%; bottom: 17%; width: 40px; height: 74px; transform: translateX(-50%); z-index: 3; }
+  .sc-char svg { width: 100%; height: 100%; }
+  .sc-char.walk svg { animation: walk 260ms ease-in-out infinite alternate; }
+  @keyframes walk { to { transform: translateY(-4px) rotate(2deg); } }
+  .sc-ctl { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 30; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; pointer-events: none; }
+  .sc-ctl > * { pointer-events: auto; }
+  .isl-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .isl-chip { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(10,6,24,0.7); color: var(--c); display: grid; place-items: center; cursor: pointer; transition: transform var(--t-tap), border-color var(--t-fast); }
+  .isl-chip[aria-pressed="true"] { border-color: var(--c); box-shadow: 0 0 0 2px var(--c); }
+  .isl-chip:active { transform: scale(0.92); }
+  .walk-btns { display: flex; gap: 6px; }
+  .walk-btns button, .snd { min-height: 36px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(10,6,24,0.75); color: var(--ink-2); font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .walk-btns button:hover, .snd:hover { color: var(--ink); }
+  .walk-btns .kbd, .snd .kbd { height: 18px; min-width: 18px; font-size: 10px; }
+  .snd[aria-pressed="true"] { color: var(--ic); border-color: var(--ic); }
+  .sc-dist { position: absolute; left: 16px; top: 14px; z-index: 30; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); }
+  .dived { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--ic) 40%, transparent), rgba(5,3,12,0.85) 60%); transition: opacity 260ms; }
+  .dived.on { opacity: 1; }
+  .dived span { font-family: var(--f-display); font-size: 34px; }
+
+  /* compact capsule (v2) */
+  .cap { position: absolute; left: 50%; bottom: 72px; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 10px; border-radius: 18px; cursor: pointer; border: 1px solid var(--line-2); color: var(--ink); text-align: left;
+    background: linear-gradient(180deg, rgba(24,16,48,0.8), rgba(10,6,24,0.9)); backdrop-filter: blur(16px); box-shadow: 0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px color-mix(in srgb, var(--ic) 20%, transparent);
+    transform: translate(-50%, 16px) scale(0.96); opacity: 0; pointer-events: none; transition: transform 380ms var(--spring), opacity 240ms; }
+  .cap.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  .cap-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--ic); background: color-mix(in srgb, var(--ic) 16%, transparent); border: 1px solid color-mix(in srgb, var(--ic) 35%, transparent); }
+  .cap-t b { display: block; font-size: 15px; font-weight: 650; line-height: 1.2; }
+  .cap-t small { display: block; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ic); }
+  .cap-key { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; margin-left: 6px; border-left: 1px solid var(--line); }
+  .cap-key .kbd { min-width: 34px; height: 34px; font-size: 14px; border-radius: 9px; transition: transform 90ms, border-bottom-width 90ms; }
+  .cap-key span.l { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .pressed .cap-key .kbd, .pressed .kbd.k { transform: translateY(2px); border-bottom-width: 1px; }
+
+  /* A · area title */
+  .at { position: absolute; inset: 0; z-index: 25; display: grid; place-items: center; pointer-events: none; text-align: center; }
+  .at-in { opacity: 0; }
+  .at.play .at-in { animation: at-show 2.6s var(--ease-out) forwards; }
+  @keyframes at-show { 0% { opacity: 0; transform: translateY(10px); filter: blur(6px); } 14% { opacity: 1; transform: none; filter: none; } 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(40px) scale(0.6); } }
+  .at-k { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ic); }
+  .at-n { font-family: var(--f-display); font-size: clamp(56px, 8vw, 110px); line-height: 0.95; margin: 10px 0 8px; text-shadow: 0 0 40px color-mix(in srgb, var(--ic) 40%, transparent); }
+  .at-s { font-family: var(--f-display); font-style: italic; font-size: clamp(20px, 2.2vw, 28px); color: var(--ink-2); }
+  .at-rule { height: 1px; width: 0; margin: 14px auto 0; background: linear-gradient(90deg, transparent, var(--ic), transparent); }
+  .at.play .at-rule { animation: rule 900ms 200ms var(--ease-out) forwards; }
+  @keyframes rule { to { width: min(520px, 80vw); } }
+  .reset { min-height: 36px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(10,6,24,0.75); color: var(--ink-2); font-size: 12.5px; cursor: pointer; }
+
+  /* B · world tag */
+  .wt { position: absolute; left: 0; top: 0; z-index: 20; pointer-events: none; opacity: 0; transition: opacity 260ms; }
+  .wt.show { opacity: 1; }
+  .wt-box { position: absolute; left: 0; bottom: 0; transform: translate(-50%, 0); display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 12px; border-radius: 14px; white-space: nowrap; pointer-events: auto; cursor: pointer;
+    background: rgba(12,8,28,0.88); backdrop-filter: blur(12px); border: 1px solid color-mix(in srgb, var(--ic) 45%, transparent); box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: transform 200ms var(--ease-out); }
+  .wt-box b { font-size: 14px; font-weight: 650; display: block; line-height: 1.2; }
+  .wt-box small { display: block; font-size: 11.5px; color: var(--ink-3); max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
+  .wt-box .kbd { min-width: 30px; height: 30px; opacity: 0.35; transition: opacity 200ms; }
+  .wt.act .wt-box .kbd { opacity: 1; border-color: var(--ic); box-shadow: 0 0 14px color-mix(in srgb, var(--ic) 50%, transparent); }
+  .wt-line { position: absolute; left: 0; top: 0; width: 1.5px; background: linear-gradient(var(--ic), transparent); transform: translateX(-50%); }
+  .wt-edge { position: absolute; z-index: 21; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; display: none; place-items: center; background: rgba(12,8,28,0.9); border: 1px solid var(--ic); color: var(--ic); pointer-events: none; }
+  .wt-edge.show { display: grid; }
+
+  /* C · peek */
+  .pk { position: absolute; left: 50%; bottom: 72px; z-index: 20; width: min(380px, calc(100% - 32px)); transform: translate(-50%, 16px); opacity: 0; pointer-events: none; transition: transform 380ms var(--spring), opacity 240ms;
+    border-radius: 20px; overflow: hidden; background: linear-gradient(180deg, rgba(24,16,48,0.86), rgba(10,6,24,0.94)); backdrop-filter: blur(16px); border: 1px solid var(--line-2); box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: pointer; text-align: left; color: var(--ink); padding: 0; }
+  .pk.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  .pk-top { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; }
+  .pk-more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 420ms var(--ease-out); }
+  .pk.open .pk-more { grid-template-rows: 1fr; }
+  .pk-more > div { overflow: hidden; }
+  .pk-teaser { padding: 0 14px 14px; }
+  .pk-teaser p { margin: 0; font-family: var(--f-display); font-size: 22px; line-height: 1.15; }
+  .pk-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  .pk-thumbs img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+
+  /* D · charge */
+  .ring-c { position: absolute; inset: -6px; border-radius: 12px; pointer-events: none; }
+  .ring-c svg { width: 100%; height: 100%; overflow: visible; }
+  .ring-c rect { fill: none; stroke: var(--ic); stroke-width: 2.5; stroke-dasharray: 160; stroke-dashoffset: 160; }
+  .charging .ring-c rect { animation: charge 160ms linear forwards; }
+  @keyframes charge { to { stroke-dashoffset: 0; } }
+  .spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--ic); box-shadow: 0 0 10px var(--ic); pointer-events: none; z-index: 35; }
+  .cap.fly { transition: transform 520ms var(--ease-in), opacity 520ms; transform: translate(-50%, -200px) scale(0.3) !important; opacity: 0 !important; }
+</style>
+</head>
+<body class="isl-mountain">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">System · The approach prompt</div>
+    <h1 class="cx-h1">Press E, <em>but make it feel like a game.</em></h1>
+    <p class="cx-lede">The capsule that says "[E] Explore" works, no complaints. But it's the moment every single visitor sees six times, so it should be the most polished thing in the world. Five takes below. In each scene: click it, walk closer with W, press E.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/ui/UI.js</strong> builds #island-popup: a glass capsule pinned bottom-centre with the island icon, name, section, and an E keycap with a pulse ring.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>It's a HUD sticker: same spot, same look, no matter where the island is. It tells you the name but not why you'd go in. And it says "Explore" while the brand bible says the verb is "dive in".</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>Celebrate the find, anchor the prompt to the island, give a reason to press, make pressing feel physical.</strong></p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Five takes on the prompt</div>
+    <h2 class="cx-h2">Pick a <em>prompt</em></h2>
+    <p class="cx-sub">Use the coloured dots in each scene to switch island. W or ↑ walks closer, S or ↓ steps back, E dives in.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Prompt options">
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-title"><span class="cx-tab-key">1</span><span class="cx-tab-name">Area Title<small>celebrate the first find</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-tag"><span class="cx-tab-key">2</span><span class="cx-tab-name">World Tag<small>pinned to the island itself</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-peek"><span class="cx-tab-key">3</span><span class="cx-tab-name">Peek<small>a reason to press</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-charge"><span class="cx-tab-key">4</span><span class="cx-tab-name">Charge<small>pressing feels physical</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-combo"><span class="cx-tab-key">5</span><span class="cx-tab-name">The Combo <span class="cx-rec">My pick</span><small>all four, layered</small></span></button>
+    </div>
+
+    <section class="cx-pane" id="pane-title" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>A · Area Title</h3><p>The first time you step onto an island, its name fills the screen like a new area in a game, the found counter ticks up, then it shrinks into the compact prompt. After that, just the prompt.</p></div><p class="mono">Reset to see it again</p></div>
+      <div class="cx-stage" data-scene="title" tabindex="0" aria-label="Area Title demo. W to walk closer, S to step back, E to dive in."><div class="world-bg"><div class="world-planet"></div></div></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>"Found" is a brand word, and right now finding an island has no moment. A title card makes it an event and makes the 6 / 6 counter matter. Games have done this forever because it works.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Plays once per island, never blocks input, skippable by walking on. Under reduced motion it becomes a simple fade. Text is huge and high contrast.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>A DOM overlay triggered from the same proximity check that shows the popup today, gated by MapOverlay's visited set. CSS keyframes only. About 60 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Must never play twice for the same island, or it turns into an annoyance fast. Keep it under 2.5 seconds.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-tag" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>B · World Tag</h3><p>The prompt lives in the world: a tag floating above the island with a thin line down to a glowing ring. It moves with the island, grows as you get closer, and clings to the screen edge with an arrow when the island is off-screen.</p></div><p class="mono">← → or drag to pan the camera</p></div>
+      <div class="cx-stage" data-scene="tag" tabindex="0" aria-label="World Tag demo. W to walk closer, left and right to pan, E to dive in."><div class="world-bg"><div class="world-planet"></div></div></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Diegetic UI (living in the world) feels like a real game, a fixed HUD sticker feels like a website. It also answers "which island is this about?" with zero thought, because the line points at it.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>The edge arrow helps people find islands, a wayfinding win. The whole tag is the click target. Scaling stops at a readable minimum so text never gets tiny.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Project the island's anchor point with Vector3.project(camera) each frame and move a DOM element there (cheap). Clamp to the viewport and swap to the arrow when off-screen.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Needs smoothing so it doesn't jitter when the camera moves. Must not cover the character. Two tags on screen at once needs a rule (nearest wins).</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-peek" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>C · Peek</h3><p>The prompt carries a teaser of what's inside: "9 projects, 5 playable demos" with three thumbnails, or "now: Teaching Assistant". It opens up as you arrive, so people know why it's worth pressing.</p></div><p class="mono">Try Mountain, then Pirate</p></div>
+      <div class="cx-stage" data-scene="peek" tabindex="0" aria-label="Peek demo. W to walk closer, E to dive in."><div class="world-bg"><div class="world-planet"></div></div></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Information scent: people press more when they can smell what's behind the door. A label says where you are, a teaser says why you'd go in. Probably the biggest lift in press-through of all five.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Opens on arrival, not on hover, so it works on touch. One line of text plus optional thumbnails keeps it scannable while walking.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Add a teaser field to each island in src/data/content.js. Thumbnails reuse the project posters already in public/projects/. Grid-rows trick for the expand.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Teasers must stay true and current ("now: ..." goes stale). Keep it to one line, it's a sign not a panel.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-charge" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>D · Charge</h3><p>Pressing E feels physical: the keycap sinks, a ring fills in 160ms, sparks burst in the island's colour and the prompt flies into the island as the dive starts. Optional soft chime.</p></div><p class="mono">Turn sound on for the chime</p></div>
+      <div class="cx-stage" data-scene="charge" tabindex="0" aria-label="Charge demo. W to walk closer, E to dive in."><div class="world-bg"><div class="world-planet"></div></div></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Feedback within 100ms makes things feel responsive, and "juice" (sparks, sound, motion that points where you're going) makes them feel good. The prompt flying into the island bridges straight into the dive.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>No hold-to-confirm: holding is for destructive actions, opening content should be instant. The whole thing is 160ms, never a wait. Sound is off by default.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>CSS for the keycap and ring, a few spark elements animated with the Web Animations API, a two-note chime through the shared AudioEngine the Jukebox already uses.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Pure polish: it doesn't help anyone decide to press. Do it last, after the prompt carries real information.</p></div>
+      </div>
+    </section>
+
+    <section class="cx-pane" id="pane-combo" role="tabpanel">
+      <div class="cx-pane-intro"><div><h3>E · The Combo</h3><p>All four, layered so each does one job. First find: the Area Title. After: the World Tag, whose second line is the Peek teaser. On press: the Charge. On phones the whole tag is one big "tap to dive in" button.</p></div><p class="mono">Walk up to a new island first</p></div>
+      <div class="cx-stage" data-scene="combo" tabindex="0" aria-label="Combo demo. W to walk closer, left and right to pan, E to dive in."><div class="world-bg"><div class="world-planet"></div></div></div>
+      <div class="cx-ratings"><div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div><div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div><div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div></div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Each layer answers one question in order: "where am I?" (title), "which thing?" (tag), "why go in?" (peek), "did it work?" (charge). Nothing competes, because they happen at different moments.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Desktop shows the E keycap, touch shows "tap to dive in" and the entire tag is the target (well over 44px). Reduced motion keeps all the information and drops the movement.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Replace #island-popup in UI.js with a WorldTag class fed by the camera projection, add the teaser field, the title overlay, and the press juice. Roughly 250 lines total, no new libraries.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Build in order (peek, tag, title, charge) and ship each one, so you're never stuck with half a system.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>The Combo, built in this order: Peek, Tag, Title, Charge.</h3>
+      <p>Peek is the one that changes behaviour (more people press when they know what's inside), so it goes first. The World Tag is what makes it feel like a game instead of a website. The Area Title gives "found" the moment it deserves. Charge is the cherry.</p>
+      <p><strong>Copy fix right now, even before the redesign:</strong> change the keycap label from "Explore" to "dive in", and the mobile one to "tap to dive in". The brand bible already says so, the UI just never caught up.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="index.html"><small>← Previous</small><span>Brand Bible</span></a>
+    <a href="panel.html"><small>Next →</small><span>The Dive</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var COARSE = window.matchMedia('(pointer: coarse)').matches
+  var ISL = [
+    { k: 'meadow', n: 'Meadow Island', s: 'About Me', c: '#6BD46F', i: 'leaf', line: 'where Eric lives', peek: 'Say hi to Eric. He waves back.' },
+    { k: 'mountain', n: 'Mountain Island', s: 'Projects', c: '#FF8A65', i: 'mountain', line: 'where the projects live', peek: '9 projects · 5 playable demos', thumbs: ['petaling-utama', 'medmatch', 'ygo'] },
+    { k: 'arctic', n: 'Arctic Island', s: 'Ask Mochi', c: '#7CC4FF', i: 'snow', line: 'something new lives here', peek: 'A yeti who knows everything about Eric.' },
+    { k: 'lava', n: 'Lava Island', s: 'Experience', c: '#FF5A1F', i: 'flame', line: 'where the work got done', peek: 'Barclays, BlackRock, and a TA job.' },
+    { k: 'desert', n: 'Desert Island', s: 'Contact', c: '#F6A04D', i: 'sun', line: 'where you say hello', peek: 'Replies in about a day.' },
+    { k: 'pirate', n: 'Pirate Ship', s: 'Travel Log', c: '#2BC7D3', i: 'compass', line: 'where the voyage is logged', peek: '24 countries · 3 continents' }
+  ]
+  var ISLAND_SVG = '<svg viewBox="0 0 240 150" aria-hidden="true">' +
+    '<path d="M40 62 L200 62 L150 140 L104 132 Z" fill="#3b2f52"/><path d="M40 62 L120 62 L104 132 Z" fill="#4d3f66"/><path d="M120 62 L200 62 L150 140 Z" fill="#2c2340"/>' +
+    '<path d="M14 58 L70 40 L130 34 L188 40 L226 58 L184 70 L60 70 Z" fill="var(--ic)"/>' +
+    '<path d="M14 58 L70 40 L130 34 L120 66 L60 70 Z" fill="#fff" opacity=".18"/><path d="M130 34 L188 40 L226 58 L184 70 L120 66 Z" fill="#000" opacity=".14"/>' +
+    '<path d="M100 40 L112 14 L124 40 Z" fill="#fff" opacity=".35"/><circle cx="160" cy="44" r="7" fill="#fff" opacity=".25"/></svg>'
+  var CHAR_SVG = '<svg viewBox="0 0 40 74" aria-hidden="true"><ellipse cx="20" cy="71" rx="12" ry="3" fill="rgba(0,0,0,.4)"/><rect x="13" y="46" width="6" height="22" rx="2" fill="#2B2F45"/><rect x="21" y="46" width="6" height="22" rx="2" fill="#23263a"/><path d="M9 24 L31 24 L33 48 L7 48 Z" fill="#5DB36A"/><circle cx="20" cy="14" r="10" fill="#EBC3A0"/><path d="M10 13 Q11 3 20 3 Q30 3 30 13 Q26 8 20 8 Q14 8 10 13 Z" fill="#1E1B26"/></svg>'
+
+  var found = {}
+  var audioCtx = null
+  function chime(c) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+      var base = { '#6BD46F': 784, '#FF8A65': 587, '#7CC4FF': 659, '#FF5A1F': 440, '#F6A04D': 494, '#2BC7D3': 392 }[c] || 523
+      ;[0, 0.09].forEach(function (d, k) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + d
+        o.type = 'sine'; o.frequency.value = base * (k ? 1.5 : 1)
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5)
+        o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.55)
+      })
+    } catch (e) {}
+  }
+
+  function capHTML(withPeek) {
+    return '<span class="cap-ic" data-r="ic"></span><span class="cap-t"><b data-r="n"></b><small data-r="s"></small></span>' +
+      '<span class="cap-key"><span class="ring-c"><svg viewBox="0 0 46 46" preserveAspectRatio="none"><rect x="1" y="1" width="44" height="44" rx="10"/></svg></span><span class="kbd k">' + (COARSE ? 'Tap' : 'E') + '</span><span class="l">' + (COARSE ? 'to dive in' : 'dive in') + '</span></span>'
+  }
+
+  function scene(stage, mode) {
+    var sc = document.createElement('div'); sc.className = 'sc'
+    sc.innerHTML = '<div class="sc-island">' + ISLAND_SVG + '<div class="sc-ring"></div></div><div class="sc-char">' + CHAR_SVG + '</div><div class="sc-dist"></div>'
+    stage.appendChild(sc)
+    var ctl = document.createElement('div'); ctl.className = 'sc-ctl'
+    ctl.innerHTML = '<div class="isl-chips">' + ISL.map(function (x, i) { return '<button class="isl-chip" style="--c:' + x.c + '" aria-label="' + x.n + '" data-i="' + i + '">' + CX.icon(x.i, 16) + '</button>' }).join('') + '</div>' +
+      '<div class="walk-btns">' + (mode === 'title' || mode === 'combo' ? '<button class="reset" data-a="reset">reset found</button>' : '') +
+      (mode === 'charge' || mode === 'combo' ? '<button class="snd" data-a="snd" aria-pressed="false">' + CX.icon('mute', 14) + 'Sound</button>' : '') +
+      '<button data-a="back"><span class="kbd">S</span>step back</button><button data-a="walk"><span class="kbd">W</span>walk closer</button></div>'
+    stage.appendChild(ctl)
+    var dived = document.createElement('div'); dived.className = 'dived'; dived.innerHTML = '<span></span>'; stage.appendChild(dived)
+    var islandEl = sc.querySelector('.sc-island'), charEl = sc.querySelector('.sc-char'), distEl = sc.querySelector('.sc-dist')
+    var st = { i: 1, d: /near/.test(location.search) ? 0 : 1, pan: 0, sound: false, busy: false }
+    // prompt UIs
+    var cap = null, at = null, wt = null, pk = null, edge = null
+    if (mode === 'title' || mode === 'peek' || mode === 'charge') {
+      if (mode === 'peek') {
+        pk = document.createElement('button'); pk.className = 'pk'
+        pk.innerHTML = '<div class="pk-top">' + capHTML() + '</div><div class="pk-more"><div><div class="pk-teaser"><p data-r="peek"></p><div class="pk-thumbs" data-r="thumbs"></div></div></div></div>'
+        sc.appendChild(pk); cap = pk
+      } else {
+        cap = document.createElement('button'); cap.className = 'cap'; cap.innerHTML = capHTML(); sc.appendChild(cap)
+      }
+    }
+    if (mode === 'title' || mode === 'combo') {
+      at = document.createElement('div'); at.className = 'at'; at.setAttribute('aria-live', 'polite')
+      at.innerHTML = '<div class="at-in"><div class="at-k" data-r="k"></div><div class="at-n" data-r="an"></div><div class="at-s" data-r="as"></div><div class="at-rule"></div></div>'
+      sc.appendChild(at)
+    }
+    if (mode === 'tag' || mode === 'combo') {
+      wt = document.createElement('div'); wt.className = 'wt'
+      wt.innerHTML = '<div class="wt-line"></div><button class="wt-box"><span class="cap-ic" data-r="ic" style="width:32px;height:32px;border-radius:9px"></span><span><b data-r="n"></b><small data-r="' + (mode === 'combo' ? 'peek' : 's') + '"></small></span><span class="kbd k">' + (COARSE ? 'Tap' : 'E') + '</span><span class="ring-c" style="inset:auto;right:2px;top:2px;width:36px;height:36px"><svg viewBox="0 0 46 46" preserveAspectRatio="none"><rect x="1" y="1" width="44" height="44" rx="10"/></svg></span></button>'
+      sc.appendChild(wt)
+      edge = document.createElement('div'); edge.className = 'wt-edge'; sc.appendChild(edge)
+      wt.querySelector('.wt-box').addEventListener('click', press)
+    }
+    if (cap) cap.addEventListener('click', function () { if (mode === 'peek' && !pk.classList.contains('open')) { pk.classList.add('open'); return } press() })
+
+    function fill() {
+      var x = ISL[st.i]
+      stage.style.setProperty('--ic', x.c); stage.querySelector('.world-bg').style.setProperty('--ic', x.c)
+      stage.querySelectorAll('[data-r="ic"]').forEach(function (e) { e.innerHTML = CX.icon(x.i, 18) })
+      stage.querySelectorAll('[data-r="n"]').forEach(function (e) { e.textContent = x.n })
+      stage.querySelectorAll('[data-r="s"]').forEach(function (e) { e.textContent = x.s })
+      stage.querySelectorAll('[data-r="peek"]').forEach(function (e) { e.textContent = x.peek })
+      stage.querySelectorAll('[data-r="thumbs"]').forEach(function (e) { e.innerHTML = (x.thumbs || []).map(function (t) { return '<img src="../public/projects/' + t + '.jpg" alt="">' }).join('') })
+      ctl.querySelectorAll('.isl-chip').forEach(function (b, k) { b.setAttribute('aria-pressed', k === st.i ? 'true' : 'false') })
+    }
+    function onIsland() { return st.d < 0.02 }
+    function render() {
+      var d = st.d
+      islandEl.style.setProperty('--s', (0.5 + (1 - d) * 0.8).toFixed(3))
+      islandEl.style.setProperty('--top', (40 + (1 - d) * 18).toFixed(2) + '%')
+      islandEl.style.setProperty('--pan', st.pan + 'px')
+      sc.classList.toggle('on', onIsland())
+      distEl.textContent = onIsland() ? 'on the island' : Math.round(d * 30) + ' m away'
+      if (cap) cap.classList.toggle('on', onIsland())
+      if (pk) pk.classList.toggle('open', onIsland())
+      if (wt) placeTag()
+    }
+    function placeTag() {
+      var show = st.d <= 0.7 && !(at && at.classList.contains('play'))
+      var W = sc.clientWidth, r = islandEl.getBoundingClientRect(), sr = sc.getBoundingClientRect()
+      var cx = r.left - sr.left + r.width / 2, top = r.top - sr.top + r.height * 0.22
+      var lineH = 34 + (1 - st.d) * 20, off = cx < 40 || cx > W - 40
+      wt.classList.toggle('show', show && !off); wt.classList.toggle('act', onIsland())
+      wt.style.transform = 'translate(' + cx + 'px,' + (top - lineH) + 'px) scale(' + (0.86 + (1 - st.d) * 0.14).toFixed(3) + ')'
+      wt.querySelector('.wt-line').style.height = lineH + 'px'
+      edge.classList.toggle('show', show && off)
+      if (off) { var left = cx < 40; edge.style.left = (left ? 30 : W - 30) + 'px'; edge.style.top = Math.max(60, top) + 'px'; edge.innerHTML = CX.icon(left ? 'left' : 'right', 18) }
+    }
+    var tween = null
+    function to(prop, val) {
+      var from = st[prop], t0 = performance.now(), dur = REDUCED ? 1 : 520
+      cancelAnimationFrame(tween); charEl.classList.add('walk')
+      ;(function step(now) {
+        var t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3)
+        st[prop] = from + (val - from) * e; render()
+        if (t < 1) tween = requestAnimationFrame(step)
+        else { charEl.classList.remove('walk'); arrived() }
+      })(t0)
+    }
+    function arrived() {
+      if (!onIsland() || !at) return
+      if (found[st.i]) return
+      found[st.i] = true
+      var n = Object.keys(found).length, x = ISL[st.i]
+      at.querySelector('[data-r="k"]').textContent = 'Island found · ' + n + ' / 6'
+      at.querySelector('[data-r="an"]').textContent = x.n
+      at.querySelector('[data-r="as"]').textContent = x.line
+      if (cap) cap.classList.remove('on')
+      at.classList.remove('play'); void at.offsetWidth; at.classList.add('play')
+      if (wt) placeTag()
+      setTimeout(function () { at.classList.remove('play'); render() }, REDUCED ? 900 : 2500)
+    }
+    function walk(dir) { if (st.busy) return; to('d', Math.max(0, Math.min(1, Math.round((st.d + dir * 0.34) * 3) / 3))) }
+    function pan(dir) { if (st.busy) return; to('pan', Math.max(-700, Math.min(700, st.pan + dir * 180))) }
+    function press() {
+      if (!onIsland() || st.busy || (at && at.classList.contains('play'))) return
+      st.busy = true
+      var x = ISL[st.i], host = wt ? wt.querySelector('.wt-box') : cap
+      var charge = mode === 'charge' || mode === 'combo'
+      host.classList.add('pressed'); if (charge) host.classList.add('charging')
+      if (charge && st.sound) chime(x.c)
+      setTimeout(function () {
+        if (charge && !REDUCED) burst(host, x.c)
+        if (charge && cap) cap.classList.add('fly')
+        setTimeout(function () {
+          dived.querySelector('span').textContent = 'diving into ' + x.n + '...'
+          dived.classList.add('on')
+          setTimeout(function () {
+            dived.classList.remove('on'); host.classList.remove('pressed', 'charging'); if (cap) cap.classList.remove('fly')
+            st.busy = false; render()
+          }, 1100)
+        }, charge ? 380 : 120)
+      }, charge ? 170 : 90)
+    }
+    function burst(el, c) {
+      var r = el.getBoundingClientRect(), sr = sc.getBoundingClientRect(), cx = r.left - sr.left + r.width - 30, cy = r.top - sr.top + r.height / 2
+      for (var k = 0; k < 14; k++) {
+        var s = document.createElement('i'); s.className = 'spark'; s.style.left = cx + 'px'; s.style.top = cy + 'px'; sc.appendChild(s)
+        var a = k / 14 * Math.PI * 2, dist = 40 + Math.random() * 40
+        s.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }, { transform: 'translate(' + (Math.cos(a) * dist - 3) + 'px,' + (Math.sin(a) * dist - 3) + 'px) scale(0)', opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' }).onfinish = (function (n) { return function () { n.remove() } })(s)
+      }
+    }
+    // controls
+    ctl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return
+      if (b.dataset.i != null) { st.i = Number(b.dataset.i); st.d = 1; st.pan = 0; if (pk) pk.classList.remove('open'); fill(); render(); stage.focus({ preventScroll: true }); return }
+      if (b.dataset.a === 'walk') walk(-1)
+      if (b.dataset.a === 'back') walk(1)
+      if (b.dataset.a === 'reset') { found = {}; st.d = 1; render() }
+      if (b.dataset.a === 'snd') { st.sound = !st.sound; b.setAttribute('aria-pressed', st.sound); b.innerHTML = CX.icon(st.sound ? 'sound' : 'mute', 14) + 'Sound'; if (st.sound) chime(ISL[st.i].c) }
+    })
+    stage.addEventListener('keydown', function (e) {
+      var k = e.key.toLowerCase()
+      if (k === 'w' || k === 'arrowup') { e.preventDefault(); walk(-1) }
+      else if (k === 's' || k === 'arrowdown') { e.preventDefault(); walk(1) }
+      else if (k === 'e' || k === 'enter') { if (e.target.tagName === 'BUTTON' && k === 'enter') return; e.preventDefault(); press() }
+      else if (wt && (k === 'arrowleft' || k === 'a')) { e.preventDefault(); pan(1) }
+      else if (wt && (k === 'arrowright' || k === 'd')) { e.preventDefault(); pan(-1) }
+    })
+    if (wt) {
+      var dx = null
+      sc.addEventListener('pointerdown', function (e) { if (!e.target.closest('button')) dx = e.clientX })
+      window.addEventListener('pointermove', function (e) { if (dx === null) return; st.pan = Math.max(-700, Math.min(700, st.pan + (e.clientX - dx))); dx = e.clientX; render() })
+      window.addEventListener('pointerup', function () { dx = null })
+      window.addEventListener('resize', render)
+    }
+    fill(); render()
+    stage.closest('.cx-pane').addEventListener('cx:pane', function (e) { if (e.detail.visible) requestAnimationFrame(render) })
+  }
+
+  document.querySelectorAll('[data-scene]').forEach(function (s) { scene(s, s.dataset.scene) })
+})()
+</script>
+</body>
+</html>

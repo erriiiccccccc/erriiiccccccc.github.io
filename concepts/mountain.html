@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mountain Island · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .ew-body.flush { overflow: hidden; }
+
+  /* Generative cover for projects with no demo yet */
+  .cover {
+    --ca: #FF8A65;
+    position: relative; container-type: inline-size; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; padding: 8%;
+    background:
+      radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--ca) 80%, white 8%) 0%, color-mix(in srgb, var(--ca) 45%, #0a0618) 45%, #0a0618 100%);
+  }
+  .cover::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(115deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 12px);
+    mask-image: linear-gradient(200deg, #000 10%, transparent 70%);
+  }
+  .cover b { position: relative; font-family: var(--f-display); font-weight: 400; font-size: 13cqi; line-height: 0.95; color: #fff; }
+  .cover small { position: relative; font-family: var(--f-mono); font-size: max(8px, 3.6cqi); letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+
+  /* ── A · GAME HUB ─────────────────────────────────────────── */
+  .gh { --pa: #FF8A65; position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+  .gh-bg { position: absolute; inset: 0; opacity: 0; transition: opacity 700ms var(--ease-out); }
+  .gh-bg.on { opacity: 1; }
+  .gh-bg > * { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .gh-bg.on > video, .gh-bg.on > img { animation: gh-settle 9s var(--ease-out) both; }
+  @keyframes gh-settle { from { transform: scale(1.06); } to { transform: scale(1); } }
+  .gh-bg .cover b, .gh-bg .cover small { display: none; }
+  .gh-bg .cover::after { content: 'cover art placeholder'; position: absolute; right: 24px; top: 20px; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+  .gh-shade {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(8,5,20,0.97) 0%, rgba(8,5,20,0.88) 30%, rgba(8,5,20,0.5) 50%, rgba(8,5,20,0.04) 74%),
+      linear-gradient(0deg, rgba(8,5,20,0.96) 0%, rgba(8,5,20,0.35) 34%, transparent 58%);
+  }
+  .gh-tint { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.55;
+    background: radial-gradient(55% 70% at 0% 100%, var(--pa), transparent 70%); transition: background 600ms; }
+  .gh-count { position: absolute; right: 28px; top: 18px; z-index: 2; display: flex; align-items: baseline; gap: 6px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+  .gh-count b { font-family: var(--f-display); font-weight: 400; font-size: 44px; color: var(--ink); line-height: 1; }
+  .gh-info { position: relative; z-index: 2; padding: 0 32px 8px; max-width: 640px; }
+  .gh-info.swap > * { animation: gh-up 520ms var(--ease-out) both; }
+  .gh-info.swap > *:nth-child(2) { animation-delay: 40ms; }
+  .gh-info.swap > *:nth-child(3) { animation-delay: 80ms; }
+  .gh-info.swap > *:nth-child(4) { animation-delay: 120ms; }
+  .gh-info.swap > *:nth-child(5) { animation-delay: 160ms; }
+  .gh-info.swap > *:nth-child(6) { animation-delay: 200ms; }
+  @keyframes gh-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .gh-badges { display: flex; gap: 8px; margin-bottom: 14px; min-height: 26px; }
+  .gh-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 7px; font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); }
+  .gh-badge--live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.2); }
+  .gh-badge--win { background: var(--gold); color: var(--space-900); }
+  .gh-title { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(40px, 5.2vw, 76px); line-height: 0.95; letter-spacing: -0.01em; }
+  .gh-meta { margin: 10px 0 10px; font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pa); }
+  .gh-blurb { margin: 0 0 14px; color: var(--ink-2); font-size: 15.5px; max-width: 52ch; }
+  .gh-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gh-cta { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .gh .btn--primary { background: var(--pa); box-shadow: 0 8px 30px color-mix(in srgb, var(--pa) 40%, transparent); }
+  .gh-rail { position: relative; z-index: 2; display: flex; gap: 12px; padding: 18px 32px 24px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .gh-rail::-webkit-scrollbar { display: none; }
+  .gh-tile {
+    --ta: #fff; position: relative; flex: 0 0 auto; width: clamp(118px, 12.5vw, 170px); aspect-ratio: 16 / 10; padding: 0;
+    border-radius: 12px; overflow: hidden; cursor: pointer; scroll-snap-align: center; background: #111;
+    border: 1px solid rgba(255,255,255,0.14); opacity: 0.62;
+    transition: transform 260ms var(--ease-out), box-shadow 260ms, border-color 260ms, opacity 260ms;
+  }
+  .gh-tile:hover { opacity: 0.9; }
+  .gh-tile > img, .gh-tile > .cover { width: 100%; height: 100%; object-fit: cover; }
+  .gh-tile[aria-selected="true"] { opacity: 1; transform: translateY(-8px) scale(1.04); border-color: var(--ta); box-shadow: 0 0 0 2px var(--ta), 0 14px 40px rgba(0,0,0,0.5), 0 0 40px color-mix(in srgb, var(--ta) 40%, transparent); }
+  .gh-tile-name { position: absolute; inset: auto 0 0 0; padding: 18px 8px 7px; font-size: 11.5px; font-weight: 600; text-align: left; background: linear-gradient(transparent, rgba(0,0,0,0.75)); }
+  .gh-tile .cover + .gh-tile-name { display: none; }
+  .gh-prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--ta); }
+  @media (max-width: 860px) {
+    .gh-info { padding: 0 18px 4px; }
+    .gh-blurb { font-size: 14.5px; }
+    .gh-rail { padding: 16px 18px 18px; }
+    .gh-count { right: 18px; }
+    .gh-shade { background: linear-gradient(0deg, rgba(8,5,20,0.97) 0%, rgba(8,5,20,0.7) 50%, rgba(8,5,20,0.2) 100%); }
+  }
+
+  /* ── B · THE INDEX ────────────────────────────────────────── */
+  .ix { padding: 4px 28px 28px; }
+  .ix-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 6px 0 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 3; background: linear-gradient(180deg, rgba(14,9,32,0.96), rgba(14,9,32,0.85)); }
+  .ix-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ix-chip { min-height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--t-fast); }
+  .ix-chip:hover { color: var(--ink); background: var(--raise); }
+  .ix-chip[aria-pressed="true"] { background: var(--ink); color: var(--space-900); border-color: transparent; }
+  .ix-count { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase; }
+  .ix-list { list-style: none; margin: 0; padding: 0; }
+  .ix-row {
+    width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: baseline; gap: 18px;
+    padding: 16px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; cursor: pointer; text-align: left; color: var(--ink-3);
+    transition: color var(--t-fast);
+  }
+  .ix-list li.in .ix-row { animation: ix-in 420ms var(--ease-out) both; animation-delay: calc(var(--n) * 40ms); }
+  @keyframes ix-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .ix-num { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; }
+  .ix-title { font-family: var(--f-display); font-size: clamp(30px, 4.4vw, 58px); line-height: 1; color: var(--ink-2); transition: color var(--t-fast), transform 360ms var(--ease-out); display: inline-block; }
+  .ix-side { text-align: right; font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.7; }
+  .ix-side span { display: block; color: var(--ink-4); }
+  .ix-row:hover .ix-title, .ix-row:focus-visible .ix-title, .ix-row.hot .ix-title { color: #fff; transform: translateX(12px); }
+  .ix-row:hover, .ix-row.hot { color: var(--ic); }
+  .ix-row:focus-visible { outline: none; }
+  .ix-row:focus-visible .ix-num::before { content: '→ '; }
+  .ix-float {
+    position: absolute; left: 0; top: 0; z-index: 5; width: clamp(220px, 26vw, 340px); aspect-ratio: 16 / 10;
+    border-radius: 14px; overflow: hidden; pointer-events: none; opacity: 0; transform: translate3d(-999px, 0, 0);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.18); transition: opacity 220ms;
+  }
+  .ix-float.on { opacity: 1; }
+  .ix-float > * { width: 100%; height: 100%; object-fit: cover; }
+  .ix-inline { display: none; }
+  .ix-drawer {
+    position: absolute; top: 0; right: 0; bottom: 0; z-index: 8; width: min(440px, 100%);
+    display: flex; flex-direction: column; background: rgba(10,7,26,0.97); border-left: 1px solid var(--line-2);
+    transform: translateX(104%); transition: transform 420ms var(--ease-out); box-shadow: -30px 0 80px rgba(0,0,0,0.5);
+  }
+  .ix-drawer.open { transform: none; }
+  .ix-drawer-media { aspect-ratio: 16 / 10; flex-shrink: 0; position: relative; }
+  .ix-drawer-media > * { width: 100%; height: 100%; object-fit: cover; }
+  .ix-drawer-x { position: absolute; top: 12px; right: 12px; z-index: 2; }
+  .ix-drawer-body { padding: 22px 24px; overflow: auto; }
+  .ix-drawer-body h3 { margin: 4px 0 8px; font-family: var(--f-display); font-weight: 400; font-size: 38px; line-height: 1; }
+  .ix-drawer-body p { color: var(--ink-2); font-size: 15px; margin: 0 0 14px; }
+  @media (max-width: 860px) {
+    .ix { padding: 4px 16px 20px; }
+    .ix-row { grid-template-columns: 34px minmax(0, 1fr); }
+    .ix-side { display: none; }
+    .ix-float { display: none; }
+    .ix-inline { display: block; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; margin: 0 0 14px; }
+    .ix-inline > * { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  /* ── C · TOPO TRAIL ───────────────────────────────────────── */
+  .tp { position: absolute; inset: 0; container-type: size; display: grid; place-items: center;
+    background: radial-gradient(70% 60% at 65% 30%, rgba(255,138,101,0.14), transparent 70%); }
+  .tp-map { position: relative; width: min(100cqw, 100cqh * 5 / 3); aspect-ratio: 5 / 3; }
+  .tp-map svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tp-contour { fill: none; stroke: rgba(255,170,140,0.16); stroke-width: 1; }
+  .tp-contour.idx { stroke: rgba(255,170,140,0.32); stroke-width: 1.4; }
+  .tp-contour.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: tp-draw 1.2s var(--ease-out) forwards; animation-delay: calc(var(--n) * 25ms); }
+  @keyframes tp-draw { to { stroke-dashoffset: 0; } }
+  .tp-trail { fill: none; stroke: rgba(255,255,255,0.28); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; }
+  .tp-walked { fill: none; stroke: var(--ic); stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(255,138,101,0.7)); }
+  .tp-marker { fill: #fff; filter: drop-shadow(0 0 8px var(--ic)); }
+  .tp-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; fill: rgba(255,255,255,0.5); }
+  .tp-wp {
+    position: absolute; z-index: 2; width: 44px; height: 44px; margin: -22px 0 0 -22px; border: 0; padding: 0; background: none; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .tp-wp::before { content: ''; width: 14px; height: 14px; border-radius: 50%; background: var(--space-800); border: 2px solid rgba(255,255,255,0.7); transition: transform 240ms var(--spring), background 200ms, border-color 200ms; }
+  .tp-wp.done::before { background: var(--ic); border-color: var(--ic); }
+  .tp-wp[aria-current="true"]::before { transform: scale(1.5); background: #fff; border-color: #fff; box-shadow: 0 0 0 6px rgba(255,138,101,0.25); }
+  .tp-wp span { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--ink-3); pointer-events: none; }
+  .tp-card {
+    position: absolute; z-index: 4; width: min(300px, 70%); border-radius: 16px; overflow: hidden;
+    background: rgba(12,8,28,0.94); border: 1px solid var(--line-2); box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    right: 3%; bottom: 5%;
+  }
+  .tp-card.swap { animation: gh-up 420ms var(--ease-out) both; }
+  .tp-card-media .cover b { display: none; }
+  .tp-card-media { aspect-ratio: 16 / 10; }
+  .tp-card-media > * { width: 100%; height: 100%; object-fit: cover; }
+  .tp-card-body { padding: 14px 16px 16px; }
+  .tp-card-body h4 { margin: 2px 0 6px; font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1; }
+  .tp-card-body p { margin: 0 0 12px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+  .tp-card .btn { min-height: 40px; font-size: 13px; }
+  .tp-alt { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 0; font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-4); }
+  .tp-alt div { height: 46px; border-left: 1px solid var(--line-2); padding-left: 10px; position: relative; display: flex; align-items: flex-start; }
+  .tp-alt div.on { color: var(--ic); }
+  .tp-alt div.on::before { content: ''; position: absolute; left: -4px; top: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--ic); }
+  @media (max-width: 860px) {
+    .tp { place-items: start center; padding-top: 10px; }
+    .tp-alt { display: none; }
+    .tp-card { left: 12px; right: 12px; bottom: 12px; width: auto; display: grid; grid-template-columns: 120px 1fr; }
+    .tp-card-media { aspect-ratio: auto; }
+    .tp-wp span { display: none; }
+  }
+</style>
+</head>
+<body class="isl-mountain">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">02 · Mountain Island · Projects</div>
+    <h1 class="cx-h1">Your work, <em>front and centre.</em></h1>
+    <p class="cx-lede">Mountain is where people decide if you're good. Right now your work shares the screen with stock photos. Here are three ways to make it the only thing that matters. Click a tab or press 1, 2, 3, then click into a scene to drive it.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/islands/projects.js</strong> lays out a sideways collage: 9 projects interleaved with 9 Unsplash travel photos (Fuji, Santorini, Iceland). Videos play in smallish frames.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>The stock photos aren't yours, so people can't tell which tiles are work. Everything is the same size, so nothing is the hero. Your 5 real demo videos never get the full screen.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>One project at a time, big and moving.</strong> The demo is the hero, everything else is one key press away.</p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Three ways to show the work</div>
+    <h2 class="cx-h2">Pick a <em>showcase</em></h2>
+    <p class="cx-sub">All three are live. Same 9 projects, same real data from projectsData.js, three very different feelings.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Showcase options">
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-hub"><span class="cx-tab-key">1</span><span class="cx-tab-name">Game Hub <span class="cx-rec">My pick</span><small>one project, full screen, flick through</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-index"><span class="cx-tab-key">2</span><span class="cx-tab-name">The Index<small>giant type list, hover to preview</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-topo"><span class="cx-tab-key">3</span><span class="cx-tab-name">Topo Trail<small>climb from 2022 to the summit</small></span></button>
+    </div>
+
+    <!-- ═══ A · GAME HUB ═══ -->
+    <section class="cx-pane" id="pane-hub" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>A · Game Hub</h3><p>Like a console home screen. The selected project's demo plays full-bleed behind its title, a rail of tiles sits along the bottom, arrows flick between them.</p></div>
+        <p class="mono">Best for: first impressions, showing live products moving</p>
+      </div>
+      <div class="cx-stage" id="hub-stage" tabindex="0" aria-label="Game Hub demo. Use left and right arrow keys to switch projects.">
+        <div class="world-bg isl-mountain"><div class="world-planet"></div></div><div class="world-dim"></div>
+        <div class="cx-stage-hint"><span class="kbd">←</span><span class="kbd">→</span> switch</div>
+        <div class="ew" role="dialog" aria-label="Projects">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>02 / 06</span>·<b>Mountain Island</b></div><h2 class="ew-title">Projects</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="List view"><span data-icon="list"></span></button><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body flush">
+            <div class="gh" id="gh">
+              <div class="gh-bg"></div><div class="gh-bg"></div>
+              <div class="gh-shade"></div><div class="gh-tint"></div>
+              <div class="gh-count" aria-live="polite"><b id="gh-n">01</b>/ 09</div>
+              <div class="gh-info" id="gh-info"></div>
+              <div class="gh-rail" id="gh-rail" role="tablist" aria-label="Projects"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Your demos are the strongest thing you have, and right now they're thumbnails. Here one is always playing, huge. People get what you build in five seconds, then flick through like a game menu, which is the whole point of the world.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>One focus at a time, so no choice paralysis from 18 tiles. Arrows, click, or swipe the rail. Text sits on a heavy gradient so it reads over any video. Reduced motion shows posters, no autoplay. "04 / 09" tells you where you are.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Swap the collage in projectsLayout.js for two stacked video layers that crossfade. Reuse the data in projectsData.js minus ART_RAW. The rail is a scroll-snap row. Arrow keys are free because movement pauses while a panel is open. Around 250 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Needs a demo or a real poster for every project, otherwise covers carry 4 of the 9. Preload only the next video so bandwidth stays sane. Videos must stay muted to autoplay.</p></div>
+      </div>
+    </section>
+
+    <!-- ═══ B · THE INDEX ═══ -->
+    <section class="cx-pane" id="pane-index" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>B · The Index</h3><p>A confident typographic list. Hover a row and its demo floats beside your cursor. Enter opens the details. Filters cut the list down fast.</p></div>
+        <p class="mono">Best for: "just show me everything"</p>
+      </div>
+      <div class="cx-stage" id="ix-stage" tabindex="0" aria-label="Index demo. Use up and down arrows to move, Enter to open.">
+        <div class="world-bg isl-mountain"><div class="world-planet"></div></div><div class="world-dim"></div>
+        <div class="cx-stage-hint"><span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">↵</span></div>
+        <div class="ew" role="dialog" aria-label="Projects" id="ix-ew">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>02 / 06</span>·<b>Mountain Island</b></div><h2 class="ew-title">Projects</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Grid view"><span data-icon="grid"></span></button><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" id="ix-body">
+            <div class="ix">
+              <div class="ix-bar">
+                <div class="ix-chips" id="ix-chips" role="group" aria-label="Filter projects">
+                  <button class="ix-chip" aria-pressed="true" data-f="all">All</button>
+                  <button class="ix-chip" aria-pressed="false" data-f="live">Live sites</button>
+                  <button class="ix-chip" aria-pressed="false" data-f="data">Data</button>
+                  <button class="ix-chip" aria-pressed="false" data-f="hack">Hackathon</button>
+                  <button class="ix-chip" aria-pressed="false" data-f="personal">Personal</button>
+                </div>
+                <span class="ix-count" id="ix-count" aria-live="polite">9 projects</span>
+              </div>
+              <ul class="ix-list" id="ix-list"></ul>
+            </div>
+          </div>
+          <div class="ix-float" id="ix-float" aria-hidden="true"></div>
+          <aside class="ix-drawer" id="ix-drawer" aria-label="Project details" aria-hidden="true">
+            <div class="ix-drawer-media" id="ix-dmedia"><button class="ew-iconbtn ix-drawer-x" id="ix-dclose" aria-label="Close details"><span data-icon="close"></span></button></div>
+            <div class="ix-drawer-body" id="ix-dbody"></div>
+          </aside>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>The fastest answer to "show me everything". Big type does the heavy lifting, which reads confident and senior. The floating preview gives every row a moment of delight without clutter.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Huge rows are huge targets. ↑ ↓ and Enter work, filters cut 9 to 2 in one click. The preview never holds info the row doesn't, so nothing is hover-only. On phones there's no cursor, so rows expand an inline preview instead.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>A list of buttons plus one floating media element reused for every row (one video, swap the src). Position lerps in requestAnimationFrame. The drawer is a sheet inside the panel. Around 180 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>This look is common on designer sites. Polished, but less unique to your world. With 9 projects the list can feel short unless the type is really big.</p></div>
+      </div>
+    </section>
+
+    <!-- ═══ C · TOPO TRAIL ═══ -->
+    <section class="cx-pane" id="pane-topo" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>C · Topo Trail</h3><p>A topographic map of the mountain. Each project is a waypoint on a trail from base camp in 2022 to the summit in 2026. Walk it with the arrows.</p></div>
+        <p class="mono">Best for: telling a growth story</p>
+      </div>
+      <div class="cx-stage" id="tp-stage" tabindex="0" aria-label="Topo Trail demo. Use left and right arrows to walk the trail.">
+        <div class="world-bg isl-mountain"><div class="world-planet"></div></div><div class="world-dim"></div>
+        <div class="cx-stage-hint"><span class="kbd">←</span><span class="kbd">→</span> walk</div>
+        <div class="ew" role="dialog" aria-label="Projects">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>02 / 06</span>·<b>Mountain Island</b></div><h2 class="ew-title">Projects</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body flush">
+            <div class="tp">
+              <div class="tp-alt" id="tp-alt" aria-hidden="true"></div>
+              <div class="tp-map" id="tp-map">
+                <svg viewBox="0 0 1000 600" aria-hidden="true" id="tp-svg"></svg>
+                <article class="tp-card" id="tp-card" aria-live="polite"></article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="3"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>The most unique of the three and the only one that belongs to Mountain. Your work becomes a climb from 2022 to now. Growth gets shown, not claimed. Topo lines are the modern outdoor-brand look, zero costume.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>← → walks one waypoint at a time, so it's never a hunt. Waypoints are real buttons (Tab and Enter work). The card shows on select, not on hover. Contours are decoration and hidden from screen readers.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Contours generated once as SVG (wobbly circles), the trail is one path, the walker uses getPointAtLength. Later you could trace the real mountain_island silhouette from world.glb for the contours. Around 220 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Slowest to scan, and the map eats space media could use. Seven of nine projects are 2024, so the climb bunches up. Gets crowded past about 12 projects.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Ship the Game Hub. Keep The Index as a list toggle.</h3>
+      <p>Your demos are your best asset, and the Game Hub is the only option that puts one front and centre, moving, the second the panel opens. It's also the most native to a game: you pick a project like you pick a save file. Recruiters get it in five seconds, players flick through for fun.</p>
+      <p>Add a small list icon in the panel header that flips to The Index for people who want everything at once. Same data, two views. Keep Topo Trail in your back pocket, maybe as a tiny altimeter in the hub later.</p>
+      <p><strong>Before you build:</strong> drop the Unsplash photos from Mountain. They aren't your work and they make people wonder what you built. Your real photos belong on Pirate Ship. Record demos or real posters for Eric's World!, ELK Pipeline, Blender and Ada Hack, and write one line per project on what you did and what happened. Tech logos die on Arctic and live here as tags.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="meadow.html"><small>← Previous</small><span>Meadow</span></a>
+    <a href="arctic.html"><small>Next →</small><span>Arctic</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = window.CX ? CX.reduced() : false
+  var BASE = '../public/projects/'
+  var P = [
+    { id: 'petaling-utama', title: 'Petaling Utama Motor', role: 'Full-Stack', year: 2024, demo: true, accent: '#4CAF50', href: 'https://petalingutamamotor.com', tags: ['React', 'Node.js', 'PostgreSQL', 'Nginx'], cats: ['live'], blurb: 'Full-stack e-commerce for a real Malaysian motor business. Live in production with a real catalogue and real customers.' },
+    { id: 'medmatch', title: 'MedMatch', role: 'Web Dev', year: 2024, demo: true, accent: '#EC407A', href: 'https://www.medmatch.institute', tags: ['Web', 'Platform', 'Frontend'], cats: ['live'], blurb: 'Connects medical students with clinicians through verified profiles and purpose-built matching. Research, without the friction.' },
+    { id: 'sotwds', title: 'Scotland on the Web', role: 'Data Story', year: 2024, demo: true, accent: '#29B6F6', href: 'https://sotwds.vercel.app', tags: ['Scrollytelling', 'Data Viz', 'D3'], cats: ['live', 'data'], blurb: 'A scrollytelling data story that reads two web-archiving systems side by side, to show what each kind of memory keeps and what it misses.' },
+    { id: 'ygo', title: 'YGo Tours', role: 'Web Dev', year: 2024, demo: true, accent: '#7E57C2', href: 'https://ygowebsite.vercel.app', tags: ['Web', 'Editorial', 'Frontend'], cats: ['live'], blurb: 'An editorial, magazine-style site for a Kuala Lumpur travel agency running since 1994: private journeys, corporate incentives, specialty trips.' },
+    { id: 'foundtech', title: 'FoundTech', role: 'Web Dev', year: 2024, demo: true, accent: '#26C6DA', href: 'https://foundtech.com.my', tags: ['Web', 'Responsive', 'Frontend'], cats: ['live'], blurb: 'A clean, responsive marketing site for a Malaysian tech company. Shipped live, with a smooth scrolling story from hero to footer.' },
+    { id: 'erics-world', title: "Eric's World!", role: 'Creative Dev', year: 2026, demo: false, accent: '#FF8A65', href: 'https://erriiiccccccc.github.io', repo: 'https://github.com/erriiiccccccc/erriiiccccccc.github.io', tags: ['Three.js', 'Vite', 'GLSL'], cats: ['live', 'personal'], blurb: "The world you're standing on right now. A walkable little planet with six islands and a hand-rolled glass UI." },
+    { id: 'elk-pipeline', title: 'ELK Logging Pipeline', role: 'Internship', year: 2023, demo: false, accent: '#64B5F6', tags: ['Elasticsearch', 'Kibana', 'Linux'], cats: ['data'], blurb: 'Elasticsearch, Logstash and Kibana on Oracle Linux for a fintech platform at Finexus. Raw server logs in, searchable dashboards out.' },
+    { id: 'ada-hack', title: 'Ada Hack 2022: HumanEd', role: 'Hackathon', year: 2022, demo: false, badge: 'Winner', accent: '#7C3AED', tags: ['Hackathon'], cats: ['hack'], blurb: "Won Ada Hack 2022 at the University of Edinburgh, built for the Rubik's Cube Painting Challenge against a 24-hour clock." },
+    { id: 'blender', title: 'First Blender Project', role: 'Personal', year: 2023, demo: false, accent: '#FBBF24', tags: ['Blender', '3D Art'], cats: ['personal'], blurb: 'A first dive into 3D: a full scene built from scratch. Lighting, materials, the lot.' }
+  ]
+  var N = P.length
+  function pad(n) { return (n < 10 ? '0' : '') + n }
+  function icon(n, s) { return window.CX ? CX.icon(n, s) : '' }
+
+  function cover(p) {
+    var d = document.createElement('div')
+    d.className = 'cover'
+    d.style.setProperty('--ca', p.accent)
+    d.innerHTML = '<small>cover art placeholder</small><b>' + p.title + '</b>'
+    return d
+  }
+  function poster(p) {
+    var i = document.createElement('img')
+    i.src = BASE + p.id + '.jpg'
+    i.alt = ''
+    i.loading = 'lazy'
+    return i
+  }
+  function video(p) {
+    var v = document.createElement('video')
+    v.muted = true; v.loop = true; v.playsInline = true
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', '')
+    v.preload = 'auto'
+    v.poster = BASE + p.id + '.jpg'
+    v.src = BASE + p.id + '.webm'
+    return v
+  }
+  function media(p, allowVideo) {
+    if (p.demo) return (allowVideo && !REDUCED) ? video(p) : poster(p)
+    return cover(p)
+  }
+  function tagPills(p) { return p.tags.map(function (t) { return '<span class="pill">' + t + '</span>' }).join('') }
+  function links(p, small) {
+    var h = ''
+    if (p.href) h += '<a class="btn btn--primary" href="' + p.href + '" target="_blank" rel="noopener">' + icon('play', 15) + ' Play live</a>'
+    if (p.repo) h += '<a class="btn" href="' + p.repo + '" target="_blank" rel="noopener">' + icon('github', 16) + ' Source</a>'
+    if (!h) h = '<span class="pill">no public link</span>'
+    return h
+  }
+  function stageKeys(stage, map) {
+    stage.addEventListener('keydown', function (e) {
+      var tag = (e.target.tagName || '').toLowerCase()
+      if (tag === 'input' || tag === 'textarea') return
+      var fn = map[e.key]
+      if (fn) { e.preventDefault(); fn(e) }
+    })
+  }
+
+  /* ═══ A · GAME HUB ═══ */
+  ;(function () {
+    var gh = document.getElementById('gh')
+    var layers = gh.querySelectorAll('.gh-bg')
+    var info = document.getElementById('gh-info')
+    var rail = document.getElementById('gh-rail')
+    var num = document.getElementById('gh-n')
+    var front = 0, cur = -1, visible = false
+
+    P.forEach(function (p, i) {
+      var b = document.createElement('button')
+      b.className = 'gh-tile'
+      b.setAttribute('role', 'tab')
+      b.setAttribute('aria-label', p.title)
+      b.style.setProperty('--ta', p.accent)
+      b.appendChild(p.demo ? poster(p) : cover(p))
+      b.insertAdjacentHTML('beforeend', '<span class="gh-tile-name">' + p.title + '</span><span class="gh-prog"></span>')
+      b.addEventListener('click', function () { select(i) })
+      rail.appendChild(b)
+    })
+    var tiles = rail.querySelectorAll('.gh-tile')
+
+    function select(i) {
+      i = (i + N) % N
+      if (i === cur) return
+      cur = i
+      var p = P[i]
+      gh.style.setProperty('--pa', p.accent)
+      var back = layers[1 - front], old = layers[front]
+      back.replaceChildren(media(p, true))
+      var v = back.querySelector('video')
+      var prog = tiles[i].querySelector('.gh-prog')
+      tiles.forEach(function (t) { t.querySelector('.gh-prog').style.width = '0' })
+      if (v) {
+        v.addEventListener('timeupdate', function () { if (v.duration) prog.style.width = (v.currentTime / v.duration * 100) + '%' })
+        if (visible) v.play().catch(function () {})
+      }
+      back.classList.add('on'); old.classList.remove('on')
+      setTimeout(function () {
+        if (!old.classList.contains('on')) { old.querySelectorAll('video').forEach(function (x) { x.pause() }); old.replaceChildren() }
+      }, 760)
+      front = 1 - front
+
+      var badges = ''
+      if (p.href) badges += '<span class="gh-badge gh-badge--live">Live</span>'
+      if (p.demo) badges += '<span class="gh-badge">Playable demo</span>'
+      if (p.badge) badges += '<span class="gh-badge gh-badge--win">' + p.badge + '</span>'
+      info.innerHTML =
+        '<div class="gh-badges">' + badges + '</div>' +
+        '<h3 class="gh-title">' + p.title + '</h3>' +
+        '<div class="gh-meta">' + p.role + ' · ' + p.year + '</div>' +
+        '<p class="gh-blurb">' + p.blurb + '</p>' +
+        '<div class="gh-tags">' + tagPills(p) + '</div>' +
+        '<div class="gh-cta">' + links(p) + '</div>'
+      info.classList.remove('swap'); void info.offsetWidth; info.classList.add('swap')
+      num.textContent = pad(i + 1)
+
+      tiles.forEach(function (t, k) { t.setAttribute('aria-selected', k === i ? 'true' : 'false'); t.tabIndex = k === i ? 0 : -1 })
+      var t = tiles[i]
+      rail.scrollTo({ left: t.offsetLeft - rail.clientWidth / 2 + t.offsetWidth / 2, behavior: REDUCED ? 'auto' : 'smooth' })
+    }
+
+    stageKeys(document.getElementById('hub-stage'), {
+      ArrowRight: function () { select(cur + 1) },
+      ArrowLeft: function () { select(cur - 1) }
+    })
+    // swipe on the background
+    var sx = null
+    gh.addEventListener('pointerdown', function (e) { if (!e.target.closest('a,button')) sx = e.clientX })
+    gh.addEventListener('pointerup', function (e) { if (sx !== null && Math.abs(e.clientX - sx) > 50) select(cur + (e.clientX < sx ? 1 : -1)); sx = null })
+
+    document.getElementById('pane-hub').addEventListener('cx:pane', function (e) {
+      visible = e.detail.visible
+      gh.querySelectorAll('video').forEach(function (v) { visible ? v.play().catch(function () {}) : v.pause() })
+    })
+    select(0)
+  })()
+
+  /* ═══ B · THE INDEX ═══ */
+  ;(function () {
+    var ew = document.getElementById('ix-ew')
+    var list = document.getElementById('ix-list')
+    var float = document.getElementById('ix-float')
+    var drawer = document.getElementById('ix-drawer')
+    var dmedia = document.getElementById('ix-dmedia')
+    var dbody = document.getElementById('ix-dbody')
+    var count = document.getElementById('ix-count')
+    var hot = -1, filter = 'all'
+    var pos = { x: 0, y: 0, tx: 0, ty: 0, r: 0 }, raf = 0, floatVid = null
+
+    P.forEach(function (p, i) {
+      var li = document.createElement('li')
+      li.dataset.i = i
+      li.style.setProperty('--n', i)
+      li.innerHTML =
+        '<button class="ix-row" data-i="' + i + '">' +
+          '<span class="ix-num">' + pad(i + 1) + '</span>' +
+          '<span><span class="ix-title">' + p.title + '</span></span>' +
+          '<span class="ix-side">' + p.role + ' · ' + p.year + '<span>' + p.tags.slice(0, 3).join(' / ') + '</span></span>' +
+        '</button><div class="ix-inline" hidden></div>'
+      list.appendChild(li)
+    })
+    var rows = list.querySelectorAll('.ix-row')
+    var isMobile = function () { return window.matchMedia('(max-width: 860px)').matches }
+
+    function setFloat(i) {
+      var p = P[i]
+      if (p.demo && !REDUCED) {
+        if (!floatVid) { floatVid = video(p) }
+        if (floatVid.dataset.id !== p.id) { floatVid.src = BASE + p.id + '.webm'; floatVid.poster = BASE + p.id + '.jpg'; floatVid.dataset.id = p.id }
+        if (float.firstChild !== floatVid) float.replaceChildren(floatVid)
+        floatVid.play().catch(function () {})
+      } else {
+        if (floatVid) floatVid.pause()
+        float.replaceChildren(media(p, false))
+      }
+    }
+    function heat(i) {
+      if (hot === i) return
+      hot = i
+      rows.forEach(function (r) { r.classList.toggle('hot', Number(r.dataset.i) === i) })
+      if (i < 0) { float.classList.remove('on'); if (floatVid) floatVid.pause(); return }
+      setFloat(i)
+      float.classList.add('on')
+      loop()
+    }
+    function loop() {
+      if (raf) return
+      var tick = function () {
+        var dx = pos.tx - pos.x, dy = pos.ty - pos.y
+        pos.x += dx * (REDUCED ? 1 : 0.16); pos.y += dy * (REDUCED ? 1 : 0.16)
+        pos.r += ((REDUCED ? 0 : Math.max(-8, Math.min(8, dx * 0.06))) - pos.r) * 0.12
+        float.style.transform = 'translate3d(' + pos.x + 'px,' + pos.y + 'px,0) rotate(' + pos.r + 'deg)'
+        if (float.classList.contains('on') || Math.abs(dx) > 0.5) raf = requestAnimationFrame(tick)
+        else raf = 0
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    function target(x, y) {
+      var r = ew.getBoundingClientRect()
+      var w = float.offsetWidth, h = float.offsetHeight
+      var tx = x - r.left + 28, ty = y - r.top - h / 2
+      if (tx + w > r.width - 12) tx = x - r.left - w - 28
+      pos.tx = tx; pos.ty = Math.max(12, Math.min(r.height - h - 12, ty))
+    }
+
+    list.addEventListener('pointermove', function (e) {
+      if (isMobile() || e.pointerType === 'touch') return
+      var row = e.target.closest('.ix-row')
+      target(e.clientX, e.clientY)
+      if (hot < 0) { pos.x = pos.tx; pos.y = pos.ty }
+      heat(row ? Number(row.dataset.i) : -1)
+    })
+    list.addEventListener('pointerleave', function () { heat(-1) })
+    list.addEventListener('focusin', function (e) {
+      var row = e.target.closest('.ix-row')
+      if (!row || isMobile()) return
+      var rr = row.getBoundingClientRect(), er = ew.getBoundingClientRect()
+      pos.tx = er.width - float.offsetWidth - 40
+      pos.ty = Math.max(12, Math.min(er.height - float.offsetHeight - 12, rr.top - er.top + rr.height / 2 - float.offsetHeight / 2))
+      heat(Number(row.dataset.i))
+    })
+    list.addEventListener('focusout', function (e) { if (!list.contains(e.relatedTarget)) heat(-1) })
+
+    list.addEventListener('click', function (e) {
+      var row = e.target.closest('.ix-row')
+      if (!row) return
+      var i = Number(row.dataset.i)
+      if (isMobile()) {
+        var inl = row.nextElementSibling
+        var open = !inl.hidden
+        list.querySelectorAll('.ix-inline').forEach(function (x) { x.hidden = true; x.replaceChildren() })
+        if (!open) {
+          inl.hidden = false
+          inl.appendChild(media(P[i], true))
+          var v = inl.querySelector('video'); if (v) v.play().catch(function () {})
+          var btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = 'Details'
+          btn.style.cssText = 'position:absolute;right:10px;bottom:10px;min-height:40px'
+          btn.addEventListener('click', function (ev) { ev.stopPropagation(); openDrawer(i) })
+          inl.style.position = 'relative'
+          inl.appendChild(btn)
+        }
+        return
+      }
+      openDrawer(i)
+    })
+
+    function openDrawer(i) {
+      var p = P[i]
+      heat(-1)
+      dmedia.querySelectorAll('video,img,.cover').forEach(function (n) { n.remove() })
+      dmedia.insertBefore(media(p, true), dmedia.firstChild)
+      var v = dmedia.querySelector('video'); if (v) v.play().catch(function () {})
+      dbody.innerHTML =
+        '<div class="mono">' + pad(i + 1) + ' · ' + p.role + ' · ' + p.year + '</div>' +
+        '<h3>' + p.title + '</h3><p>' + p.blurb + '</p>' +
+        '<div class="gh-tags" style="margin-bottom:18px">' + tagPills(p) + '</div>' +
+        '<div class="gh-cta">' + links(p) + '</div>'
+      drawer.classList.add('open')
+      drawer.setAttribute('aria-hidden', 'false')
+      document.getElementById('ix-dclose').focus({ preventScroll: true })
+      drawer._from = i
+    }
+    function closeDrawer() {
+      if (!drawer.classList.contains('open')) return
+      drawer.classList.remove('open')
+      drawer.setAttribute('aria-hidden', 'true')
+      dmedia.querySelectorAll('video').forEach(function (v) { v.pause() })
+      var r = list.querySelector('.ix-row[data-i="' + drawer._from + '"]')
+      if (r) r.focus({ preventScroll: true })
+    }
+    document.getElementById('ix-dclose').addEventListener('click', closeDrawer)
+
+    document.getElementById('ix-chips').addEventListener('click', function (e) {
+      var c = e.target.closest('.ix-chip'); if (!c) return
+      filter = c.dataset.f
+      this.querySelectorAll('.ix-chip').forEach(function (x) { x.setAttribute('aria-pressed', x === c ? 'true' : 'false') })
+      var n = 0
+      list.querySelectorAll('li').forEach(function (li) {
+        var p = P[Number(li.dataset.i)]
+        var show = filter === 'all' || p.cats.indexOf(filter) > -1
+        li.hidden = !show
+        li.classList.remove('in')
+        if (show) { li.style.setProperty('--n', n++); void li.offsetWidth; li.classList.add('in') }
+      })
+      count.textContent = n + (n === 1 ? ' project' : ' projects')
+    })
+
+    function visibleRows() { return Array.prototype.filter.call(rows, function (r) { return !r.parentElement.hidden }) }
+    stageKeys(document.getElementById('ix-stage'), {
+      ArrowDown: function () { move(1) },
+      ArrowUp: function () { move(-1) },
+      Escape: closeDrawer
+    })
+    function move(d) {
+      if (drawer.classList.contains('open')) return
+      var vr = visibleRows(), k = vr.indexOf(document.activeElement)
+      var n = vr[Math.max(0, Math.min(vr.length - 1, k < 0 ? 0 : k + d))]
+      if (n) { n.focus({ preventScroll: true }); n.scrollIntoView({ block: 'nearest' }) }
+    }
+    document.getElementById('pane-index').addEventListener('cx:pane', function (e) {
+      if (!e.detail.visible) { heat(-1); closeDrawer() }
+    })
+  })()
+
+  /* ═══ C · TOPO TRAIL ═══ */
+  ;(function () {
+    var svg = document.getElementById('tp-svg')
+    var map = document.getElementById('tp-map')
+    var card = document.getElementById('tp-card')
+    var alt = document.getElementById('tp-alt')
+    var NS = 'http://www.w3.org/2000/svg'
+    var order = P.map(function (p, i) { return i }).sort(function (a, b) { return P[a].year - P[b].year || a - b })
+    var cur = -1, walkLen = 0, drawn = false
+
+    function smooth(pts, closed) {
+      var d = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1)
+      var n = pts.length
+      for (var i = 0; i < (closed ? n : n - 1); i++) {
+        var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n]
+        if (!closed) { p0 = pts[Math.max(0, i - 1)]; p3 = pts[Math.min(n - 1, i + 2)] }
+        var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
+        var c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
+        d += 'C' + c1[0].toFixed(1) + ',' + c1[1].toFixed(1) + ' ' + c2[0].toFixed(1) + ',' + c2[1].toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1)
+      }
+      return d + (closed ? 'Z' : '')
+    }
+    function blob(cx, cy, r, s) {
+      var pts = []
+      for (var k = 0; k < 28; k++) {
+        var t = k / 28 * Math.PI * 2
+        var rr = r * (1 + 0.09 * Math.sin(3 * t + s) + 0.05 * Math.sin(5 * t + s * 1.7) + 0.03 * Math.sin(8 * t + s * 2.3))
+        pts.push([cx + Math.cos(t) * rr * 1.25, cy + Math.sin(t) * rr * 0.86])
+      }
+      return smooth(pts, true)
+    }
+    var html = ''
+    var n = 0
+    for (var r = 26, k = 0; r < 720; r += 32, k++) html += '<path class="tp-contour' + (k % 5 === 4 ? ' idx' : '') + '" style="--n:' + (n++) + '" d="' + blob(690 - k * 6, 140 + k * 9, r, k * 0.35) + '"/>'
+    for (var r2 = 18, k2 = 0; r2 < 190; r2 += 30, k2++) html += '<path class="tp-contour" style="--n:' + (n++) + '" d="' + blob(210, 420, r2, 2 + k2 * 0.5) + '"/>'
+    var trailPts = [[110, 560], [200, 528], [262, 470], [330, 438], [420, 420], [480, 360], [560, 330], [600, 268], [655, 214], [690, 150]]
+    var trailD = smooth(trailPts, false)
+    html += '<path id="tp-trail" class="tp-trail" d="' + trailD + '"/>'
+    html += '<path id="tp-walked" class="tp-walked" d="' + trailD + '"/>'
+    html += '<text class="tp-label" x="96" y="592">Base camp · 2022</text>'
+    html += '<text class="tp-label" x="712" y="138">Summit · 2026</text>'
+    html += '<path d="M690 150 l0 -38 l22 8 l-22 8" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>'
+    html += '<circle id="tp-marker" class="tp-marker" r="7" cx="110" cy="560"/>'
+    svg.innerHTML = html
+
+    var trail = document.getElementById('tp-trail')
+    var walked = document.getElementById('tp-walked')
+    var marker = document.getElementById('tp-marker')
+    var L = trail.getTotalLength()
+    walked.style.strokeDasharray = L
+    walked.style.strokeDashoffset = L
+    svg.querySelectorAll('.tp-contour').forEach(function (c) { c.style.setProperty('--len', Math.ceil(c.getTotalLength())) })
+
+    // waypoints, evenly spaced along the trail in year order
+    var wps = order.map(function (pi, k) {
+      var at = L * (0.03 + 0.97 * k / (order.length - 1))
+      var pt = trail.getPointAtLength(at)
+      var b = document.createElement('button')
+      b.className = 'tp-wp'
+      b.style.left = (pt.x / 10) + '%'
+      b.style.top = (pt.y / 6) + '%'
+      b.setAttribute('aria-label', P[pi].title + ', ' + P[pi].year)
+      var prevYear = k > 0 ? P[order[k - 1]].year : null
+      b.innerHTML = P[pi].year !== prevYear ? '<span>' + P[pi].year + '</span>' : ''
+      b.addEventListener('click', function () { go(k) })
+      map.appendChild(b)
+      return { el: b, at: at, x: pt.x, y: pt.y, p: P[pi] }
+    })
+
+    ;[2026, 2025, 2024, 2023, 2022].forEach(function (y) { alt.insertAdjacentHTML('beforeend', '<div data-y="' + y + '">' + y + '</div>') })
+
+    function go(k) {
+      k = Math.max(0, Math.min(wps.length - 1, k))
+      if (k === cur) return
+      var from = cur < 0 ? 0 : wps[cur].at
+      cur = k
+      var w = wps[k]
+      wps.forEach(function (x, j) { x.el.classList.toggle('done', j < k); x.el.setAttribute('aria-current', j === k ? 'true' : 'false') })
+      alt.querySelectorAll('div').forEach(function (d) { d.classList.toggle('on', Number(d.dataset.y) === w.p.year) })
+      // walk the marker along the path
+      var t0 = performance.now(), dur = REDUCED ? 1 : Math.min(1100, 260 + Math.abs(w.at - from) * 1.2)
+      var step = function (now) {
+        var t = Math.min(1, (now - t0) / dur)
+        var e = 1 - Math.pow(1 - t, 3)
+        var len = from + (w.at - from) * e
+        var pt = trail.getPointAtLength(len)
+        marker.setAttribute('cx', pt.x); marker.setAttribute('cy', pt.y)
+        walked.style.strokeDashoffset = L - len
+        if (t < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
+      // card
+      var p = w.p
+      card.innerHTML =
+        '<div class="tp-card-media"></div>' +
+        '<div class="tp-card-body"><div class="mono">' + p.role + ' · ' + p.year + '</div><h4>' + p.title + '</h4><p>' + p.blurb + '</p>' +
+        (p.href ? '<a class="btn btn--primary" href="' + p.href + '" target="_blank" rel="noopener">' + icon('play', 14) + ' Play live</a>' : '<span class="pill">' + (p.badge || 'no public link') + '</span>') + '</div>'
+      card.querySelector('.tp-card-media').appendChild(media(p, false))
+      card.classList.remove('swap'); void card.offsetWidth; card.classList.add('swap')
+    }
+
+    stageKeys(document.getElementById('tp-stage'), {
+      ArrowRight: function () { go(cur + 1) },
+      ArrowLeft: function () { go(cur - 1) }
+    })
+    document.getElementById('pane-topo').addEventListener('cx:pane', function (e) {
+      if (e.detail.visible && !drawn) {
+        drawn = true
+        if (!REDUCED) svg.querySelectorAll('.tp-contour').forEach(function (c) { c.classList.add('draw') })
+      }
+    })
+    go(0)
+  })()
+})()
+</script>
+</body>
+</html>

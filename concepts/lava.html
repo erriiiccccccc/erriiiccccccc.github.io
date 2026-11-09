@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lava Island · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .heat-floor { position: absolute; inset: auto 0 0 0; height: 45%; pointer-events: none; z-index: 1;
+    background: radial-gradient(60% 80% at 50% 120%, rgba(255,90,31,0.35), transparent 70%); animation: heat 5s ease-in-out infinite alternate; }
+  @keyframes heat { from { opacity: 0.6; } to { opacity: 1; } }
+  .logo-tile { width: 52px; height: 52px; border-radius: 13px; background: #fff; display: grid; place-items: center; flex-shrink: 0; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+  .logo-tile img { width: 76%; height: 76%; object-fit: contain; }
+  .logo-tile b { font-family: var(--f-mono); font-size: 13px; font-weight: 600; color: #1a0a05; letter-spacing: 0.02em; }
+
+  /* ── A · STRATA ────────────────────────────────────────── */
+  .st { position: absolute; inset: 0; display: grid; grid-template-columns: 74px 1fr; }
+  .st-gauge { position: relative; border-right: 1px solid var(--line); }
+  .st-gauge-line { position: absolute; left: 36px; top: 24px; bottom: 24px; width: 2px; background: linear-gradient(180deg, #FFD27A, #FF5A1F 30%, #7C2D12 70%, #44403C); border-radius: 2px; opacity: 0.8; }
+  .st-gauge-label { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); }
+  .st-mark { position: absolute; left: 30px; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(255,90,31,0.3), 0 0 16px var(--temp, #FF5A1F); transition: top 500ms var(--ease-out); }
+  .st-mark-y { position: absolute; left: 50px; transform: translateY(-50%); font-family: var(--f-mono); font-size: 10px; color: var(--ink-2); white-space: nowrap; transition: top 500ms var(--ease-out); }
+  .st-stack { display: flex; flex-direction: column; min-height: 0; }
+  .era { --temp: #FF5A1F; position: relative; flex: 1 1 0; min-height: 56px; display: flex; transition: flex-grow 520ms var(--ease-out); border-bottom: 1px solid rgba(0,0,0,0.5); }
+  .era.on { flex-grow: 4.2; }
+  .era::before { /* jagged strata seam on top */
+    content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 6px; z-index: 2; pointer-events: none;
+    background: linear-gradient(90deg, var(--temp), color-mix(in srgb, var(--temp) 30%, transparent) 70%, transparent);
+    clip-path: polygon(0 0, 8% 60%, 17% 10%, 29% 80%, 41% 20%, 55% 70%, 68% 0, 79% 60%, 90% 15%, 100% 50%, 100% 0);
+    opacity: var(--glow, 0.6);
+  }
+  .seg {
+    position: relative; flex: 1 1 0; min-width: 0; border: 0; padding: 0 22px; cursor: pointer; text-align: left; color: var(--ink); overflow: hidden;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow, 0.6) * 24%), transparent) 0%, transparent 72%), rgba(10,4,4,0.35);
+    display: flex; flex-direction: column; justify-content: center; gap: 4px; transition: background 400ms;
+  }
+  .seg + .seg { border-left: 1px solid rgba(0,0,0,0.5); }
+  .seg:focus-visible { outline: 2px solid var(--temp); outline-offset: -4px; }
+  .seg.hot { background: radial-gradient(120% 150% at 0% 100%, color-mix(in srgb, var(--temp) calc(var(--glow, 0.6) * 40%), transparent), transparent 70%), linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow, 0.6) * 14%), transparent), transparent 80%), rgba(10,4,4,0.3); }
+  .era:first-child .seg::after { /* molten flow on the newest layer */
+    content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.5;
+    background: linear-gradient(100deg, transparent 20%, rgba(255,210,122,0.35) 35%, transparent 50%, rgba(255,140,60,0.25) 70%, transparent 85%);
+    background-size: 240% 100%; animation: flow 7s linear infinite;
+  }
+  @keyframes flow { from { background-position: 100% 0; } to { background-position: -140% 0; } }
+  .seg-line { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+  .seg-role { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seg-org { color: var(--ink-3); font-size: 13.5px; white-space: nowrap; }
+  .seg-yr { margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+  .seg-more { display: grid; grid-template-columns: 52px 1fr; gap: 16px; align-items: center; max-height: 0; opacity: 0; overflow: hidden; transition: max-height 520ms var(--ease-out), opacity 300ms, margin 400ms; }
+  .seg.hot .seg-more { max-height: 260px; opacity: 1; margin-top: 12px; }
+  .seg-impact { font-family: var(--f-display); font-size: clamp(34px, 4vw, 56px); line-height: 0.95; color: color-mix(in srgb, var(--temp) 70%, white); text-shadow: 0 0 30px color-mix(in srgb, var(--temp) 50%, transparent); }
+  .seg-desc { margin: 6px 0 0; color: var(--ink-2); font-size: 14px; max-width: 54ch; }
+  .era.on .seg:not(.hot) .seg-role { color: var(--ink-2); }
+  @media (max-width: 860px) {
+    .st { grid-template-columns: 1fr; }
+    .st-gauge { display: none; }
+    .era { flex-direction: column; }
+    .seg { padding: 10px 14px; }
+    .seg + .seg { border-left: 0; border-top: 1px solid rgba(0,0,0,0.5); }
+    .seg-org { display: none; }
+  }
+
+  /* ── B · IMPACT BENTO ──────────────────────────────────── */
+  .bn { padding: 4px 22px 22px; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(150px, 1fr); gap: 12px; min-height: 100%; }
+  .bc {
+    position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 18px; border-radius: 18px; cursor: pointer; text-align: left; color: var(--ink); overflow: hidden;
+    border: 1px solid rgba(255,140,80,0.16); background: radial-gradient(120% 100% at 0% 0%, rgba(255,90,31,0.10), transparent 60%), rgba(255,255,255,0.03);
+    transition: transform 280ms var(--ease-out), border-color 280ms, box-shadow 280ms;
+  }
+  .bc:hover, .bc:focus-visible { transform: translateY(-3px); border-color: rgba(255,140,80,0.5); box-shadow: 0 18px 50px rgba(0,0,0,0.4), 0 0 40px rgba(255,90,31,0.18); outline: none; }
+  .bc::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: linear-gradient(90deg, #FFB547, #FF5A1F, transparent); opacity: 0; transition: opacity 280ms; }
+  .bc:hover::after, .bc:focus-visible::after, .bc.open::after { opacity: 1; }
+  .bc-num { font-family: var(--f-display); font-size: clamp(30px, 3.4vw, 48px); line-height: 0.95; background: linear-gradient(180deg, #FFE1B0, #FF8A3D); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .bc--hero .bc-num { font-size: clamp(48px, 6vw, 92px); }
+  .bc-sub { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
+  .bc-foot { display: flex; align-items: center; gap: 12px; }
+  .bc-foot .logo-tile { width: 38px; height: 38px; border-radius: 10px; }
+  .bc-foot b { display: block; font-size: 14px; font-weight: 600; line-height: 1.25; }
+  .bc-foot span { font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.06em; }
+  .bc-desc { display: none; color: var(--ink-2); font-size: 15px; max-width: 60ch; margin: 0; }
+  .bc.open { grid-column: 1 / -1; grid-row: span 2; }
+  .bc.open .bc-desc { display: block; }
+  .bc.open .bc-num { font-size: clamp(56px, 7vw, 110px); }
+  .bc-weak { display: inline-block; margin-top: 10px; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px dashed rgba(251,191,36,0.5); padding: 3px 6px; border-radius: 6px; }
+  ::view-transition-group(*) { animation-duration: 420ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  @media (max-width: 860px) { .bn { grid-template-columns: 1fr 1fr; padding: 4px 12px 14px; } .bc { grid-column: span 1 !important; grid-row: span 1 !important; } .bc--hero, .bc.open { grid-column: 1 / -1 !important; } }
+
+  /* ── C · FLOW ──────────────────────────────────────────── */
+  .fl { --lab: 210px; position: absolute; inset: 0; padding: 8px 24px 20px; display: flex; flex-direction: column; }
+  .fl-chart { position: relative; flex: 1; min-height: 0; margin-left: var(--lab); }
+  .fl-axis { position: absolute; inset: 0; }
+  .fl-axis div { position: absolute; top: 0; bottom: 0; border-left: 1px dashed rgba(255,255,255,0.08); }
+  .fl-axis span { position: absolute; top: 0; left: 6px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+  .fl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, #FFD27A, #FF5A1F); box-shadow: 0 0 16px #FF5A1F; z-index: 3; }
+  .fl-now span { position: absolute; top: -2px; left: 8px; font-family: var(--f-mono); font-size: 10.5px; color: #FFB547; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+  .fl-now::after { content: ''; position: absolute; left: -5px; bottom: -6px; width: 12px; height: 12px; border-radius: 50%; background: #FFB547; box-shadow: 0 0 0 0 rgba(255,181,71,0.6); animation: ping 2s ease-out infinite; }
+  @keyframes ping { to { box-shadow: 0 0 0 16px rgba(255,181,71,0); } }
+  .fl-lanes { position: absolute; left: calc(var(--lab) * -1); right: 0; top: 30px; bottom: 0; display: flex; flex-direction: column; justify-content: space-around; }
+  .lane { position: relative; height: 40px; }
+  .lane-label { position: absolute; left: 0; width: calc(var(--lab) - 14px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; }
+  .lane-label .logo-tile { width: 32px; height: 32px; border-radius: 8px; box-shadow: none; }
+  .lane-label .logo-tile b { font-size: 10px; }
+  .lane-label div { min-width: 0; }
+  .lane-label strong { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lane-label small { display: block; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+  .bar { position: absolute; top: 6px; height: 28px; border-radius: 8px; border: 0; cursor: pointer; padding: 0 10px; display: flex; align-items: center; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.06em; color: #1a0703; font-weight: 600; white-space: nowrap; overflow: hidden;
+    background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 6px 20px color-mix(in srgb, var(--b) 30%, transparent); transform-origin: left center; animation: grow 800ms var(--ease-out) both; animation-delay: calc(var(--n) * 70ms); }
+  .bar.hatch { background: repeating-linear-gradient(135deg, var(--a) 0 6px, color-mix(in srgb, var(--a) 70%, black) 6px 12px); color: #fff; }
+  .bar:hover, .bar:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .fl-card { position: absolute; z-index: 5; width: 300px; padding: 16px; border-radius: 16px; background: rgba(20,8,6,0.96); border: 1px solid rgba(255,140,80,0.35); box-shadow: 0 20px 60px rgba(0,0,0,0.6); pointer-events: none; opacity: 0; transform: translateY(6px); transition: opacity 180ms, transform 220ms var(--ease-out); }
+  .fl-card.on { opacity: 1; transform: none; }
+  .fl-card h4 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1.05; }
+  .fl-card .imp { font-family: var(--f-display); font-size: 34px; color: #FFB547; line-height: 1; margin: 8px 0 6px; }
+  .fl-card p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+  .fl-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--ink-3); }
+  .fl-legend i { display: inline-block; width: 22px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  @media (max-width: 860px) { .fl { --lab: 112px; padding: 8px 12px 14px; } .lane-label .logo-tile { display: none; } .fl-card { width: 240px; } }
+</style>
+</head>
+<body class="isl-lava">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">04 · Lava Island · Experience</div>
+    <h1 class="cx-h1">Make the work <em>feel hot.</em></h1>
+    <p class="cx-lede">The timeline you have is clean, but nothing happens, so Lava ends up the calmest island in the world. Here are three ways to give it heat without going back to costume. Click into a scene to drive it.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/islands/experience.js</strong> is a LinkedIn-style list: logo tile, role, org, year, one line. You picked it after the riveted-iron and minimal-spine versions felt cringe.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>Every role has the same weight, so a spring internship looks as big as Barclays. Your best numbers (45 minutes, 6,000+) hide in small grey text. Nothing moves.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>Lead every role with its impact, and let heat mean recency.</strong> Newest glows, oldest has cooled. Light, not props.</p></div>
+    </div>
+  </header>
+
+  <section class="cx-section">
+    <div class="cx-eyebrow">Three ways to show experience</div>
+    <h2 class="cx-h2">Pick a <em>shape</em></h2>
+    <p class="cx-sub">All three use your 7 real roles from experience.js. Logos for Barclays, BlackRock and Edinburgh are the real files, the rest are monograms like today.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Experience options">
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-strata"><span class="cx-tab-key">1</span><span class="cx-tab-name">Strata <span class="cx-rec">My pick</span><small>layers of rock, newest is molten</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-bento"><span class="cx-tab-key">2</span><span class="cx-tab-name">Impact Bento<small>every role leads with a number</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-flow"><span class="cx-tab-key">3</span><span class="cx-tab-name">Flow<small>a timeline that shows overlaps</small></span></button>
+    </div>
+
+    <!-- A · STRATA -->
+    <section class="cx-pane" id="pane-strata" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>A · Strata</h3><p>A cross-section of the island. Each era is a layer of rock, newest on top. Colour temperature encodes time: the top layer is molten, each older one has cooled a little more. The focused layer opens to show its impact.</p></div>
+        <p class="mono">Overlapping roles share a layer</p>
+      </div>
+      <div class="cx-stage" id="st-stage" tabindex="0" aria-label="Strata demo. Up and down arrows move through time, left and right switch roles in a layer.">
+        <div class="world-bg isl-lava"><div class="world-planet"></div></div><div class="world-dim"></div><div class="heat-floor"></div>
+        <div class="cx-stage-hint"><span class="kbd">↑</span><span class="kbd">↓</span> time <span class="kbd">←</span><span class="kbd">→</span> role</div>
+        <div class="ew" role="dialog" aria-label="Experience">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>04 / 06</span>·<b>Lava Island</b></div><h2 class="ew-title">Experience</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" style="overflow:hidden">
+            <div class="st">
+              <div class="st-gauge" aria-hidden="true"><div class="st-gauge-label">depth</div><div class="st-gauge-line"></div><div class="st-mark" id="st-mark"></div><div class="st-mark-y" id="st-mark-y"></div></div>
+              <div class="st-stack" id="st-stack"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>It's the only option that could only exist on a lava island, yet there's no costume: it's just light and layers. Heat as recency is a real encoding, not decoration, so the metaphor earns its place. One open layer at a time keeps focus.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>↑ ↓ moves through time, ← → between overlapping roles, click works too. Years are always written, so colour never carries meaning alone. The depth gauge shows where you are. Under reduced motion the molten flow stops.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Group ENTRIES in experience.js into eras. A flex column where the open era gets a bigger flex-grow (animates for free). Temperature is one CSS variable per layer. Around 150 lines, no new assets.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Only shines if each role has a real impact line. BlackRock, Outlier and Finexus are weak today. Past about 9 roles the collapsed layers get thin, so group older ones.</p></div>
+      </div>
+    </section>
+
+    <!-- B · IMPACT BENTO -->
+    <section class="cx-pane" id="pane-bento" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>B · Impact Bento</h3><p>Every role leads with its biggest outcome in huge type. Size follows impact, so Barclays gets the hero tile. Click a tile and it grows into the full story.</p></div>
+        <p class="mono">Dashed badge = needs a stronger number</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-lava"><div class="world-planet"></div></div><div class="world-dim"></div><div class="heat-floor"></div>
+        <div class="ew" role="dialog" aria-label="Experience">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>04 / 06</span>·<b>Lava Island</b></div><h2 class="ew-title">Experience</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body"><div class="bn" id="bn"></div></div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Recruiters scan for outcomes, and this puts outcomes first. Size equals impact, so the hierarchy does the talking. Very modern, very professional.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Tiles are buttons, Tab and Enter work. The expand uses the View Transitions API so the tile morphs instead of jumping, and falls back to instant. Text gradients keep solid contrast.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Add an impact field and a size to each entry, a CSS grid with spans, document.startViewTransition for the expand. Around 100 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Bento grids are everywhere right now, so it's the least unique to Lava. Exposes weak numbers brutally. Loses the sense of time order.</p></div>
+      </div>
+    </section>
+
+    <!-- C · FLOW -->
+    <section class="cx-pane" id="pane-flow" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>C · Flow</h3><p>A swimlane timeline from 2023 to now with a glowing "now" line. It shows something the list hides: in 2024 you were freelancing, training AI and interning at the same time.</p></div>
+        <p class="mono">Months are approximate, swap in real dates</p>
+      </div>
+      <div class="cx-stage" id="fl-stage">
+        <div class="world-bg isl-lava"><div class="world-planet"></div></div><div class="world-dim"></div><div class="heat-floor"></div>
+        <div class="ew" role="dialog" aria-label="Experience">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>04 / 06</span>·<b>Lava Island</b></div><h2 class="ew-title">Experience</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" style="overflow:hidden">
+            <div class="fl">
+              <div class="fl-chart" id="fl-chart"><div class="fl-axis" id="fl-axis"></div><div class="fl-lanes" id="fl-lanes"></div><div class="fl-card" id="fl-card" aria-live="polite"></div></div>
+              <div class="fl-legend"><span><i style="background:linear-gradient(90deg,#FFD27A,#FF5A1F)"></i>Industry</span><span><i style="background:linear-gradient(90deg,#FFB547,#C2410C)"></i>Teaching</span><span><i style="background:repeating-linear-gradient(135deg,#9a3412 0 4px,#5a1f0b 4px 8px)"></i>Freelance + side</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Shows hustle at a glance: overlapping bars say "did a lot at once" better than any sentence. The pulsing now line makes the panel feel alive. Data viz reads as engineering-minded.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Bars are buttons with full labels, focus or hover shows the card. Type is shown by pattern and a legend, not colour alone. Fits without horizontal scrolling.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Add start and end months to each entry, position bars by percentage. No library needed. Around 120 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Short internships become slivers that look tiny next to long side gigs, which undersells Barclays and BlackRock. Needs real months to be honest.</p></div>
+      </div>
+    </section>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Strata, with Bento's impact-first copy inside each layer.</h3>
+      <p>Strata is the one that makes Lava feel like Lava. It moves, it glows, and the heat actually means something (how recent), which is exactly the line between "themed" and "cringe". The open layer leads with the big number, so you get Bento's recruiter punch without the generic grid.</p>
+      <p><strong>Content homework first:</strong> every role needs one quantified line. Barclays (45 min to near instant) and AMEU (6,000+, +120%) are great. BlackRock, Outlier and Finexus need a number or a concrete outcome: how many evaluations, which system, what it replaced. Also grab the missing logos (Outlier, Finexus, Petaling Utama Motor) so fewer monograms show.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="arctic.html"><small>← Previous</small><span>Arctic</span></a>
+    <a href="desert.html"><small>Next →</small><span>Desert</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  var LOGO = '../public/experience/'
+  var R = {
+    uoe:   { role: 'Teaching Assistant', org: 'University of Edinburgh', yr: '2026', mono: 'UoE', logo: 'uoe.svg', impact: '2 courses', desc: 'System Design and Mobile Robotics, guiding students through architecture and robotics labs.', s: 2026.0, e: 2026.85, kind: 'teach' },
+    barc:  { role: 'Technology Analyst Intern', org: 'Barclays', yr: '2025', mono: 'B', logo: 'barclays.svg', impact: '45 min to near instant', desc: 'Automated a 45-minute manual workflow down to near instant.', s: 2025.45, e: 2025.7, kind: 'ind' },
+    free:  { role: 'Full-Stack Developer', org: 'Freelance', yr: '2024 to 25', mono: 'PUM', impact: '1 live store, end to end', desc: 'Built and deployed petalingutamamotor.com end to end, live with real customers.', s: 2024.3, e: 2025.5, kind: 'side' },
+    outl:  { role: 'AI Coding Trainer', org: 'Outlier', yr: '2024 to 25', mono: 'O', impact: 'LLM code evals', desc: 'Trained and evaluated LLM coding outputs.', weak: true, s: 2024.5, e: 2025.4, kind: 'side' },
+    br:    { role: 'Technology Spring Intern', org: 'BlackRock', yr: '2024', mono: 'BR', logo: 'blackrock.svg', impact: 'Aladdin', desc: 'Aladdin engineering operations and systems.', weak: true, s: 2024.25, e: 2024.36, kind: 'ind' },
+    ameu:  { role: 'Marketing Executive', org: 'AMEU', yr: '2023 to 24', mono: 'A', impact: '6,000+ accounts', sub: '+120% engagement', desc: 'Grew the society to 6,000+ accounts and a 120% engagement increase.', s: 2023.7, e: 2024.5, kind: 'side' },
+    fin:   { role: 'Software Engineer Intern', org: 'Finexus Group', yr: '2023', mono: 'F', impact: 'ELK pipeline', desc: 'Built an ELK pipeline with a Java EE and Python backend for a fintech platform.', weak: true, s: 2023.45, e: 2023.72, kind: 'ind' }
+  }
+  function tile(r, cls) { return '<span class="logo-tile ' + (cls || '') + '">' + (r.logo ? '<img src="' + LOGO + r.logo + '" alt="' + r.org + ' logo">' : '<b>' + r.mono + '</b>') + '</span>' }
+  function keys(stage, map) {
+    stage.addEventListener('keydown', function (e) { var f = map[e.key]; if (f) { e.preventDefault(); f() } })
+  }
+
+  /* ═══ A · STRATA ═══ */
+  ;(function () {
+    var ERAS = [
+      { y: 'now', keys: ['uoe'] }, { y: '2025', keys: ['barc'] }, { y: '2024 to 25', keys: ['free', 'outl'] },
+      { y: '2024', keys: ['br'] }, { y: '2023 to 24', keys: ['ameu'] }, { y: '2023', keys: ['fin'] }
+    ]
+    var TEMP = ['#FFC861', '#FF9A3D', '#FF6A2A', '#E2491B', '#A3361A', '#6B3A2E']
+    var GLOW = [1, 0.85, 0.7, 0.55, 0.42, 0.3]
+    var stack = document.getElementById('st-stack'), mark = document.getElementById('st-mark'), markY = document.getElementById('st-mark-y')
+    var ei = 0, si = 0
+    ERAS.forEach(function (era, i) {
+      var el = document.createElement('div')
+      el.className = 'era'; el.style.setProperty('--temp', TEMP[i]); el.style.setProperty('--glow', GLOW[i])
+      era.keys.forEach(function (k, j) {
+        var r = R[k]
+        var b = document.createElement('button')
+        b.className = 'seg'
+        b.innerHTML = '<div class="seg-line"><span class="seg-role">' + r.role + '</span><span class="seg-org">' + r.org + '</span><span class="seg-yr">' + r.yr + '</span></div>' +
+          '<div class="seg-more">' + tile(r) + '<div><div class="seg-impact">' + r.impact + '</div>' + (r.sub ? '<div class="mono" style="margin-top:6px;color:var(--ink-2)">' + r.sub + '</div>' : '') + '<p class="seg-desc">' + r.org + ' · ' + r.desc + '</p></div></div>'
+        b.addEventListener('click', function () { go(i, j) })
+        el.appendChild(b)
+      })
+      stack.appendChild(el)
+    })
+    var eras = stack.querySelectorAll('.era')
+    function go(i, j) {
+      ei = Math.max(0, Math.min(ERAS.length - 1, i))
+      si = Math.max(0, Math.min(ERAS[ei].keys.length - 1, j || 0))
+      eras.forEach(function (el, k) {
+        el.classList.toggle('on', k === ei)
+        el.querySelectorAll('.seg').forEach(function (s, m) { var hot = k === ei && m === si; s.classList.toggle('hot', hot); s.setAttribute('aria-expanded', hot ? 'true' : 'false') })
+      })
+      // gauge follows the open layer once the flex animation settles
+      var place = function () {
+        var el = eras[ei], top = el.offsetTop + el.offsetHeight / 2
+        mark.style.top = top + 'px'; markY.style.top = top + 'px'
+        mark.style.setProperty('--temp', TEMP[ei]); markY.textContent = ERAS[ei].y
+      }
+      place(); setTimeout(place, 540)
+    }
+    keys(document.getElementById('st-stage'), {
+      ArrowDown: function () { go(ei + 1, 0) }, ArrowUp: function () { go(ei - 1, 0) },
+      ArrowRight: function () { go(ei, si + 1) }, ArrowLeft: function () { go(ei, si - 1) }
+    })
+    document.getElementById('pane-strata').addEventListener('cx:pane', function (e) { if (e.detail.visible) go(ei, si) })
+    go(0, 0)
+  })()
+
+  /* ═══ B · IMPACT BENTO ═══ */
+  ;(function () {
+    var ORDER = [['barc', 'bc--hero', 2, 2], ['ameu', '', 2, 1], ['uoe', '', 1, 1], ['free', '', 1, 1], ['br', '', 1, 1], ['fin', '', 1, 1], ['outl', '', 2, 1]]
+    var bn = document.getElementById('bn')
+    ORDER.forEach(function (o, i) {
+      var r = R[o[0]]
+      var b = document.createElement('button')
+      b.className = 'bc ' + o[1]
+      b.style.gridColumn = 'span ' + o[2]; b.style.gridRow = 'span ' + o[3]
+      b.style.viewTransitionName = 'bc' + i
+      b.setAttribute('aria-expanded', 'false')
+      b.innerHTML = '<div><div class="bc-num">' + r.impact + '</div>' + (r.sub ? '<div class="bc-sub">' + r.sub + '</div>' : '') + (r.weak ? '<span class="bc-weak">needs a number</span>' : '') + '</div>' +
+        '<p class="bc-desc">' + r.desc + '</p>' +
+        '<div class="bc-foot">' + tile(r) + '<div><b>' + r.role + '</b><span>' + r.org + ' · ' + r.yr + '</span></div></div>'
+      b.addEventListener('click', function () {
+        var apply = function () {
+          var open = b.classList.contains('open')
+          bn.querySelectorAll('.bc').forEach(function (x, k) {
+            x.classList.remove('open'); x.setAttribute('aria-expanded', 'false')
+            x.style.gridColumn = 'span ' + ORDER[k][2]; x.style.gridRow = 'span ' + ORDER[k][3]
+          })
+          if (!open) { b.classList.add('open'); b.setAttribute('aria-expanded', 'true'); b.style.gridColumn = '1 / -1'; b.style.gridRow = 'span 2' }
+        }
+        if (document.startViewTransition && !REDUCED) document.startViewTransition(apply)
+        else apply()
+      })
+      bn.appendChild(b)
+    })
+  })()
+
+  /* ═══ C · FLOW ═══ */
+  ;(function () {
+    var MIN = 2023, MAX = 2027, NOW = 2026 + 10.25 / 12
+    var axis = document.getElementById('fl-axis'), lanes = document.getElementById('fl-lanes'), card = document.getElementById('fl-card'), chart = document.getElementById('fl-chart')
+    function pct(y) { return ((y - MIN) / (MAX - MIN) * 100) + '%' }
+    for (var y = MIN; y < MAX; y++) axis.insertAdjacentHTML('beforeend', '<div style="left:' + pct(y) + '"><span>' + y + '</span></div>')
+    axis.insertAdjacentHTML('beforeend', '<div class="fl-now" style="left:' + pct(NOW) + '"><span>now</span></div>')
+    var KIND = { ind: ['#FFD27A', '#FF5A1F', ''], teach: ['#FFB547', '#C2410C', ''], side: ['#9a3412', '#5a1f0b', 'hatch'] }
+    ;['uoe', 'barc', 'free', 'outl', 'br', 'ameu', 'fin'].forEach(function (k, i) {
+      var r = R[k], c = KIND[r.kind]
+      var lane = document.createElement('div'); lane.className = 'lane'
+      lane.innerHTML = '<div class="lane-label">' + tile(r) + '<div><strong>' + r.org + '</strong><small>' + r.role + '</small></div></div>'
+      var bar = document.createElement('button')
+      bar.className = 'bar ' + c[2]
+      bar.style.cssText = 'left:calc(var(--lab) + (100% - var(--lab)) * ' + ((r.s - MIN) / (MAX - MIN)) + ');width:calc((100% - var(--lab)) * ' + Math.max(0.012, (r.e - r.s) / (MAX - MIN)) + ');--a:' + c[0] + ';--b:' + c[1] + ';--n:' + i
+      bar.setAttribute('aria-label', r.role + ' at ' + r.org + ', ' + r.yr + '. ' + r.impact)
+      bar.textContent = (r.e - r.s) > 0.3 ? r.yr : ''
+      var show = function () {
+        card.innerHTML = '<div class="mono">' + r.org + ' · ' + r.yr + '</div><h4>' + r.role + '</h4><div class="imp">' + r.impact + '</div><p>' + r.desc + '</p>'
+        var cr = chart.getBoundingClientRect(), br = bar.getBoundingClientRect()
+        var left = br.left - cr.left + br.width / 2 - 150
+        left = Math.max(-200, Math.min(cr.width - 300, left))
+        var top = br.top - cr.top + 40
+        if (top + 170 > cr.height) top = br.top - cr.top - 180
+        card.style.left = left + 'px'; card.style.top = top + 'px'
+        card.classList.add('on')
+      }
+      var hide = function () { card.classList.remove('on') }
+      bar.addEventListener('mouseenter', show); bar.addEventListener('focus', show)
+      bar.addEventListener('mouseleave', hide); bar.addEventListener('blur', hide)
+      bar.addEventListener('click', show)
+      lane.appendChild(bar)
+      lanes.appendChild(lane)
+    })
+    // replay bar growth when the pane opens
+    document.getElementById('pane-flow').addEventListener('cx:pane', function (e) {
+      if (!e.detail.visible) return
+      lanes.querySelectorAll('.bar').forEach(function (b) { b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '' })
+    })
+  })()
+})()
+</script>
+</body>
+</html>

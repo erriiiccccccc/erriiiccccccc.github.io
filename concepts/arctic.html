@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arctic Island · Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  /* Arctic light: cold, crisp, aurora shimmer from above */
+  .aurora-sky { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .aurora-sky::before, .aurora-sky::after {
+    content: ''; position: absolute; left: -20%; right: -20%; top: -30%; height: 70%;
+    background: linear-gradient(100deg, transparent 10%, rgba(110,242,218,0.22) 30%, rgba(124,196,255,0.18) 50%, rgba(167,139,250,0.16) 70%, transparent 90%);
+    filter: blur(30px); transform: skewY(-6deg); animation: aur 14s ease-in-out infinite alternate;
+  }
+  .aurora-sky::after { top: -20%; opacity: 0.6; animation-duration: 19s; animation-direction: alternate-reverse; }
+  @keyframes aur { from { transform: skewY(-6deg) translateX(-6%); } to { transform: skewY(-3deg) translateX(6%); } }
+
+  /* ── A · ASK MOCHI ─────────────────────────────────────── */
+  .ask { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; height: 100%; }
+  .ask-side { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; border-right: 1px solid var(--line); overflow: hidden; }
+  #ask-mochi { width: min(210px, 90%); } .ask-side svg { width: 100%; height: auto; overflow: visible; } .ask-side > div:last-child { text-align: center; }
+  .ask-name { font-family: var(--f-display); font-size: 30px; line-height: 1; }
+  .ask-status { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ic-2); min-height: 16px; text-align: center; }
+  .ask-chat { display: flex; flex-direction: column; min-height: 0; }
+  .ask-log { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 22px 8px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .msg { max-width: 78%; padding: 11px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.55; animation: msg-in 280ms var(--ease-out) both; }
+  @keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg--you { align-self: flex-end; background: var(--ic); color: #04121f; border-bottom-right-radius: 5px; font-weight: 500; }
+  .msg--mochi { align-self: flex-start; background: rgba(124,196,255,0.08); border: 1px solid rgba(124,196,255,0.22); border-bottom-left-radius: 5px; color: var(--ink); }
+  .msg-src { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .src-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(255,255,255,0.05); color: var(--ink-2); font-size: 12px; cursor: pointer; }
+  .src-chip:hover { color: var(--ink); border-color: var(--ic); }
+  .src-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--ic)); font-style: normal; }
+  .typing { display: inline-flex; gap: 4px; padding: 14px 16px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--ic); opacity: 0.4; animation: dot 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: 0.15s; } .typing i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot { 50% { opacity: 1; transform: translateY(-3px); } }
+  .ask-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 22px; scrollbar-width: none; }
+  .ask-chips::-webkit-scrollbar { display: none; }
+  .ask-chip { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid rgba(124,196,255,0.3); background: rgba(124,196,255,0.06); color: var(--ink); font-size: 13px; cursor: pointer; transition: background var(--t-fast), transform var(--t-tap); }
+  .ask-chip:hover { background: rgba(124,196,255,0.14); }
+  .ask-chip:active { transform: scale(0.97); }
+  .ask-form { display: flex; gap: 8px; padding: 8px 22px 20px; }
+  .ask-form input { flex: 1; min-width: 0; min-height: 46px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(0,0,0,0.25); color: var(--ink); font: inherit; font-size: 15px; }
+  .ask-form input:focus { outline: none; border-color: var(--ic); box-shadow: 0 0 0 3px rgba(124,196,255,0.2); }
+  .ask-form .btn { min-width: 46px; padding: 0 16px; }
+  .toast { position: absolute; left: 50%; bottom: 22px; transform: translate(-50%, 20px); z-index: 30; padding: 10px 16px; border-radius: var(--r-pill); background: rgba(10,16,30,0.95); border: 1px solid var(--line-2); font-size: 13px; opacity: 0; pointer-events: none; transition: all 280ms var(--ease-out); }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 860px) {
+    .ask { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .ask-side { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 16px; justify-content: flex-start; }
+    #ask-mochi { width: 64px; } .ask-side > div:last-child { text-align: left; }
+    .ask-log, .ask-chips, .ask-form { padding-left: 14px; padding-right: 14px; }
+    .msg { max-width: 90%; }
+  }
+
+  /* ── B · THE LAB ───────────────────────────────────────── */
+  .lab { padding: 6px 24px 24px; }
+  .lab-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chipset { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fchip { min-height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+  .fchip[aria-pressed="true"] { background: var(--ink); color: var(--space-900); border-color: transparent; }
+  .lab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .spec {
+    position: relative; border-radius: 18px; overflow: hidden; isolation: isolate;
+    background: linear-gradient(160deg, rgba(220,240,255,0.10), rgba(124,196,255,0.04) 40%, rgba(10,20,40,0.4));
+    border: 1px solid rgba(190,225,255,0.22); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 30px rgba(124,196,255,0.08);
+    transition: transform 300ms var(--ease-out), box-shadow 300ms;
+  }
+  .spec:hover { transform: translateY(-4px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 20px 50px rgba(0,30,60,0.5), 0 0 30px rgba(124,196,255,0.15); }
+  .spec::after { /* refraction streak */
+    content: ''; position: absolute; inset: -40% auto -40% -60%; width: 40%; transform: rotate(18deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent); transition: left 900ms var(--ease-out); z-index: 2; pointer-events: none;
+  }
+  .spec:hover::after { left: 130%; }
+  .spec-img { aspect-ratio: 4 / 3; margin: 10px; border-radius: 12px; display: grid; place-items: center; text-align: center; padding: 12px;
+    background: repeating-linear-gradient(135deg, rgba(124,196,255,0.06) 0 10px, transparent 10px 20px), rgba(4,12,26,0.5);
+    border: 1px dashed rgba(124,196,255,0.3); color: var(--ink-3); font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .spec-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+  .spec-body { padding: 4px 16px 16px; }
+  .spec-body h4 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .spec-body p { margin: 0 0 10px; color: var(--ink-3); font-size: 13px; line-height: 1.5; }
+  .spec-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .spec-tags span { font-family: var(--f-mono); font-size: 10.5px; padding: 3px 7px; border-radius: 6px; background: rgba(124,196,255,0.1); color: var(--ic); }
+  .status { position: absolute; top: 18px; right: 18px; z-index: 3; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; background: rgba(4,12,26,0.85); border: 1px solid var(--line-2); }
+  .status.wip { color: var(--gold); } .status.ok { color: #4ADE80; } .status.fail { color: #FF8A8A; }
+
+  /* ── C · TROPHY CAVE ───────────────────────────────────── */
+  .tc { padding: 6px 24px 24px; }
+  .tc-head { display: flex; align-items: center; gap: 18px; padding: 4px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .tc-ring { --p: 0.75; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+    background: conic-gradient(var(--ic) calc(var(--p) * 360deg), rgba(255,255,255,0.08) 0); }
+  .tc-ring b { width: 52px; height: 52px; border-radius: 50%; background: #0b1426; display: grid; place-items: center; font-family: var(--f-mono); font-size: 13px; }
+  .tc-head h4 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1; }
+  .tc-head p { margin: 4px 0 0; color: var(--ink-3); font-size: 13.5px; }
+  .tc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .ach { display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); transition: background var(--t-fast), border-color var(--t-fast); }
+  .ach:hover { background: rgba(124,196,255,0.06); border-color: rgba(124,196,255,0.25); }
+  .ach-ic { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; color: var(--t, var(--ic));
+    background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--t, var(--ic)) 35%, transparent), rgba(255,255,255,0.03) 70%);
+    border: 1px solid color-mix(in srgb, var(--t, var(--ic)) 55%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--t, var(--ic)) 20%, transparent); }
+  .ach-t { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .ach-t b { font-size: 14.5px; font-weight: 600; }
+  .ach-t span { font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-4); white-space: nowrap; }
+  .ach p { margin: 2px 0 0; font-size: 13px; color: var(--ink-3); line-height: 1.45; }
+  .ach-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08); margin-top: 8px; overflow: hidden; }
+  .ach-bar i { display: block; height: 100%; background: var(--ic); border-radius: 4px; }
+  .ach--locked { opacity: 0.55; }
+  .ach--locked .ach-ic { color: var(--ink-3); border-color: var(--line-2); background: rgba(255,255,255,0.03); box-shadow: none; }
+
+  /* ── D · NOW ───────────────────────────────────────────── */
+  .now { padding: 6px 24px 24px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .nc { position: relative; padding: 18px; border-radius: 18px; background: rgba(255,255,255,0.035); border: 1px solid var(--line); overflow: hidden; }
+  .nc .mono { display: flex; align-items: center; gap: 8px; color: var(--ic); }
+  .nc h4 { margin: 10px 0 4px; font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1.05; }
+  .nc p { margin: 0; color: var(--ink-3); font-size: 13.5px; }
+  .nc .ph { color: var(--ink-4); font-style: italic; }
+  .nc--big { grid-column: span 4; grid-row: span 2; background: radial-gradient(80% 90% at 100% 0%, rgba(110,242,218,0.14), transparent 60%), rgba(255,255,255,0.035); }
+  .nc--big h4 { font-size: clamp(30px, 3.4vw, 46px); }
+  .nc--s2 { grid-column: span 2; }
+  .nc--s3 { grid-column: span 3; }
+  .clock { font-family: var(--f-display); font-size: 54px; line-height: 1; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .eq { display: flex; align-items: flex-end; gap: 3px; height: 26px; margin-top: 14px; }
+  .eq i { width: 5px; border-radius: 2px; background: var(--ic-2); animation: eq 1.1s ease-in-out infinite; }
+  @keyframes eq { 0%, 100% { height: 20%; } 50% { height: 100%; } }
+  @media (max-width: 860px) { .now { grid-template-columns: 1fr 1fr; padding: 6px 14px 16px; } .nc--big, .nc--s3 { grid-column: span 2; } .nc--s2 { grid-column: span 1; } .lab, .tc { padding-left: 14px; padding-right: 14px; } .tc-list { grid-template-columns: 1fr; } }
+
+  /* ── MONSTERS ──────────────────────────────────────────── */
+  .mz { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: stretch; }
+  .mz-stage { position: relative; min-height: 520px; border-radius: var(--r-xl); overflow: hidden; border: 1px solid var(--line-2); display: grid; place-items: center; outline-offset: 4px;
+    background: radial-gradient(70% 60% at 50% 100%, rgba(124,196,255,0.18), transparent 70%), linear-gradient(180deg, #050b1c, #0b1730 70%, #10213f); }
+  .mz-stage .ice-floor { position: absolute; left: -10%; right: -10%; bottom: -30%; height: 46%; border-radius: 50%; background: radial-gradient(60% 50% at 50% 30%, rgba(220,240,255,0.22), rgba(124,196,255,0.06) 60%, transparent 75%); }
+  .mz-svg { position: relative; z-index: 2; width: min(360px, 80%); height: auto; overflow: visible; cursor: pointer; }
+  .mz-nav { position: absolute; left: 0; right: 0; bottom: 16px; z-index: 3; display: flex; justify-content: center; gap: 10px; }
+  .mz-tip { position: absolute; top: 16px; left: 0; right: 0; z-index: 3; text-align: center; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); }
+  .mz-info { padding: 28px; border-radius: var(--r-xl); background: var(--raise); border: 1px solid var(--line); }
+  .mz-info h3 { margin: 6px 0 4px; font-family: var(--f-display); font-weight: 400; font-size: 56px; line-height: 1; }
+  .mz-role { display: inline-flex; margin: 6px 0 14px; }
+  .mz-quote { font-family: var(--f-display); font-style: italic; font-size: 24px; line-height: 1.25; color: var(--ink-2); margin: 0 0 18px; }
+  .mz-info h4 { margin: 18px 0 8px; font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ic); }
+  .mz-info ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14.5px; }
+  .mz-info li + li { margin-top: 4px; }
+  .mz-info p.built { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .lineup { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+  .lu { position: relative; padding: 14px 10px 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--raise); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-tap); }
+  .lu:hover { background: var(--raise-2); }
+  .lu:active { transform: scale(0.98); }
+  .lu[aria-selected="true"] { border-color: var(--ic); background: rgba(124,196,255,0.08); }
+  .lu svg { width: 90px; height: 100px; overflow: visible; }
+  .lu b { font-family: var(--f-display); font-weight: 400; font-size: 22px; line-height: 1; }
+  .lu small { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); text-align: center; }
+  .lu .cx-rec { position: absolute; top: 8px; right: 8px; }
+  @media (max-width: 860px) { .mz { grid-template-columns: 1fr; } .mz-stage { min-height: 400px; } .lineup { grid-template-columns: repeat(2, 1fr); } .mz-info h3 { font-size: 44px; } }
+
+  /* monster motion */
+  .m-root { transform-box: fill-box; transform-origin: 50% 100%; animation: m-breathe 3.2s ease-in-out infinite; }
+  @keyframes m-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 1.035) translateY(-1px); } }
+  .m-eyes { transform-box: fill-box; transform-origin: 50% 50%; }
+  .blink .m-eyes { animation: m-blink 180ms ease-in-out; }
+  @keyframes m-blink { 50% { transform: scaleY(0.1); } }
+  .m-arm-r { transform-box: fill-box; transform-origin: 30% 20%; transition: transform 300ms var(--spring); }
+  svg:hover .m-arm-r, svg:focus .m-arm-r, .emote .m-arm-r { animation: m-wave 700ms ease-in-out 2; }
+  @keyframes m-wave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-38deg); } }
+  .emote .m-root { animation: m-hop 700ms var(--ease-out); }
+  @keyframes m-hop { 0% { transform: translateY(0) scale(1.05, 0.92); } 35% { transform: translateY(-26px) scale(0.96, 1.06); } 70% { transform: translateY(0) scale(1.04, 0.95); } 100% { transform: none; } }
+  .think .m-root { animation: m-tilt 1.2s ease-in-out infinite; }
+  @keyframes m-tilt { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  .m-core { transform-box: fill-box; transform-origin: 50% 50%; animation: m-pulse 2.2s ease-in-out infinite; }
+  svg:hover .m-core, .emote .m-core { animation-duration: 0.6s; }
+  @keyframes m-pulse { 0%, 100% { opacity: 0.75; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.12); } }
+  .m-float { animation: m-float 4.4s ease-in-out infinite; }
+  @keyframes m-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  .m-hue { animation: m-hue 6s ease-in-out infinite alternate; }
+  @keyframes m-hue { to { filter: hue-rotate(50deg); } }
+  .m-pip { transition: transform 260ms var(--ease-in); animation: m-peek 5s ease-in-out infinite; }
+  @keyframes m-peek { 0%, 55%, 100% { transform: translateY(0); } 65%, 80% { transform: translateY(62px); } }
+  svg:hover .m-pip, .emote .m-pip { animation: none; transform: translateY(62px); }
+  .m-lantern { transform-box: view-box; transform-origin: 134px 136px; animation: m-swing 2.4s ease-in-out infinite; }
+  @keyframes m-swing { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+  .m-tw { animation: m-tw 2s ease-in-out infinite; } .m-tw:nth-of-type(2) { animation-delay: 0.7s; } .m-tw:nth-of-type(3) { animation-delay: 1.3s; }
+  @keyframes m-tw { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+</style>
+</head>
+<body class="isl-arctic">
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="cx-hero">
+    <div class="cx-eyebrow">03 · Arctic Island · New purpose</div>
+    <h1 class="cx-h1">Kill the logo wall. <em>Give it a local.</em></h1>
+    <p class="cx-lede">You're right, a tech stack wall is dated. Nobody hires off a grid of logos. Below are four things Arctic could become, then four monsters who could live there. Click a scene to drive it.</p>
+    <div class="cx-brief">
+      <div class="cx-card"><h3>Where it's at</h3><p><strong>src/islands/tech.js</strong> shows about 54 full-colour logos in 7 groups, from Python to Bambu Lab, plus a glacier photo.</p></div>
+      <div class="cx-card"><h3>What's off</h3><p>A logo says "touched it once" and "shipped with it for years" the same way. It's the least personal panel in the whole world, and every dev site has one.</p></div>
+      <div class="cx-card cx-card--accent"><h3>The move</h3><p><strong>The stack's real job is answering "can he do X?"</strong> Answer that properly, with a character, and the logos can retire as tags.</p></div>
+    </div>
+  </header>
+
+  <!-- ═══ PART 1 · CONTENT ═══ -->
+  <section class="cx-section">
+    <div class="cx-eyebrow">Part 1 · What lives here now</div>
+    <h2 class="cx-h2">Four new <em>purposes</em></h2>
+    <p class="cx-sub">Each one replaces the tech stack in a different way. All demos use real facts from your repo. Anything that needs your input is marked as a placeholder.</p>
+
+    <div class="cx-tabs" role="tablist" aria-label="Arctic content options">
+      <button class="cx-tab" role="tab" aria-selected="true" aria-controls="pane-ask"><span class="cx-tab-key">1</span><span class="cx-tab-name">Ask Mochi <span class="cx-rec">My pick</span><small>a yeti that knows your whole history</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-lab"><span class="cx-tab-key">2</span><span class="cx-tab-name">The Lab<small>things you made with your hands</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-trophy"><span class="cx-tab-key">3</span><span class="cx-tab-name">Trophy Cave<small>achievements, game style</small></span></button>
+      <button class="cx-tab" role="tab" aria-selected="false" aria-controls="pane-now"><span class="cx-tab-key">4</span><span class="cx-tab-name">Now<small>what you're up to lately</small></span></button>
+    </div>
+
+    <!-- A · ASK MOCHI -->
+    <section class="cx-pane" id="pane-ask" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>A · Ask Mochi</h3><p>An NPC who answers questions about you, grounded in your real CV. Tap a question or type your own. Every answer links to the island it came from.</p></div>
+        <p class="mono">Try: "does he know react?" or "kubernetes"</p>
+      </div>
+      <div class="cx-stage" id="ask-stage">
+        <div class="world-bg isl-arctic"><div class="world-planet"></div></div><div class="world-dim"></div><div class="aurora-sky"></div>
+        <div class="ew" role="dialog" aria-label="Ask Mochi">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>03 / 06</span>·<b>Arctic Island</b></div><h2 class="ew-title">Ask Mochi</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body" style="overflow:hidden">
+            <div class="ask">
+              <div class="ask-side">
+                <div id="ask-mochi"></div>
+                <div><div class="ask-name">Mochi</div><div class="ask-status" id="ask-status">knows everything about eric</div></div>
+              </div>
+              <div class="ask-chat">
+                <div class="ask-log" id="ask-log" aria-live="polite"></div>
+                <div class="ask-chips" id="ask-chips" role="group" aria-label="Suggested questions"></div>
+                <form class="ask-form" id="ask-form" autocomplete="off">
+                  <label class="sr-only" for="ask-in">Ask Mochi a question</label>
+                  <input id="ask-in" placeholder="ask anything about eric..." maxlength="140">
+                  <button class="btn btn--primary" type="submit" aria-label="Send"><span data-icon="send" data-size="16"></span></button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div class="toast" id="ask-toast"></div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="5"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="3"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>It does the tech stack's job, properly. "Can he do Kubernetes?" gets a straight answer plus where you used it. It's the most memorable thing in the world, and it quietly proves you can ship AI features, which matters in 2026.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Suggested chips mean zero typing is needed. Answers are short and always cite a source island, so trust is earned. The log is an aria-live region. Typing never fires game keys. Reduced motion shows answers instantly.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>A Vercel function <strong>api/ask.mjs</strong>, same pattern as api/jukebox.mjs, calling Claude (claude-haiku-5-5) with your CV, projects and roles in the system prompt. Short answers in brand voice, refuses off-topic, rate limited per IP. Common questions are cached. This demo's offline matcher becomes the fallback.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>It can make things up, so ground it tightly and make "ask Eric directly" the default for anything unknown. Keep it cheap with Haiku, caching and a daily cap. Add a topic guard so it doesn't become a free chatbot.</p></div>
+      </div>
+    </section>
+
+    <!-- B · THE LAB -->
+    <section class="cx-pane" id="pane-lab" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>B · The Lab</h3><p>Your hardware side: robots, prints, laser cuts, 3D scenes. Each build sits like a specimen in clear ice. The tools you used become tags on the build.</p></div>
+        <p class="mono">Slots are placeholders for your builds</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-arctic"><div class="world-planet"></div></div><div class="world-dim"></div><div class="aurora-sky"></div>
+        <div class="ew" role="dialog" aria-label="The Lab">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>03 / 06</span>·<b>Arctic Island</b></div><h2 class="ew-title">The Lab</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body">
+            <div class="lab">
+              <div class="lab-bar">
+                <div class="chipset" id="lab-chips" role="group" aria-label="Filter builds">
+                  <button class="fchip" aria-pressed="true" data-f="all">All</button>
+                  <button class="fchip" aria-pressed="false" data-f="robot">Robotics</button>
+                  <button class="fchip" aria-pressed="false" data-f="fab">Print + cut</button>
+                  <button class="fchip" aria-pressed="false" data-f="3d">3D</button>
+                  <button class="fchip" aria-pressed="false" data-f="elec">Electronics</button>
+                </div>
+                <span class="mono" id="lab-count">6 builds</span>
+              </div>
+              <div class="lab-grid" id="lab-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="4"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="1"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Your stack list says ROS 2, Bambu Lab, xTool, Fusion 360. That's rare for a CS grad and right now it's buried as logos. Physical builds make you stand out from every other web dev, and Mountain stays for polished client work.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Simple filter chips, cards in a scannable grid, status words (not just colour) for shipped, WIP, failed. Every card has the same anatomy so eyes learn it once.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>Swap GROUPS in tech.js for a BUILDS array: title, line, status, photo, tools. Same panel, same reveal. Photos go in public/lab/. The frost refraction is pure CSS.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>Only works if you have photos of real builds. Four great ones beat twelve mediocre ones. "Failed gloriously" is charming once, not five times.</p></div>
+      </div>
+    </section>
+
+    <!-- C · TROPHY CAVE -->
+    <section class="cx-pane" id="pane-trophy" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>C · Trophy Cave</h3><p>Your wins as achievements, like a game's trophy list. Real facts only. In-progress ones show a bar, and one secret trophy is locked until you find something.</p></div>
+        <p class="mono">Pairs with Pip, the hidden snow imp</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-arctic"><div class="world-planet"></div></div><div class="world-dim"></div><div class="aurora-sky"></div>
+        <div class="ew" role="dialog" aria-label="Trophy Cave">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>03 / 06</span>·<b>Arctic Island</b></div><h2 class="ew-title">Trophy Cave</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body">
+            <div class="tc">
+              <div class="tc-head"><div class="tc-ring" id="tc-ring"><b id="tc-frac">8/12</b></div><div><h4>Trophy Cave</h4><p>8 unlocked · 3 in progress · 1 secret</p></div></div>
+              <div class="tc-list" id="tc-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="3"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Very native to a game. Lets a recruiter skim your best moments in one screen, and the progress bars (7 Wonders, countries) make it feel alive instead of finished.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>One row anatomy, icon plus text, so colour never carries meaning alone. Progress has numbers, not only bars. Locked trophies say how to unlock, so it's a hint not a wall.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>A small ACHIEVEMENTS array. "Islands found" reads the same visited set MapOverlay already tracks. "Countries" reads travel-stats.json. Cheap to build, around 120 lines.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>It overlaps Lava (experience) a lot. Achievement titles can tip into cringe fast, so keep them plain. Can read as bragging if the list is padded.</p></div>
+      </div>
+    </section>
+
+    <!-- D · NOW -->
+    <section class="cx-pane" id="pane-now" role="tabpanel">
+      <div class="cx-pane-intro">
+        <div><h3>D · Now</h3><p>A living board of what you're building, learning, listening to and where you are. The one panel that changes when you do.</p></div>
+        <p class="mono">Lowest effort, needs updating monthly</p>
+      </div>
+      <div class="cx-stage">
+        <div class="world-bg isl-arctic"><div class="world-planet"></div></div><div class="world-dim"></div><div class="aurora-sky"></div>
+        <div class="ew" role="dialog" aria-label="Now">
+          <header class="ew-head">
+            <div class="ew-titles"><div class="ew-eyebrow"><span>03 / 06</span>·<b>Arctic Island</b></div><h2 class="ew-title">Now</h2></div>
+            <div class="ew-actions"><span class="ew-esc">ESC</span><button class="ew-iconbtn" aria-label="Previous island"><span data-icon="left"></span></button><button class="ew-iconbtn" aria-label="Next island"><span data-icon="right"></span></button><button class="ew-iconbtn" aria-label="Close"><span data-icon="close"></span></button></div>
+          </header>
+          <div class="ew-body">
+            <div class="now">
+              <div class="nc nc--big"><div class="mono"><span data-icon="hammer" data-size="14"></span>Building</div><h4 class="ph">[the thing you're building right now]</h4><p class="ph">placeholder: one line on what it is and why</p></div>
+              <div class="nc nc--s2"><div class="mono"><span data-icon="pin" data-size="14"></span>Based in</div><h4>London, UK</h4><div class="clock" id="now-clock">--:--</div><p id="now-tz">local time</p></div>
+              <div class="nc nc--s2"><div class="mono"><span data-icon="music" data-size="14"></span>Listening</div><h4>Your pinned loop</h4><p>plays on the Jukebox, Meadow Island</p><div class="eq" aria-hidden="true"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.5s"></i></div></div>
+              <div class="nc nc--s3"><div class="mono"><span data-icon="spark" data-size="14"></span>Learning</div><h4 class="ph">[what you're learning]</h4><p class="ph">placeholder</p></div>
+              <div class="nc nc--s3"><div class="mono"><span data-icon="book" data-size="14"></span>Reading</div><h4 class="ph">[book or article]</h4><p>last updated 8 Nov 2026</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cx-ratings">
+        <div class="cx-rating">Impact <span class="cx-dots" data-v="2"></span></div>
+        <div class="cx-rating">Effort <span class="cx-dots" data-v="1"></span></div>
+        <div class="cx-rating">Risk <span class="cx-dots" data-v="2"></span></div>
+      </div>
+      <div class="cx-notes">
+        <div class="cx-note"><h4>Why it works</h4><p>Makes the world feel lived in. Return visitors see something new. Linking "Listening" to your Jukebox loop ties two islands together nicely.</p></div>
+        <div class="cx-note"><h4>HCI + accessibility</h4><p>Bento cards with icon plus label. The clock uses tabular numbers so it doesn't jitter. "Last updated" is honest about freshness.</p></div>
+        <div class="cx-note"><h4>How it'd be built</h4><p>One NOW object in a data file, Intl.DateTimeFormat for the London clock. Under 80 lines. Could even read from a JSON in Blob so you update it without a deploy.</p></div>
+        <div class="cx-note"><h4>Watch out</h4><p>A stale Now page is worse than none. If you won't update it monthly, skip it. It's also the least "wow" of the four.</p></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ═══ PART 2 · MONSTERS ═══ -->
+  <section class="cx-section" id="monsters">
+    <div class="cx-eyebrow">Part 2 · Meet the locals</div>
+    <h2 class="cx-h2">Four <em>monsters</em></h2>
+    <p class="cx-sub">All original. Drawn low-poly with flat shading so they match the world, and all buildable from Three.js primitives, no model files. Hover to react, click for an emote, arrows to flip through.</p>
+
+    <div class="mz">
+      <div class="mz-stage" id="mz-stage" tabindex="0" aria-label="Monster viewer. Left and right arrows switch monsters, Enter plays an emote.">
+        <div class="aurora-sky"></div><div class="ice-floor"></div>
+        <div class="mz-tip">hover to react · click for an emote</div>
+        <div id="mz-big" style="display:contents"></div>
+        <div class="mz-nav"><button class="ew-iconbtn" id="mz-prev" aria-label="Previous monster"><span data-icon="left"></span></button><button class="ew-iconbtn" id="mz-next" aria-label="Next monster"><span data-icon="right"></span></button></div>
+      </div>
+      <div class="mz-info" id="mz-info" aria-live="polite"></div>
+    </div>
+    <div class="lineup" id="lineup" role="tablist" aria-label="Monster lineup"></div>
+
+    <div class="cx-verdict">
+      <span class="cx-rec">My pick</span>
+      <h3>Arctic becomes Ask Mochi. Pip hides in the snow.</h3>
+      <p>Ask Mochi is the boldest move on this page and the one that actually replaces what the tech stack was for. A recruiter asks "has he used Kubernetes?" and gets a real answer with a source, from a fluffy yeti, inside a game. Nobody forgets that. It also shows you can ship a grounded AI feature end to end, which is worth more than any logo.</p>
+      <p><strong>Mochi</strong> is the monster: round, soft, friendly, readable at a distance and easy to build from an icosahedron. Put <strong>Pip</strong> in a snow hole nearby as an easter egg: catch it three times and it unlocks a secret. That's where the Trophy Cave idea can live later, as a tiny reward, not a whole panel.</p>
+      <p>The logos don't vanish, they retire: tools become tags on Mountain's projects and things Mochi can talk about. If you'd rather not run an AI feature, <strong>The Lab</strong> is the strong fallback, as long as you have photos of real builds.</p>
+    </div>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="mountain.html"><small>← Previous</small><span>Mountain</span></a>
+    <a href="lava.html"><small>Next →</small><span>Lava</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  function icon(n, s) { return CX.icon(n, s) }
+
+  /* ═══ LOW-POLY FACET GENERATOR ═══ */
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+  function facets(o) {
+    var r = rng(o.seed || 1), n = o.n, out = [], inn = [], s = '', i
+    var jit = o.jit == null ? 0.1 : o.jit
+    for (i = 0; i < n; i++) {
+      var t = i / n * Math.PI * 2 + (r() - 0.5) * 0.35 * (Math.PI * 2 / n)
+      var j = 1 + (r() - 0.5) * jit
+      out.push([o.cx + Math.cos(t) * o.rx * j, o.cy + Math.sin(t) * o.ry * j])
+      var t2 = t + Math.PI / n
+      inn.push([o.cx + Math.cos(t2) * o.rx * 0.56 - o.rx * 0.07, o.cy + Math.sin(t2) * o.ry * 0.56 - o.ry * 0.09])
+    }
+    var c = [o.cx - o.rx * 0.1, o.cy - o.ry * 0.14]
+    var L = [-0.55, -0.83]
+    function pt(p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1) }
+    function tri(a, b, d, lift) {
+      var mx = (a[0] + b[0] + d[0]) / 3 - o.cx, my = (a[1] + b[1] + d[1]) / 3 - o.cy
+      var nx = mx / o.rx, ny = my / o.ry, len = Math.hypot(nx, ny) || 1
+      var dot = (nx / len) * L[0] + (ny / len) * L[1]
+      var k = 0.5 - 0.5 * dot - lift + (r() - 0.5) * 0.22
+      var idx = Math.max(0, Math.min(o.pal.length - 1, Math.floor(k * o.pal.length)))
+      var f = o.pal[idx]
+      s += '<polygon points="' + pt(a) + ' ' + pt(b) + ' ' + pt(d) + '" fill="' + f + '" stroke="' + f + '" stroke-width="0.7" stroke-linejoin="round"' + (o.op ? ' fill-opacity="' + o.op + '" stroke-opacity="' + o.op + '"' : '') + '/>'
+    }
+    for (i = 0; i < n; i++) {
+      var a = out[i], b = out[(i + 1) % n], ia = inn[i], ib = inn[(i + 1) % n]
+      tri(a, b, ia, 0); tri(ia, b, ib, 0.12); tri(c, ia, ib, 0.28)
+    }
+    return s
+  }
+  var uid = 0
+
+  /* ═══ MONSTERS ═══ */
+  var SNOW = ['#F7FBFF', '#E3EFFA', '#C9DDF1', '#A9C5E4']
+  var FACE = ['#A9C8E6', '#8DB2D8', '#7299C6', '#5B82B2']
+  var ICE = ['#EAF8FF', '#B7E2FA', '#7CC4F2', '#4C93D0', '#2E65A6']
+  var AUR = ['#E9FFFB', '#B8F5EC', '#8FD8F5', '#9C8CF0', '#7E66D8']
+  var NAVY = ['#4A5E99', '#3B4E86', '#2E3F70', '#22305A']
+
+  function mochi() {
+    return '<svg viewBox="0 0 200 220" role="img" aria-label="Mochi, a round low-poly yeti with a teal scarf">' +
+      '<ellipse cx="100" cy="208" rx="54" ry="7" fill="rgba(0,0,0,.35)"/>' +
+      '<g class="m-root">' +
+        facets({ cx: 78, cy: 198, rx: 15, ry: 9, n: 6, pal: SNOW.slice(1), seed: 21 }) +
+        facets({ cx: 122, cy: 198, rx: 15, ry: 9, n: 6, pal: SNOW.slice(1), seed: 22 }) +
+        '<path d="M74 78 L60 60 L63 42 L72 52 L82 72 Z" fill="#F2DDB2"/><path d="M74 78 L66 58 L72 52 L82 72 Z" fill="#D9BF8E"/>' +
+        '<path d="M126 78 L140 60 L137 42 L128 52 L118 72 Z" fill="#F2DDB2"/><path d="M126 78 L134 58 L128 52 L118 72 Z" fill="#D9BF8E"/>' +
+        facets({ cx: 100, cy: 130, rx: 64, ry: 66, n: 12, pal: SNOW, seed: 3 }) +
+        facets({ cx: 100, cy: 112, rx: 34, ry: 27, n: 9, pal: FACE, seed: 5, jit: 0.06 }) +
+        '<g class="m-eyes"><ellipse cx="88" cy="108" rx="6" ry="7" fill="#14213A"/><ellipse cx="112" cy="108" rx="6" ry="7" fill="#14213A"/><circle cx="90" cy="105" r="2.2" fill="#fff"/><circle cx="114" cy="105" r="2.2" fill="#fff"/></g>' +
+        '<ellipse cx="79" cy="121" rx="6" ry="3.5" fill="#FF9FB2" opacity=".55"/><ellipse cx="121" cy="121" rx="6" ry="3.5" fill="#FF9FB2" opacity=".55"/>' +
+        '<path d="M94 121 Q100 127 106 121" fill="none" stroke="#14213A" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M44 148 L156 148 L152 158 L48 158 Z" fill="#5BD9C2"/><path d="M46 153 L154 153 L152 158 L48 158 Z" fill="#3FB9A6"/>' +
+        '<path d="M122 154 L138 156 L142 186 L128 184 Z" fill="#3FB9A6"/><path d="M128 170 L141 172 L142 178 L129 176 Z" fill="#E9FFFB" opacity=".7"/>' +
+        '<g>' + facets({ cx: 42, cy: 146, rx: 14, ry: 22, n: 7, pal: SNOW, seed: 8 }) + '</g>' +
+        '<g class="m-arm-r">' + facets({ cx: 158, cy: 146, rx: 14, ry: 22, n: 7, pal: SNOW, seed: 9 }) + '</g>' +
+      '</g></svg>'
+  }
+  function glint() {
+    var id = 'g' + (uid++)
+    return '<svg viewBox="0 0 200 220" role="img" aria-label="Glint, a crystal ice golem with a glowing teal core">' +
+      '<defs><radialGradient id="' + id + 'c"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#C9FFF4"/><stop offset="1" stop-color="#6EF2DA" stop-opacity="0"/></radialGradient>' +
+      '<filter id="' + id + 'b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter></defs>' +
+      '<ellipse cx="100" cy="208" rx="50" ry="7" fill="rgba(0,0,0,.35)"/>' +
+      '<g class="m-root">' +
+        '<path d="M60 98 L38 52 L74 88 Z" fill="#B7E2FA"/><path d="M60 98 L50 66 L74 88 Z" fill="#7CC4F2"/>' +
+        '<path d="M140 98 L162 52 L126 88 Z" fill="#B7E2FA"/><path d="M140 98 L150 66 L126 88 Z" fill="#4C93D0"/>' +
+        '<path d="M70 92 L58 68 L82 88 Z" fill="#EAF8FF"/><path d="M130 92 L142 68 L118 88 Z" fill="#7CC4F2"/>' +
+        facets({ cx: 82, cy: 190, rx: 14, ry: 17, n: 5, pal: ICE.slice(1), seed: 31, jit: 0.2 }) +
+        facets({ cx: 118, cy: 190, rx: 14, ry: 17, n: 5, pal: ICE.slice(1), seed: 32, jit: 0.2 }) +
+        facets({ cx: 100, cy: 138, rx: 44, ry: 48, n: 7, pal: ICE, seed: 11, jit: 0.16, op: 0.94 }) +
+        '<circle class="m-core" cx="100" cy="138" r="22" fill="url(#' + id + 'c)" filter="url(#' + id + 'b)"/>' +
+        '<g class="m-core"><path d="M100 126 L110 138 L100 150 L90 138 Z" fill="#E9FFFB"/><path d="M100 126 L110 138 L100 138 Z" fill="#9DF7E6"/></g>' +
+        facets({ cx: 50, cy: 148, rx: 13, ry: 30, n: 5, pal: ICE, seed: 13, jit: 0.2 }) +
+        '<g class="m-arm-r">' + facets({ cx: 150, cy: 148, rx: 13, ry: 30, n: 5, pal: ICE, seed: 14, jit: 0.2 }) + '</g>' +
+        facets({ cx: 100, cy: 76, rx: 30, ry: 25, n: 6, pal: ICE, seed: 7, jit: 0.18 }) +
+        '<path d="M100 38 L92 58 L108 58 Z" fill="#EAF8FF"/><path d="M100 38 L100 58 L108 58 Z" fill="#B7E2FA"/>' +
+        '<g class="m-eyes"><rect x="85" y="73" width="10" height="4.5" rx="2.2" fill="#D9FFF8" filter="url(#' + id + 'b)"/><rect x="105" y="73" width="10" height="4.5" rx="2.2" fill="#D9FFF8" filter="url(#' + id + 'b)"/><rect x="86" y="73.5" width="8" height="3.5" rx="1.7" fill="#fff"/><rect x="106" y="73.5" width="8" height="3.5" rx="1.7" fill="#fff"/></g>' +
+      '</g></svg>'
+  }
+  function wave(x, amp, ph) {
+    var d = 'M' + x + ' 104'
+    for (var y = 112; y <= 204; y += 8) d += ' L' + (x + Math.sin(y / 14 + ph) * amp * (y - 100) / 100).toFixed(1) + ' ' + y
+    return d
+  }
+  function nori() {
+    var id = 'n' + (uid++)
+    var rib = ''
+    ;[70, 85, 100, 115, 130].forEach(function (x, i) {
+      var a = wave(x, 9, i), b = wave(x, 9, i + 2.2), c = wave(x, 9, i + 4.4)
+      rib += '<path d="' + a + '" stroke="url(#' + id + 'a)" stroke-width="' + (i === 2 ? 5 : 4) + '" fill="none" stroke-linecap="round" opacity=".75">' +
+        (REDUCED ? '' : '<animate attributeName="d" dur="' + (3 + i * 0.4) + 's" repeatCount="indefinite" values="' + a + ';' + b + ';' + c + ';' + a + '"/>') + '</path>'
+    })
+    return '<svg viewBox="0 0 200 220" role="img" aria-label="Nori, a floating aurora jelly spirit with trailing ribbons">' +
+      '<defs><linearGradient id="' + id + 'a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD8F5"/><stop offset=".4" stop-color="#6EF2DA"/><stop offset=".75" stop-color="#A78BFA"/><stop offset="1" stop-color="#F0A6CA" stop-opacity="0"/></linearGradient>' +
+      '<clipPath id="' + id + 'k"><rect x="0" y="0" width="200" height="104"/></clipPath>' +
+      '<filter id="' + id + 'b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter></defs>' +
+      '<ellipse cx="100" cy="212" rx="34" ry="5" fill="rgba(0,0,0,.25)"/>' +
+      '<g class="m-float"><g class="m-root">' +
+        '<ellipse cx="100" cy="86" rx="62" ry="50" fill="#6EF2DA" opacity=".18" filter="url(#' + id + 'b)"/>' +
+        '<g class="m-hue">' + rib + '</g>' +
+        '<g clip-path="url(#' + id + 'k)" opacity=".92">' + facets({ cx: 100, cy: 100, rx: 58, ry: 56, n: 12, pal: AUR, seed: 17, jit: 0.08 }) + '</g>' +
+        '<ellipse cx="100" cy="103" rx="56" ry="9" fill="#8FD8F5" opacity=".55"/>' +
+        '<ellipse cx="84" cy="70" rx="14" ry="8" fill="#fff" opacity=".35"/>' +
+        '<g class="m-eyes"><path d="M83 88 Q88 82 93 88" fill="none" stroke="#1D1846" stroke-width="2.6" stroke-linecap="round"/><path d="M107 88 Q112 82 117 88" fill="none" stroke="#1D1846" stroke-width="2.6" stroke-linecap="round"/></g>' +
+        '<circle cx="100" cy="95" r="2.6" fill="#1D1846"/>' +
+        '<ellipse cx="78" cy="95" rx="5" ry="3" fill="#FF9FCF" opacity=".6"/><ellipse cx="122" cy="95" rx="5" ry="3" fill="#FF9FCF" opacity=".6"/>' +
+        '<g class="m-arm-r"><path d="M150 40 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#E9FFFB"/></g>' +
+      '</g></g>' +
+      '<path class="m-tw" d="M36 60 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z" fill="#B8F5EC"/>' +
+      '<path class="m-tw" d="M168 120 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z" fill="#C4B5FD"/>' +
+      '<path class="m-tw" d="M44 150 l1 3 3 1 -3 1 -1 3 -1 -3 -3 -1 3 -1z" fill="#fff"/>' +
+      '</svg>'
+  }
+  function pip() {
+    var id = 'p' + (uid++)
+    return '<svg viewBox="0 0 200 220" role="img" aria-label="Pip, a tiny snow imp holding a lantern, peeking from a snow hole">' +
+      '<defs><clipPath id="' + id + 'k"><rect x="0" y="0" width="200" height="186"/></clipPath>' +
+      '<clipPath id="' + id + 'm"><rect x="0" y="0" width="200" height="194"/></clipPath>' +
+      '<filter id="' + id + 'b" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter></defs>' +
+      '<g clip-path="url(#' + id + 'm)">' + facets({ cx: 100, cy: 200, rx: 84, ry: 30, n: 12, pal: SNOW, seed: 41, jit: 0.06 }) + '</g>' +
+      '<ellipse cx="100" cy="186" rx="36" ry="9" fill="#0E1B33"/>' +
+      '<ellipse cx="100" cy="186" rx="30" ry="6" fill="#FBBF24" opacity=".18"/>' +
+      '<g clip-path="url(#' + id + 'k)"><g class="m-pip"><g class="m-root">' +
+        '<path d="M82 132 L72 100 L94 124 Z" fill="#3B4E86"/><path d="M82 128 L77 108 L90 124 Z" fill="#FF9FB2" opacity=".7"/>' +
+        '<path d="M118 132 L128 100 L106 124 Z" fill="#2E3F70"/><path d="M118 128 L123 108 L110 124 Z" fill="#FF9FB2" opacity=".7"/>' +
+        facets({ cx: 100, cy: 156, rx: 26, ry: 30, n: 8, pal: NAVY, seed: 43 }) +
+        facets({ cx: 100, cy: 168, rx: 15, ry: 15, n: 7, pal: SNOW, seed: 44 }) +
+        '<g class="m-eyes"><circle cx="91" cy="148" r="7" fill="#fff"/><circle cx="109" cy="148" r="7" fill="#fff"/><circle cx="92" cy="149" r="4" fill="#0B1022"/><circle cx="110" cy="149" r="4" fill="#0B1022"/><circle cx="93.5" cy="147" r="1.4" fill="#fff"/><circle cx="111.5" cy="147" r="1.4" fill="#fff"/></g>' +
+        '<path d="M97 158 Q100 161 103 158" fill="none" stroke="#0B1022" stroke-width="1.8" stroke-linecap="round"/>' +
+        '<path d="M124 160 Q132 150 134 136" fill="none" stroke="#2E3F70" stroke-width="5" stroke-linecap="round"/>' +
+        '<g class="m-lantern"><line x1="134" y1="136" x2="134" y2="144" stroke="#D9BF8E" stroke-width="1.6"/>' +
+          '<circle cx="134" cy="154" r="16" fill="#FBBF24" opacity=".45" filter="url(#' + id + 'b)"/>' +
+          '<rect x="127" y="144" width="14" height="18" rx="3" fill="#FFD66B"/><rect x="127" y="144" width="7" height="18" rx="3" fill="#FFE9A6"/>' +
+          '<rect x="125" y="142" width="18" height="4" rx="2" fill="#B98A3E"/><rect x="125" y="160" width="18" height="4" rx="2" fill="#B98A3E"/></g>' +
+      '</g></g></g>' +
+      '</svg>'
+  }
+
+  var MONSTERS = [
+    { key: 'mochi', name: 'Mochi', draw: mochi, rec: true, role: 'Host of Ask Mochi', quote: 'Shy, fluffy, and somehow knows everything about Eric.',
+      does: ['Idles with a slow breath and the odd blink', 'Turns to face you inside about 6 m', 'Waves when you step onto Arctic', 'Leans in to listen when you press E', 'Naps when the sky goes dark'],
+      built: 'IcosahedronGeometry(1, 1) body with flatShading, two Cone horns, Sphere eyes, a Torus scarf in the island accent. Same no-model-file approach as src/scene/Jukebox.js.' },
+    { key: 'glint', name: 'Glint', draw: glint, role: 'Keeper of The Lab', quote: 'Quiet, precise, a bit of a show-off when the core lights up.',
+      does: ['Core pulses slowly, faster when you are close', 'Holds up a build as you walk past', 'Throws refracted light across the snow', 'Goes dim and still at night'],
+      built: 'Octahedron and Cone shards with a transmissive MeshPhysicalMaterial, an emissive Sphere core and one small PointLight. Very low triangle count.' },
+    { key: 'nori', name: 'Nori', draw: nori, role: 'Spirit of Now', quote: 'Drifts in, tells you what Eric is up to, drifts off.',
+      does: ['Floats on a slow sine bob', 'Ribbons shift colour with the aurora', 'Follows you a few steps, then loses interest', 'Glows brighter at night'],
+      built: 'Half SphereGeometry bell with an additive transparent material, five ribbon strips animated in a vertex shader, colours sampled from src/scene/Aurora.js.' },
+    { key: 'pip', name: 'Pip', draw: pip, role: 'Hidden easter egg', quote: 'Curious, skittish, terrible at hiding.',
+      does: ['Peeks out of a snow hole every few seconds', 'Ducks back in if you get too close (hover it)', 'Catch it three times to unlock a secret', 'Its lantern lights the hole at night'],
+      built: 'Small Icosahedron body, Cone ears, a Cylinder lantern with an emissive PointLight. A tiny state machine: hidden, peek, duck.' }
+  ]
+
+  // random blinks for every monster on the page
+  function blinker(svg) {
+    if (REDUCED || !svg) return
+    ;(function loop() {
+      setTimeout(function () {
+        if (!document.body.contains(svg)) return
+        svg.classList.add('blink'); setTimeout(function () { svg.classList.remove('blink') }, 200); loop()
+      }, 1800 + Math.random() * 3200)
+    })()
+  }
+  function emote(svg) { svg.classList.remove('emote'); void svg.getBoundingClientRect(); svg.classList.add('emote'); setTimeout(function () { svg.classList.remove('emote') }, 1500) }
+
+  /* viewer + lineup */
+  var big = document.getElementById('mz-big'), info = document.getElementById('mz-info'), lineup = document.getElementById('lineup'), mi = 0
+  MONSTERS.forEach(function (m, i) {
+    var b = document.createElement('button')
+    b.className = 'lu'; b.setAttribute('role', 'tab')
+    b.innerHTML = m.draw() + '<b>' + m.name + '</b><small>' + m.role + '</small>' + (m.rec ? '<span class="cx-rec">Pick</span>' : '')
+    b.addEventListener('click', function () { show(i) })
+    lineup.appendChild(b)
+    blinker(b.querySelector('svg'))
+  })
+  function show(i) {
+    mi = (i + MONSTERS.length) % MONSTERS.length
+    var m = MONSTERS[mi]
+    big.innerHTML = m.draw()
+    var svg = big.querySelector('svg')
+    svg.classList.add('mz-svg'); svg.setAttribute('tabindex', '-1')
+    svg.addEventListener('click', function () { emote(svg) })
+    blinker(svg)
+    info.innerHTML = '<div class="mono">0' + (mi + 1) + ' / 04</div><h3>' + m.name + '</h3><span class="pill mz-role">' + m.role + '</span>' +
+      '<p class="mz-quote">"' + m.quote + '"</p><h4>Behaviour</h4><ul>' + m.does.map(function (d) { return '<li>' + d + '</li>' }).join('') + '</ul>' +
+      '<h4>Built from</h4><p class="built">' + m.built + '</p>'
+    lineup.querySelectorAll('.lu').forEach(function (b, k) { b.setAttribute('aria-selected', k === mi ? 'true' : 'false') })
+  }
+  document.getElementById('mz-prev').addEventListener('click', function () { show(mi - 1) })
+  document.getElementById('mz-next').addEventListener('click', function () { show(mi + 1) })
+  document.getElementById('mz-stage').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); show(mi + 1) }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(mi - 1) }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); emote(big.querySelector('svg')) }
+  })
+  show(0)
+
+  /* ═══ A · ASK MOCHI ═══ */
+  var mochiHost = document.getElementById('ask-mochi')
+  mochiHost.innerHTML = mochi()
+  var mochiSvg = mochiHost.querySelector('svg')
+  blinker(mochiSvg)
+  var log = document.getElementById('ask-log'), status = document.getElementById('ask-status'), toast = document.getElementById('ask-toast')
+
+  var TECH = {
+    'Languages': ['Python', 'Java', 'C', 'C++', 'C#', 'JavaScript', 'TypeScript', 'Haskell', 'Bash', 'MIPS Assembly'],
+    'frontend and creative web': ['React', 'Node.js', 'Express', 'Flask', 'JSP', 'HTML5', 'CSS3', 'Three.js', 'D3.js', 'GSAP'],
+    'data and AI': ['pandas', 'NumPy', 'Matplotlib', 'scikit-learn', 'PyTorch', 'Hugging Face'],
+    'search, databases and infra': ['Elasticsearch', 'Kibana', 'Logstash', 'PostgreSQL', 'MySQL', 'Oracle DB', 'Docker', 'Kubernetes', 'Linux', 'Nginx', 'Git'],
+    'robotics and hardware': ['ROS 2', 'TurtleBot', 'Raspberry Pi', 'Arduino'],
+    '3D, CAD and fabrication': ['Blender', 'Unity', 'Fusion 360', 'OpenSCAD', 'Bambu Lab', 'Ultimaker', 'xTool'],
+    'tools and ways of working': ['Postman', 'Jira', 'Confluence', 'Figma', 'SAFe Agile', 'MOS Certified']
+  }
+  var ALIAS = { k8s: 'Kubernetes', kube: 'Kubernetes', js: 'JavaScript', ts: 'TypeScript', py: 'Python', node: 'Node.js', nodejs: 'Node.js', postgres: 'PostgreSQL', sql: 'PostgreSQL', three: 'Three.js', threejs: 'Three.js', d3: 'D3.js', ros: 'ROS 2', torch: 'PyTorch', sklearn: 'scikit-learn', elastic: 'Elasticsearch', html: 'HTML5', css: 'CSS3', cpp: 'C++', csharp: 'C#', pi: 'Raspberry Pi', huggingface: 'Hugging Face', '3d printing': 'Bambu Lab', laser: 'xTool', cad: 'Fusion 360' }
+  var USED_IN = {
+    'React': ['Mountain Island', 'Petaling Utama Motor'], 'Node.js': ['Mountain Island', 'Petaling Utama Motor'], 'PostgreSQL': ['Mountain Island', 'Petaling Utama Motor'], 'Nginx': ['Mountain Island', 'Petaling Utama Motor'],
+    'Three.js': ['Mountain Island', "Eric's World!"], 'D3.js': ['Mountain Island', 'Scotland on the Web'], 'Elasticsearch': ['Lava Island', 'Finexus Group'], 'Kibana': ['Lava Island', 'Finexus Group'], 'Logstash': ['Lava Island', 'Finexus Group'], 'Linux': ['Lava Island', 'Finexus Group'], 'Java': ['Lava Island', 'Finexus Group'],
+    'Blender': ['Mountain Island', 'First Blender Project'], 'ROS 2': ['Lava Island', 'University of Edinburgh'], 'TurtleBot': ['Lava Island', 'University of Edinburgh']
+  }
+  var ISL = { 'Mountain Island': '#FF8A65', 'Lava Island': '#FF5A1F', 'Desert Island': '#F6A04D', 'Pirate Ship': '#2BC7D3', 'Meadow Island': '#6BD46F' }
+  var CHIPS = [
+    { q: 'can he do kubernetes?', a: 'Yep. Kubernetes and Docker are both in his kit, next to Linux and Nginx. Nginx and PostgreSQL run in production on Petaling Utama Motor, a live store he built end to end.', src: [['Mountain Island', 'Petaling Utama Motor']] },
+    { q: 'what did he build for real clients?', a: 'Five live sites for real businesses and orgs: Petaling Utama Motor (full-stack e-commerce with real customers), FoundTech, MedMatch, YGo Tours and Scotland on the Web.', src: [['Mountain Island', 'Projects']] },
+    { q: 'is he open to work?', a: 'He is. Based in London, UK, from Malaysia. Fastest way in is Desert Island, he replies in about a day.', src: [['Desert Island', 'Contact']] },
+    { q: 'robotics experience?', a: 'ROS 2, TurtleBot, Raspberry Pi and Arduino. He\'s a Teaching Assistant for System Design and Mobile Robotics at the University of Edinburgh, guiding students through robotics labs.', src: [['Lava Island', 'University of Edinburgh']] },
+    { q: 'where has he worked?', a: 'Barclays (Technology Analyst Intern, 2025), BlackRock (Technology Spring Intern, 2024), Finexus Group (Software Engineer Intern, 2023), Outlier (AI coding trainer), plus freelance full-stack work. Now a TA at the University of Edinburgh.', src: [['Lava Island', 'Experience']] },
+    { q: 'best project?', a: 'Hard to pick. The one with real customers is Petaling Utama Motor. The one you\'re standing on is Eric\'s World!. Both live on Mountain Island.', src: [['Mountain Island', 'Petaling Utama Motor'], ['Mountain Island', "Eric's World!"]] }
+  ]
+
+  var chipsEl = document.getElementById('ask-chips')
+  CHIPS.forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'ask-chip'; b.textContent = c.q
+    b.addEventListener('click', function () { ask(c.q, c) })
+    chipsEl.appendChild(b)
+  })
+
+  function matchTech(q) {
+    var found = []
+    Object.keys(ALIAS).forEach(function (k) { if (new RegExp('(^|[^a-z])' + k.replace(/[.+#]/g, '\\$&') + '([^a-z]|$)').test(q)) found.push(ALIAS[k]) })
+    Object.keys(TECH).forEach(function (g) {
+      TECH[g].forEach(function (t) {
+        var tl = t.toLowerCase()
+        if (tl.length <= 2) { if (new RegExp('(^|\\s)' + tl.replace(/[+#]/g, '\\$&') + '(\\s|\\?|$)').test(q)) found.push(t) }
+        else if (q.indexOf(tl) > -1 || q.indexOf(tl.replace(/[.\s]/g, '')) > -1) found.push(t)
+      })
+    })
+    return found.filter(function (v, i, a) { return a.indexOf(v) === i })
+  }
+  function groupOf(t) { for (var g in TECH) if (TECH[g].indexOf(t) > -1) return g; return '' }
+  function answer(q) {
+    q = q.toLowerCase().trim()
+    var t = matchTech(q)
+    if (t.length) {
+      var names = t.slice(0, 3)
+      var src = []
+      names.forEach(function (n) { if (USED_IN[n] && !src.some(function (s) { return s[1] === USED_IN[n][1] })) src.push(USED_IN[n]) })
+      var a = 'Yes. ' + names.join(', ').replace(/, ([^,]*)$/, ' and $1') + (names.length > 1 ? ' are' : ' is') + ' in his kit (' + groupOf(names[0]) + ').'
+      if (src.length) a += ' You can see ' + (names.length > 1 ? 'some of it' : 'it') + ' in action in ' + src.map(function (s) { return s[1] }).join(' and ') + '.'
+      return { a: a, src: src }
+    }
+    if (/barclays|blackrock|finexus|outlier|ameu|intern|worked|job|experience/.test(q)) return CHIPS[4]
+    if (/hire|work|available|contact|email|reach|open/.test(q)) return CHIPS[2]
+    if (/robot/.test(q)) return CHIPS[3]
+    if (/client|business|freelance|live site/.test(q)) return CHIPS[1]
+    if (/project|built|build|best/.test(q)) return CHIPS[5]
+    if (/travel|countr|been to/.test(q)) return { a: '24 countries so far, about 12% of the world, across Asia, Europe and Africa. The full log is on the Pirate Ship.', src: [['Pirate Ship', 'Travel Log']] }
+    if (/hello|hi\b|hey|who are you/.test(q)) return { a: 'Hi! I\'m Mochi. I live on Arctic and I know a suspicious amount about Eric. Ask me what he can do.', src: [] }
+    return { a: 'Not that I know of. Ask him directly, he\'s easy to reach on Desert Island.', src: [['Desert Island', 'Contact']] }
+  }
+
+  var busy = false
+  function setMochi(state) { mochiSvg.classList.remove('think'); if (state === 'think') mochiSvg.classList.add('think'); if (state === 'happy') emote(mochiSvg) }
+  function ask(q, preset) {
+    if (busy || !q.trim()) return
+    busy = true
+    var you = document.createElement('div'); you.className = 'msg msg--you'; you.textContent = q
+    log.appendChild(you)
+    var typing = document.createElement('div'); typing.className = 'msg msg--mochi typing'; typing.innerHTML = '<i></i><i></i><i></i>'
+    log.appendChild(typing); log.scrollTop = log.scrollHeight
+    setMochi('think'); status.textContent = 'thinking...'
+    var res = preset || answer(q)
+    setTimeout(function () {
+      typing.remove()
+      var m = document.createElement('div'); m.className = 'msg msg--mochi'
+      var body = document.createElement('div'); m.appendChild(body); log.appendChild(m)
+      var words = res.a.split(' '), k = 0
+      setMochi('happy'); status.textContent = 'knows everything about eric'
+      var done = function () {
+        if (res.src && res.src.length) {
+          var s = document.createElement('div'); s.className = 'msg-src'
+          res.src.forEach(function (x) {
+            var c = document.createElement('button'); c.type = 'button'; c.className = 'src-chip'; c.style.setProperty('--c', ISL[x[0]] || '#7CC4FF')
+            c.innerHTML = '<i></i>' + x[0] + ' · ' + x[1]
+            c.addEventListener('click', function () { flash('in the game this warps you to ' + x[0]) })
+            s.appendChild(c)
+          })
+          m.appendChild(s)
+        }
+        log.scrollTop = log.scrollHeight; busy = false
+      }
+      if (REDUCED) { body.textContent = res.a; done(); return }
+      var tick = setInterval(function () {
+        body.textContent = words.slice(0, ++k).join(' ')
+        log.scrollTop = log.scrollHeight
+        if (k >= words.length) { clearInterval(tick); done() }
+      }, 34)
+    }, REDUCED ? 50 : 650)
+  }
+  function flash(t) { toast.textContent = t; toast.classList.add('on'); clearTimeout(flash._t); flash._t = setTimeout(function () { toast.classList.remove('on') }, 2200) }
+  document.getElementById('ask-form').addEventListener('submit', function (e) {
+    e.preventDefault(); var inp = document.getElementById('ask-in'); var q = inp.value; inp.value = ''; ask(q)
+  })
+  // opening line
+  var hello = document.createElement('div'); hello.className = 'msg msg--mochi'
+  hello.textContent = 'Oh! A visitor. I\'m Mochi. Ask me anything about Eric, I\'ve read his whole history. Tap a question below.'
+  log.appendChild(hello)
+
+  /* ═══ B · THE LAB ═══ */
+  var BUILDS = [
+    { t: 'Robotics build', l: 'A ROS 2 project, e.g. something from the Mobile Robotics labs.', s: 'wip', f: 'robot', tools: ['ROS 2', 'TurtleBot', 'Python'] },
+    { t: '3D print', l: 'Your favourite print and what it was for.', s: 'ok', f: 'fab', tools: ['Bambu Lab', 'Fusion 360'] },
+    { t: 'Laser cut', l: 'A cut or engrave you are proud of.', s: 'ok', f: 'fab', tools: ['xTool', 'Figma'] },
+    { t: 'First Blender Project', l: 'A full scene from scratch. Lighting, materials, the lot.', s: 'ok', f: '3d', tools: ['Blender'], real: true },
+    { t: 'Electronics gadget', l: 'Something with a microcontroller and too many wires.', s: 'fail', f: 'elec', tools: ['Arduino', 'Raspberry Pi'] },
+    { t: 'CAD part', l: 'A part designed to fit a real thing.', s: 'wip', f: 'fab', tools: ['OpenSCAD', 'Ultimaker'] }
+  ]
+  var SLAB = { ok: 'shipped', wip: 'wip', fail: 'failed gloriously' }
+  var grid = document.getElementById('lab-grid')
+  grid.innerHTML = BUILDS.map(function (b) {
+    return '<article class="spec" data-f="' + b.f + '"><span class="status ' + b.s + '">' + SLAB[b.s] + '</span>' +
+      '<div class="spec-img">' + (b.real ? 'real project<br>photo goes here' : 'placeholder<br>your build photo') + '</div>' +
+      '<div class="spec-body"><h4>' + b.t + '</h4><p>' + b.l + '</p><div class="spec-tags">' + b.tools.map(function (x) { return '<span>' + x + '</span>' }).join('') + '</div></div></article>'
+  }).join('')
+  document.getElementById('lab-chips').addEventListener('click', function (e) {
+    var c = e.target.closest('.fchip'); if (!c) return
+    this.querySelectorAll('.fchip').forEach(function (x) { x.setAttribute('aria-pressed', x === c ? 'true' : 'false') })
+    var n = 0
+    grid.querySelectorAll('.spec').forEach(function (s) { var on = c.dataset.f === 'all' || s.dataset.f === c.dataset.f; s.hidden = !on; if (on) n++ })
+    document.getElementById('lab-count').textContent = n + (n === 1 ? ' build' : ' builds')
+  })
+
+  /* ═══ C · TROPHY CAVE ═══ */
+  var ACH = [
+    { i: 'trophy', t: 'First place', d: 'Won Ada Hack 2022 with HumanEd at the University of Edinburgh.', y: '2022', tier: '#FBBF24' },
+    { i: 'code', t: '45 minutes, gone', d: 'Automated a 45-minute manual workflow at Barclays down to near instant.', y: '2025', tier: '#FBBF24' },
+    { i: 'globe', t: 'Shipped to real customers', d: 'Petaling Utama Motor, built end to end and live in production.', y: '2024 to 25', tier: '#7CC4FF' },
+    { i: 'spark', t: 'Five for five', d: 'Five live sites shipped for real businesses and orgs.', y: '2024', tier: '#7CC4FF' },
+    { i: 'compass', t: 'Aladdin access', d: 'Technology Spring Intern at BlackRock.', y: '2024', tier: '#7CC4FF' },
+    { i: 'book', t: 'Now teaching', d: 'TA for System Design and Mobile Robotics, University of Edinburgh.', y: '2026', tier: '#6EF2DA' },
+    { i: 'chat', t: 'Signal boost', d: 'Grew AMEU to 6,000+ accounts with a 120% engagement lift.', y: '2023 to 24', tier: '#6EF2DA' },
+    { i: 'mountain', t: 'Worldbuilder', d: 'Built Eric\'s World!, the planet you\'re standing on.', y: '2026', tier: '#FBBF24' },
+    { i: 'pin', t: 'Passport stamps', d: '24 of 195 countries found. About 12% of the world.', p: [24, 195], tier: '#2BC7D3' },
+    { i: 'trophy', t: 'Seven wonders', d: 'See all of the New 7 Wonders.', p: [0, 7], tier: '#2BC7D3' },
+    { i: 'leaf', t: 'Island hopper', d: 'Find all 6 islands in Eric\'s World!.', p: [3, 6], tier: '#6BD46F' },
+    { i: 'lock', t: 'Secret', d: 'Something small lives in the snow. Catch it.', locked: true }
+  ]
+  document.getElementById('tc-list').innerHTML = ACH.map(function (a) {
+    var right = a.p ? a.p[0] + ' / ' + a.p[1] : (a.y || '')
+    return '<div class="ach' + (a.locked ? ' ach--locked' : '') + '" style="--t:' + (a.tier || '#7CC4FF') + '"><span class="ach-ic">' + icon(a.i, 22) + '</span>' +
+      '<div><div class="ach-t"><b>' + a.t + '</b><span>' + (a.locked ? 'locked' : right) + '</span></div><p>' + a.d + '</p>' +
+      (a.p ? '<div class="ach-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + a.p[1] + '" aria-valuenow="' + a.p[0] + '" aria-label="' + a.t + ' progress"><i style="width:' + Math.max(2, a.p[0] / a.p[1] * 100) + '%"></i></div>' : '') + '</div></div>'
+  }).join('')
+  document.getElementById('tc-ring').style.setProperty('--p', 8 / 12)
+
+  /* ═══ D · NOW ═══ */
+  var clock = document.getElementById('now-clock'), tz = document.getElementById('now-tz')
+  function tickClock() {
+    var d = new Date()
+    clock.textContent = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(d)
+    var h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(d))
+    tz.textContent = h >= 23 || h < 7 ? 'it\'s late here, probably asleep' : h < 12 ? 'morning in London' : h < 18 ? 'afternoon in London' : 'evening in London'
+  }
+  tickClock(); setInterval(tickClock, 15000)
+})()
+</script>
+</body>
+</html>

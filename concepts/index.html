@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eric's World! · Brand Bible v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .hero-v2 { position: relative; padding: 110px 0 60px; }
+  .hero-v2 .lucky { position: absolute; right: 0; top: 70px; width: clamp(120px, 18vw, 230px); opacity: 0.95; filter: drop-shadow(0 20px 50px rgba(251,191,36,0.25)); }
+  .wordmark { font-family: var(--f-word); font-weight: 700; letter-spacing: 0.04em; font-size: clamp(18px, 2vw, 22px); color: var(--gold); }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 28px; }
+  .toc a { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; color: var(--ink-2); padding: 8px 12px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--raise); }
+  .toc a:hover { color: var(--ink); border-color: var(--line-2); }
+
+  /* picks grid */
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+  .pick { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 22px; border-radius: var(--r-lg); text-decoration: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ic) 10%, transparent), var(--raise) 60%); border: 1px solid var(--line); overflow: hidden; transition: transform var(--t-base) var(--ease-out), border-color var(--t-fast); }
+  .pick::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--ic), var(--ic-2)); }
+  .pick:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--ic) 50%, transparent); }
+  .pick .mono { color: var(--ic); }
+  .pick h3 { margin: 4px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 34px; line-height: 1; }
+  .pick .pk-pick { font-size: 14px; color: var(--ink); font-weight: 600; margin-top: 6px; }
+  .pick p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  .pick .go { margin-top: auto; padding-top: 12px; font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+  .pick:hover .go { color: var(--ic); }
+
+  /* audiences */
+  .aud { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .aud-card { padding: 28px; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--raise); }
+  .aud-card .big { font-family: var(--f-display); font-size: clamp(56px, 7vw, 88px); line-height: 0.9; }
+  .aud-card h3 { margin: 12px 0 8px; font-size: 18px; }
+  .aud-card p { margin: 0; color: var(--ink-2); }
+  .aud-card ul { margin: 14px 0 0; padding-left: 18px; color: var(--ink-2); }
+  .aud-card li + li { margin-top: 4px; }
+  @media (max-width: 760px) { .aud { grid-template-columns: 1fr; } }
+
+  /* principles */
+  .prin { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .pr { padding: 24px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .pr-n { font-family: var(--f-mono); font-size: 11px; color: var(--gold); letter-spacing: 0.12em; }
+  .pr h3 { margin: 8px 0 8px; font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1.05; }
+  .pr p { margin: 0 0 12px; color: var(--ink-2); font-size: 14.5px; }
+  .dd { display: grid; gap: 6px; font-size: 13.5px; }
+  .dd div { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: baseline; }
+  .dd b { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .dd .do b { color: #4ADE80; } .dd .dont b { color: #FF8A8A; }
+  .dd span { color: var(--ink-2); }
+
+  /* short version */
+  .sv { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+  .sv-mock { position: relative; border-radius: var(--r-xl); overflow: hidden; border: 1px solid var(--line-2); min-height: 360px; background: var(--space-800); }
+  .sv-load { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; z-index: 2; }
+  .sv-load b { display: block; font-family: var(--f-word); font-size: clamp(28px, 3.4vw, 40px); letter-spacing: 0.04em; }
+  .sv-bar { width: 220px; height: 2px; margin: 18px auto 10px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  .sv-bar i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--magic-hi), var(--gold)); }
+  .sv-load .mono { color: var(--ink-3); }
+  .sv-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 22px; padding: 10px 16px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: rgba(255,255,255,0.05); color: var(--ink); font-size: 14px; text-decoration: none; }
+  .sv-link:hover { border-color: var(--gold); }
+  .sv-page { padding: 26px; border-radius: var(--r-xl); background: #FBF7EF; color: #1d1a14; }
+  .sv-page .tag { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a6d2f; }
+  .sv-page h3 { margin: 6px 0 2px; font-family: var(--f-display); font-weight: 400; font-size: 36px; line-height: 1; }
+  .sv-page .role { color: #5b5446; font-size: 14px; margin: 0 0 14px; }
+  .sv-page .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .sv-page .row span { font-size: 12.5px; padding: 6px 10px; border-radius: var(--r-pill); background: #fff; border: 1px solid #e7dfcf; }
+  .sv-page .row span.dark { background: #1d1a14; color: #FBF7EF; border-color: transparent; }
+  .sv-page h4 { margin: 14px 0 6px; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #8a6d2f; }
+  .sv-page ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: #3c372c; }
+  .sv-page li + li { margin-top: 3px; }
+  @media (max-width: 860px) { .sv { grid-template-columns: 1fr; } }
+
+  /* souls */
+  .souls { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .soul { border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--raise); overflow: hidden; }
+  .soul-top { position: relative; height: 110px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--ic) 55%, transparent), transparent 70%), linear-gradient(180deg, var(--ic-deep), rgba(0,0,0,0.2)); }
+  .soul-top .mono { color: var(--ic-2); }
+  .soul-top h3 { margin: 2px 0 0; font-family: var(--f-display); font-weight: 400; font-size: 32px; line-height: 1; }
+  .soul-sw { position: absolute; top: 16px; right: 16px; display: flex; gap: 6px; }
+  .soul-sw i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); }
+  .soul dl { margin: 0; padding: 14px 20px 18px; display: grid; grid-template-columns: 96px 1fr; gap: 7px 12px; font-size: 13.5px; }
+  .soul dt { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+  .soul dd { margin: 0; color: var(--ink-2); }
+  .soul .play { margin-left: 6px; border: 0; background: color-mix(in srgb, var(--ic) 18%, transparent); color: var(--ic-2); border-radius: var(--r-pill); padding: 2px 9px; font-size: 11.5px; cursor: pointer; min-height: 24px; }
+
+  /* type */
+  .type { display: grid; gap: 12px; }
+  .spec { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: center; padding: 22px 24px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .spec .meta b { display: block; font-size: 15px; } .spec .meta span { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+  .spec .meta p { margin: 6px 0 0; font-size: 13px; color: var(--ink-3); }
+  .s-word { font-family: var(--f-word); font-weight: 700; font-size: clamp(34px, 4vw, 54px); letter-spacing: 0.03em; color: var(--gold); }
+  .s-disp { font-family: var(--f-display); font-size: clamp(40px, 5vw, 72px); line-height: 1; } .s-disp em { color: var(--magic-hi); }
+  .s-ui { font-size: 17px; color: var(--ink-2); max-width: 60ch; }
+  .s-mono { font-family: var(--f-mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); }
+  .scale { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .scale span { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); padding: 6px 10px; border-radius: var(--r-pill); border: 1px solid var(--line); }
+  @media (max-width: 760px) { .spec { grid-template-columns: 1fr; gap: 10px; } }
+
+  /* colour */
+  .sw-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .sw { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); background: var(--raise); }
+  .sw i { display: block; height: 76px; }
+  .sw div { padding: 10px 12px; } .sw b { display: block; font-size: 13px; } .sw span { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+  .ink-ramp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .ink-ramp div { padding: 14px; border-radius: var(--r-md); background: var(--space-900); border: 1px solid var(--line); font-size: 14px; }
+  .ink-ramp small { display: block; font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-3); margin-top: 4px; }
+  @media (max-width: 760px) { .ink-ramp { grid-template-columns: 1fr 1fr; } }
+
+  /* motion */
+  .mo { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .curve { padding: 18px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .curve svg { width: 100%; height: 120px; overflow: visible; }
+  .curve path.c { fill: none; stroke: var(--gold); stroke-width: 2.5; }
+  .curve path.g { fill: none; stroke: rgba(255,255,255,0.12); stroke-width: 1; }
+  .curve b { display: block; font-size: 15px; margin-top: 8px; } .curve code { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+  .curve p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+  .track { position: relative; height: 34px; margin-top: 12px; border-radius: var(--r-pill); background: rgba(255,255,255,0.04); border: 1px solid var(--line); }
+  .track i { position: absolute; left: 4px; top: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 14px rgba(251,191,36,0.5); }
+  .durs { display: grid; gap: 8px; margin-top: 16px; }
+  .dur { display: grid; grid-template-columns: 120px 1fr 70px; gap: 12px; align-items: center; font-size: 13.5px; }
+  .dur .bar { height: 10px; border-radius: 6px; background: linear-gradient(90deg, var(--magic), var(--gold)); }
+  .dur code { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-3); text-align: right; }
+  .rules-list { margin: 16px 0 0; padding-left: 18px; color: var(--ink-2); }
+  .rules-list li + li { margin-top: 6px; }
+
+  /* lexicon */
+  .lex { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .lex th { text-align: left; font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); padding: 0 12px 10px; border-bottom: 1px solid var(--line-2); }
+  .lex td { padding: 12px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; }
+  .lex td:nth-child(2) { color: var(--ink); font-weight: 600; }
+  .lex td:nth-child(3) { color: #FF9A9A; text-decoration: line-through; text-decoration-color: rgba(255,154,154,0.5); }
+  .lex .new { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 5px; background: var(--gold); color: var(--space-900); margin-left: 6px; text-decoration: none; display: inline-block; }
+  .lex-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--line); padding: 16px 8px 4px; background: var(--raise); }
+  .micro { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 16px; }
+  .micro div { padding: 14px 16px; border-radius: var(--r-md); background: var(--raise); border: 1px solid var(--line); }
+  .micro small { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .micro p { margin: 6px 0 0; font-size: 15px; }
+
+  /* audit */
+  .audit { display: grid; gap: 8px; }
+  .fix { display: grid; grid-template-columns: 26px 1fr; gap: 14px; padding: 16px 18px; border-radius: var(--r-md); background: var(--raise); border: 1px solid var(--line); }
+  .fix .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--space-900); }
+  .fix.hi .dot { background: #FF8A8A; } .fix.md .dot { background: var(--gold); } .fix.lo .dot { background: #7CC4FF; }
+  .fix b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .fix code { font-family: var(--f-mono); font-size: 12px; color: var(--ic-2, #FDE68A); background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 5px; }
+  .fix p { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+  /* research */
+  .res { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+  .rc { display: flex; flex-direction: column; padding: 22px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .rc .mono { color: var(--magic-hi); }
+  .rc h3 { margin: 8px 0 8px; font-family: var(--f-display); font-weight: 400; font-size: 26px; line-height: 1.08; }
+  .rc p { margin: 0 0 10px; color: var(--ink-2); font-size: 14.5px; }
+  .rc .so { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+  .rc .so b { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 4px; }
+  .rc .src { margin-top: 10px; font-size: 12.5px; color: var(--ink-3); }
+  .rc .src a { color: var(--ink-2); }
+  .rc .caveat { font-size: 12.5px; color: var(--ink-3); font-style: italic; }
+
+  /* roadmap */
+  .road { display: grid; gap: 12px; counter-reset: ph; }
+  .ph { display: grid; grid-template-columns: 170px 1fr; gap: 20px; padding: 22px 24px; border-radius: var(--r-lg); background: var(--raise); border: 1px solid var(--line); }
+  .ph .when { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+  .ph .when b { display: block; font-family: var(--f-display); font-size: 30px; letter-spacing: 0; text-transform: none; color: var(--gold); font-weight: 400; margin-bottom: 4px; }
+  .ph h3 { margin: 0 0 8px; font-size: 18px; }
+  .ph ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14.5px; }
+  .ph li + li { margin-top: 4px; }
+  @media (max-width: 760px) { .ph { grid-template-columns: 1fr; gap: 8px; } }
+  .need { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .need div { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-md); border: 1px dashed rgba(251,191,36,0.35); font-size: 14px; color: var(--ink-2); }
+  .need span { color: var(--gold); flex-shrink: 0; }
+  .sources { columns: 2 320px; font-size: 13px; color: var(--ink-3); padding-left: 18px; }
+  .sources li { margin-bottom: 6px; break-inside: avoid; }
+  .sources a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<nav class="cx-nav"><div class="cx-wrap cx-nav-in">
+  <a class="cx-brand" href="index.html"><img src="../public/luckyicon.png" alt=""><b>Eric's World!</b><span>Design concepts</span></a>
+  <div class="cx-links"><a href="index.html">Bible</a><a href="prompt.html">Prompt</a><a href="panel.html">Dive</a><a href="meadow.html">Meadow</a><a href="mountain.html">Mountain</a><a href="arctic.html">Arctic</a><a href="lava.html">Lava</a><a href="desert.html">Desert</a><a href="pirate.html">Pirate</a></div>
+</div></nav>
+
+<main class="cx-wrap">
+  <header class="hero-v2">
+    <img class="lucky" src="../public/luckymainlogo.png" alt="Lucky, the Eric's World! mark">
+    <div class="wordmark">Eric's World!</div>
+    <div class="cx-eyebrow" style="margin-top:14px">Brand Bible v2 · November 2026</div>
+    <h1 class="cx-h1" style="max-width:12ch">One world. <em>Six souls.</em></h1>
+    <p class="cx-lede">Everything from the first loading frame to the last paper plane, in one system. The rules, the research behind them, and a real pick for every island. Each page linked below has live options you can click, drag and play with.</p>
+    <nav class="toc" aria-label="On this page"><a href="#picks">My picks</a><a href="#people">Who it's for</a><a href="#principles">Principles</a><a href="#short">The Short Version</a><a href="#souls">Six souls</a><a href="#type">Type</a><a href="#colour">Colour</a><a href="#motion">Motion</a><a href="#sound">Sound</a><a href="#voice">Voice</a><a href="#audit">Audit</a><a href="#research">Research</a><a href="#roadmap">Roadmap</a></nav>
+  </header>
+
+  <!-- PICKS -->
+  <section class="cx-section" id="picks">
+    <div class="cx-eyebrow">The decisions</div>
+    <h2 class="cx-h2">My pick for <em>everything</em></h2>
+    <p class="cx-sub">Open any card to see every option live, with notes on why it works, accessibility, how it'd be built in your codebase, and what to watch out for.</p>
+    <div class="picks">
+      <a class="pick" href="prompt.html" style="--ic:#A78BFA;--ic-2:#FBBF24"><span class="mono">System · Prompt</span><h3>Press E</h3><span class="pk-pick">Pick: The Combo</span><p>Area title on first find, a tag pinned to the island with a teaser, a physical press. Fix "Explore" to "dive in" today.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick" href="panel.html" style="--ic:#A78BFA;--ic-2:#FBBF24"><span class="mono">System · Dive</span><h3>After E</h3><span class="pk-pick">Pick: Side Stage + Iris</span><p>The panel opens out of the island, your character stays on screen, ‹ › hops between islands.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-meadow" href="meadow.html"><span class="mono">01 · Meadow · About Me</span><h3>Meadow</h3><span class="pk-pick">Pick: Character Select</span><p>Profile and emotes left, quest log and Jukebox right. Click him to talk.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-mountain" href="mountain.html"><span class="mono">02 · Mountain · Projects</span><h3>Mountain</h3><span class="pk-pick">Pick: Game Hub</span><p>One demo playing full-bleed, a rail of tiles, arrows to flick. Index view as a toggle. Drop the stock photos.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-arctic" href="arctic.html"><span class="mono">03 · Arctic · New</span><h3>Arctic</h3><span class="pk-pick">Pick: Ask Mochi</span><p>The tech stack retires. A yeti answers "can he do X?" from your real CV. Pip hides in the snow.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-lava" href="lava.html"><span class="mono">04 · Lava · Experience</span><h3>Lava</h3><span class="pk-pick">Pick: Strata</span><p>Layers of rock, newest on top and molten. Heat means recency. Each layer leads with its number.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-desert" href="desert.html"><span class="mono">05 · Desert · Contact</span><h3>Desert</h3><span class="pk-pick">Pick: 8 upgrades</span><p>Résumé button, intent chips, copy email, a sky that shows your real London time, a paper plane on send.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+      <a class="pick isl-pirate" href="pirate.html"><span class="mono">06 · Pirate Ship · Travel Log</span><h3>Pirate</h3><span class="pk-pick">Pick: Night Globe</span><p>A dark globe you spin, countries glowing, four huge numbers, a calm list. Kill the flags.</p><span class="go">open <span data-icon="right" data-size="14"></span></span></a>
+    </div>
+  </section>
+
+  <!-- PEOPLE -->
+  <section class="cx-section" id="people">
+    <div class="cx-eyebrow">Who it's for</div>
+    <h2 class="cx-h2">Two players, <em>two clocks</em></h2>
+    <p class="cx-sub">Every decision in this bible serves both at once. If a feature helps one and blocks the other, it doesn't ship.</p>
+    <div class="aud">
+      <div class="aud-card isl-lava" style="--ic:#FBBF24"><div class="big">30<span style="font-size:.4em;color:var(--ink-3)"> sec</span></div><h3>The recruiter</h3><p>Has a stack of applicants and a coffee going cold. Initial résumé screens are commonly measured in seconds, and a personal site is rarely the deciding filter. They need to know what you do, how good you are and how to reach you, fast.</p><ul><li>Panel titles say what, not where</li><li>Résumé one click from anywhere</li><li>Every role and project leads with its outcome</li><li>The Short Version, if they won't play at all</li></ul></div>
+      <div class="aud-card" style="--ic:#6BD46F"><div class="big">5<span style="font-size:.4em;color:var(--ink-3)"> min</span></div><h3>The player</h3><p>A friend, a fellow dev, a recruiter who got curious. They came to poke at things. They remember you because something surprised them, then they tell someone else.</p><ul><li>Islands to find, a counter that matters</li><li>A character who reacts, emotes and talks</li><li>Locals: Mochi, Pip, the Jukebox, the Doodle Wall</li><li>Small delights: true skies, paper planes</li></ul></div>
+    </div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section class="cx-section" id="principles">
+    <div class="cx-eyebrow">The rules</div>
+    <h2 class="cx-h2">Eight <em>principles</em></h2>
+    <p class="cx-sub">These replace the v1 "AAA principles" list and keep everything good from it (game vocabulary, Options not Settings, found not visited).</p>
+    <div class="prin">
+      <div class="pr"><div class="pr-n">01</div><h3>Facts never wait for fun.</h3><p>The game is the wrapper, never the lock. Anyone can get the essentials without playing.</p><div class="dd"><div class="do"><b>Do</b><span>"Projects" as the title, a Short Version link on the loader</span></div><div class="dont"><b>Don't</b><span>Hide your résumé behind three islands</span></div></div></div>
+      <div class="pr"><div class="pr-n">02</div><h3>Biome through light, not props.</h3><p>Islands are told apart by colour temperature, light, motion and texture. Never by costume.</p><div class="dd"><div class="do"><b>Do</b><span>Heat as recency on Lava, a true sky on Desert</span></div><div class="dont"><b>Don't</b><span>Rivets, parchment, flags, cartoon fire</span></div></div></div>
+      <div class="pr"><div class="pr-n">03</div><h3>The world never disappears.</h3><p>Opening an island keeps the planet and your character in view. You went somewhere, you didn't leave.</p><div class="dd"><div class="do"><b>Do</b><span>Side stage, character idling beside the panel</span></div><div class="dont"><b>Don't</b><span>A black scrim that ends the game</span></div></div></div>
+      <div class="pr"><div class="pr-n">04</div><h3>One shell, six souls.</h3><p>Same header, keys, close and tokens everywhere, so it's learned once. The body is where each island is different.</p><div class="dd"><div class="do"><b>Do</b><span>"02 / 06 · Mountain Island" then "Projects", every time</span></div><div class="dont"><b>Don't</b><span>Six different close buttons</span></div></div></div>
+      <div class="pr"><div class="pr-n">05</div><h3>Lead with the outcome.</h3><p>Every role and project opens with what changed because of you, in one line, ideally with a number.</p><div class="dd"><div class="do"><b>Do</b><span>"45 min to near instant"</span></div><div class="dont"><b>Don't</b><span>"Aladdin engineering operations and systems"</span></div></div></div>
+      <div class="pr"><div class="pr-n">06</div><h3>Answer in 100ms.</h3><p>Every press gets a visible reaction within a tenth of a second. Panels open within a second.</p><div class="dd"><div class="do"><b>Do</b><span>The keycap sinks the instant you press E</span></div><div class="dont"><b>Don't</b><span>A pause before anything happens</span></div></div></div>
+      <div class="pr"><div class="pr-n">07</div><h3>Motion is a flavour, never a gate.</h3><p>One beat per event, entrances under 600ms, content readable at every frame. Reduced motion swaps movement for fades.</p><div class="dd"><div class="do"><b>Do</b><span>A 520ms frost-in on Arctic</span></div><div class="dont"><b>Don't</b><span>Content that appears after a two-second show</span></div></div></div>
+      <div class="pr"><div class="pr-n">08</div><h3>Found, not visited.</h3><p>Finding an island is an event with a moment, a number and a reward for finishing.</p><div class="dd"><div class="do"><b>Do</b><span>"Island found · 3 / 6" title card, a secret at 6 / 6</span></div><div class="dont"><b>Don't</b><span>A counter nobody notices</span></div></div></div>
+    </div>
+  </section>
+
+  <!-- SHORT VERSION -->
+  <section class="cx-section" id="short">
+    <div class="cx-eyebrow">New · the express lane</div>
+    <h2 class="cx-h2">The <em>Short Version</em></h2>
+    <p class="cx-sub">The single highest-value addition in this whole bible. One plain, fast, readable page with everything that matters, reachable from the loader and the HUD. It protects you from the biggest risk of a 3D world: someone who won't wait, can't run WebGL, uses a screen reader, or is on a weak phone. It also gives search engines something to read.</p>
+    <div class="sv">
+      <div class="sv-mock">
+        <div class="world-bg"><div class="world-planet"></div></div>
+        <div class="sv-load"><div><b>Eric's World!</b><div class="sv-bar"><i></i></div><div class="mono">sculpting islands</div><a class="sv-link" href="#short">in a hurry? read the short version <span data-icon="right" data-size="14"></span></a></div></div>
+      </div>
+      <div class="sv-page">
+        <div class="tag">The Short Version</div>
+        <h3>Eric Ng Min Chern</h3>
+        <p class="role">Full-stack and creative developer · CS grad, University of Edinburgh · based in London</p>
+        <div class="row"><span class="dark">Download résumé</span><span>Email</span><span>LinkedIn</span><span>GitHub</span></div>
+        <h4>Experience</h4>
+        <ul><li>Barclays · Technology Analyst Intern · 45 min task to near instant</li><li>BlackRock · Technology Spring Intern</li><li>University of Edinburgh · Teaching Assistant</li></ul>
+        <h4>Top projects</h4>
+        <ul><li>Petaling Utama Motor · full-stack store, live with real customers</li><li>Scotland on the Web · scrollytelling data story</li><li>Eric's World! · this whole planet</li></ul>
+        <h4 style="margin-top:16px">Then</h4>
+        <ul><li>"want the fun version? warp back to the world"</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOULS -->
+  <section class="cx-section" id="souls">
+    <div class="cx-eyebrow">One shell, six souls</div>
+    <h2 class="cx-h2">Every island, <em>its own world</em></h2>
+    <p class="cx-sub">Each island owns a temperature, a layout paradigm, a signature interaction, an entrance beat and a musical note. Same family, different souls. Press a note to hear it.</p>
+    <div class="souls" id="souls-grid"></div>
+  </section>
+
+  <!-- TYPE -->
+  <section class="cx-section" id="type">
+    <div class="cx-eyebrow">Typography</div>
+    <h2 class="cx-h2">Four voices, <em>one job each</em></h2>
+    <p class="cx-sub">The big change from v1: Cinzel goes back to being the logo. As a heading font it reads fantasy-RPG and struggles with long titles. Instrument Serif keeps the storybook warmth but reads modern and editorial, which is the "professional and unique" you asked for.</p>
+    <div class="type">
+      <div class="spec"><div class="meta"><b>Cinzel</b><span>WORDMARK ONLY</span><p>The name, the loader, the intro. Nowhere else.</p></div><div class="s-word">Eric's World!</div></div>
+      <div class="spec"><div class="meta"><b>Instrument Serif</b><span>DISPLAY · 400 + ITALIC</span><p>Panel titles, big numbers, headlines. Italic for the one word that matters.</p></div><div class="s-disp">Your work, <em>front and centre.</em></div></div>
+      <div class="spec"><div class="meta"><b>Inter</b><span>UI + BODY · 400 to 700</span><p>Everything people read. 16px minimum for body, 1.6 line height.</p></div><div class="s-ui">Full-stack e-commerce for a real Malaysian motor business. Live in production with a real catalogue and real customers.</div></div>
+      <div class="spec"><div class="meta"><b>JetBrains Mono</b><span>HUD + LABELS · 500</span><p>Eyebrows, counters, keys, data. Uppercase, tracked out, small.</p></div><div class="s-mono">02 / 06 · Mountain Island · 3 / 6 found</div></div>
+    </div>
+    <div class="scale"><span>Display 56 to 110</span><span>H1 44 to 96</span><span>H2 32 to 52</span><span>Panel title 30 to 44</span><span>Body 16</span><span>Small 13 to 14</span><span>Label 10.5 to 12 mono</span></div>
+  </section>
+
+  <!-- COLOUR -->
+  <section class="cx-section" id="colour">
+    <div class="cx-eyebrow">Colour</div>
+    <h2 class="cx-h2">Space, magic, <em>and six temperatures</em></h2>
+    <p class="cx-sub">The v1 world colours stay. What's new: each island gets a triple (accent, secondary, deep) so panels, glows and gradients stay in family, and the ink ramp has rules.</p>
+    <div class="sw-row">
+      <div class="sw"><i style="background:#0d0820"></i><div><b>World</b><span>#0D0820</span></div></div>
+      <div class="sw"><i style="background:#161033"></i><div><b>World raised</b><span>#161033</span></div></div>
+      <div class="sw"><i style="background:#7C3AED"></i><div><b>Magic</b><span>#7C3AED</span></div></div>
+      <div class="sw"><i style="background:#A78BFA"></i><div><b>Magic light</b><span>#A78BFA</span></div></div>
+      <div class="sw"><i style="background:#FBBF24"></i><div><b>Gold</b><span>#FBBF24</span></div></div>
+      <div class="sw"><i style="background:#FF8C42"></i><div><b>Horizon</b><span>#FF8C42</span></div></div>
+    </div>
+    <div class="ink-ramp">
+      <div style="color:rgba(255,255,255,.94)">Ink 94%<small>titles, key text</small></div>
+      <div style="color:rgba(255,255,255,.70)">Ink 70%<small>body copy</small></div>
+      <div style="color:rgba(255,255,255,.48)">Ink 48%<small>labels, meta</small></div>
+      <div style="color:rgba(255,255,255,.28)">Ink 28%<small>decoration only</small></div>
+    </div>
+    <p class="cx-sub" style="margin-top:16px">Rule: island accents are for glows, borders, icons and short labels. Body text stays in the ink ramp. Never put meaning in colour alone: add an icon, a word or a number.</p>
+  </section>
+
+  <!-- MOTION -->
+  <section class="cx-section" id="motion">
+    <div class="cx-eyebrow">Motion</div>
+    <h2 class="cx-h2">One rhythm, <em>everywhere</em></h2>
+    <p class="cx-sub">Three curves, five durations. Click a curve to feel it.</p>
+    <div class="mo" id="curves"></div>
+    <div class="durs">
+      <div class="dur"><span>Tap feedback</span><div class="bar" style="width:13%"></div><code>120ms</code></div>
+      <div class="dur"><span>Hover, toggle</span><div class="bar" style="width:20%"></div><code>180ms</code></div>
+      <div class="dur"><span>UI enters</span><div class="bar" style="width:31%"></div><code>280ms</code></div>
+      <div class="dur"><span>Panels</span><div class="bar" style="width:51%"></div><code>460ms</code></div>
+      <div class="dur"><span>Camera, world</span><div class="bar" style="width:100%"></div><code>900ms</code></div>
+    </div>
+    <ul class="rules-list">
+      <li>Enter with ease-out, exit with ease-in, exit takes about 65% of the enter time.</li>
+      <li>One beat per event. If two things animate, one leads and one follows 40ms later.</li>
+      <li>Never block input. Every animation can be interrupted by the next key press.</li>
+      <li>Under reduced motion (OS setting or Options), every movement becomes a 200ms fade. Information stays, motion goes.</li>
+    </ul>
+  </section>
+
+  <!-- SOUND -->
+  <section class="cx-section" id="sound">
+    <div class="cx-eyebrow">Sound</div>
+    <h2 class="cx-h2">A world <em>in one key</em></h2>
+    <p class="cx-sub">Each island owns a note from G major pentatonic, so any two islands sound good together. Events reuse the island's note: arriving plays it, diving in plays it with a fifth, finding all six plays the whole chord. Runs on the shared AudioEngine the Jukebox already uses, and stays silent until Sound is on in Options.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" data-snd="found">Island found</button>
+      <button class="btn" data-snd="dive">Dive in</button>
+      <button class="btn" data-snd="close">Close</button>
+      <button class="btn btn--primary" data-snd="all">All 6 found</button>
+    </div>
+  </section>
+
+  <!-- VOICE -->
+  <section class="cx-section" id="voice">
+    <div class="cx-eyebrow">Voice</div>
+    <h2 class="cx-h2">Lexicon <em>v2</em></h2>
+    <p class="cx-sub">v1's voice stays: warm, curious, lightly cheeky, short sentences, speak to the player. No em dashes or en dashes anywhere (ranges become "2024 to 25"). Lowercase casual for prompts, title case for screen titles.</p>
+    <div class="lex-wrap"><table class="lex">
+      <thead><tr><th>Concept</th><th>Use</th><th>Never</th></tr></thead>
+      <tbody>
+        <tr><td>Open an island</td><td>dive in</td><td>Explore, open, visit</td></tr>
+        <tr><td>Island reached the first time</td><td>found</td><td>visited, discovered</td></tr>
+        <tr><td>Fast travel</td><td>Warp</td><td>Teleport</td></tr>
+        <tr><td>Configuration screen</td><td>Options</td><td>Settings</td></tr>
+        <tr><td>Audio toggle</td><td>Sound</td><td>Audio</td></tr>
+        <tr><td>Controls screen</td><td>How to Play</td><td>Help, Controls</td></tr>
+        <tr><td>Map screen</td><td>Island Map</td><td>World Map</td></tr>
+        <tr><td>The plain recruiter page<span class="new">NEW</span></td><td>The Short Version</td><td>Recruiter mode, Lite site</td></tr>
+        <tr><td>Arctic's new section<span class="new">NEW</span></td><td>Ask Mochi</td><td>Tech Stack, Skills</td></tr>
+        <tr><td>Island inhabitants<span class="new">NEW</span></td><td>locals</td><td>NPCs, mascots</td></tr>
+        <tr><td>The whole thing</td><td>the world</td><td>portfolio, website</td></tr>
+      </tbody>
+    </table></div>
+    <div class="micro">
+      <div><small>Prompt · desktop</small><p>E · dive in</p></div>
+      <div><small>Prompt · touch</small><p>tap to dive in</p></div>
+      <div><small>Found</small><p>Island found · 3 / 6</p></div>
+      <div><small>Loader escape</small><p>in a hurry? read the short version</p></div>
+      <div><small>Unknown answer (Mochi)</small><p>Not that I know of. Ask him directly.</p></div>
+      <div><small>Form error</small><p>That email looks off. Check for typos.</p></div>
+      <div><small>Sent</small><p>Sent. It's flying to Eric right now.</p></div>
+      <div><small>All found</small><p>All 6 islands found! Something stirred in the snow.</p></div>
+    </div>
+  </section>
+
+  <!-- AUDIT -->
+  <section class="cx-section" id="audit">
+    <div class="cx-eyebrow">Brand audit · checked in your code</div>
+    <h2 class="cx-h2">Fix these <em>first</em></h2>
+    <p class="cx-sub">Things that break the current bible or are no longer true. Most are one-line edits. Red is visible to every visitor.</p>
+    <div class="audit">
+      <div class="fix hi"><span class="dot">1</span><div><b>The prompt says "Explore"</b><p><code>src/ui/UI.js:105</code> sets the keycap label to "Explore". The bible says the verb is "dive in". BRAND.md itself still lists "[E] to explore" and "Tap to explore" in its HUD section, contradicting its own terminology table. Fix both.</p></div></div>
+      <div class="fix hi"><span class="dot">2</span><div><b>"Graduating 2026" is stale</b><p>It's November 2026. <code>src/ui/AboutOverlay.js</code> says "Final-year CS · Graduating 2026" and <code>src/data/content.js</code> says "graduating June 2026". Switch to "CS grad, University of Edinburgh".</p></div></div>
+      <div class="fix hi"><span class="dot">3</span><div><b>"100% procedural" isn't true anymore</b><p>The About dock says "100% procedural" and the Eric's World! project blurb in <code>src/islands/projectsData.js</code> says "fully procedural, built from Three.js primitives". The world is now a Blender GLB. Say what it is: "hand-built in Blender and Three.js".</p></div></div>
+      <div class="fix hi"><span class="dot">4</span><div><b>Two locations</b><p>About leads with Edinburgh, Contact's pill says London, UK. Tell one story: "CS grad from Edinburgh, based in London".</p></div></div>
+      <div class="fix md"><span class="dot">5</span><div><b>Em and en dashes in visible copy</b><p>The About hint ("move your cursor ... he's watching") and tagline, the meadow copy in content.js, most project blurbs in projectsData.js, and the year ranges in experience.js ("2024&ndash;25") all use dashes the bible bans.</p></div></div>
+      <div class="fix md"><span class="dot">6</span><div><b>Stock photos on Mountain</b><p>Nine Unsplash shots (Fuji, Santorini...) sit between your projects. They aren't yours and they blur "what did he build?". Remove them.</p></div></div>
+      <div class="fix md"><span class="dot">7</span><div><b>Flags on the Pirate Ship</b><p>24 flags in 24 art styles are the "Windows XP" feeling. Swap for ISO codes or silhouettes in the island colour.</p></div></div>
+      <div class="fix lo"><span class="dot">8</span><div><b>Cinzel as a heading font</b><p>v1 uses Cinzel for modal titles. Keep it for the wordmark only and move titles to Instrument Serif.</p></div></div>
+      <div class="fix lo"><span class="dot">9</span><div><b>No résumé anywhere</b><p>The one file recruiters look for isn't in the world. Add it to Desert, the Short Version, and the About dock.</p></div></div>
+    </div>
+  </section>
+
+  <!-- RESEARCH -->
+  <section class="cx-section" id="research">
+    <div class="cx-eyebrow">What the research says</div>
+    <h2 class="cx-h2">The evidence <em>behind the picks</em></h2>
+    <p class="cx-sub">Where these rules come from. I've flagged where a source is weaker than it's usually quoted as.</p>
+    <div class="res">
+      <div class="rc"><span class="mono">Recruiter behaviour</span><h3>First looks are measured in seconds</h3><p>Ladders' 2018 eye-tracking study put the average initial résumé screen at about 7.4 seconds, with recruiters jumping to titles, companies and dates.</p><p class="caveat">Its method has been questioned and other estimates vary widely, so read it as "fast", not as a precise number.</p><div class="so"><b>So we</b>Put titles that say what, outcomes first, and the Short Version one click away.</div><div class="src">Source: <a href="https://www.hrdive.com/news/eye-tracking-study-shows-recruiters-look-at-resumes-for-7-seconds/" target="_blank" rel="noopener">HR Dive on the Ladders study</a></div></div>
+      <div class="rc"><span class="mono">Hiring managers</span><h3>The site is rarely the filter</h3><p>A survey of 60+ hiring managers found most would look at a candidate's site, but it rarely changed the outcome. Résumé, GitHub and LinkedIn came first. Reviewers value the problem, the approach and the tradeoffs over polish.</p><p class="caveat">Small 2021 survey, but it matches what most hiring guides say.</p><div class="so"><b>So we</b>Make the world a bonus that's fast to read, and add a "what I did, what happened" line to every project.</div><div class="src">Source: <a href="https://dev.to/profydev/this-survey-among-60-hiring-managers-reveals-don-t-waste-your-time-on-a-react-portfolio-website-17ge" target="_blank" rel="noopener">Profy.dev survey</a></div></div>
+      <div class="rc"><span class="mono">Information foraging</span><h3>People follow the scent</h3><p>Pirolli and Card's information foraging theory (Xerox PARC), popularised by Nielsen Norman Group: people choose paths by cues that predict value. Weak or misleading scent makes them give up.</p><div class="so"><b>So we</b>Put a teaser in the prompt ("9 projects · 5 playable demos") and use plain section names.</div><div class="src">Source: <a href="https://www.nngroup.com/alertbox/information-scent.html" target="_blank" rel="noopener">NN/g, information scent</a></div></div>
+      <div class="rc"><span class="mono">Game UI</span><h3>Diegetic where it's about a place</h3><p>Fagerholt and Lorentzon's "Beyond the HUD" (Chalmers, 2009) splits game UI by whether it lives in the world and in the fiction. Later work found plain HUD elements can be less disruptive for critical info.</p><div class="so"><b>So we</b>Pin the prompt to the island (diegetic), but keep the found counter, controls and Options as clean HUD.</div><div class="src">Sources: <a href="https://publications.lib.chalmers.se/records/fulltext/111921.pdf" target="_blank" rel="noopener">Beyond the HUD (PDF)</a> · <a href="https://www.gamedeveloper.com/design/game-ui-discoveries-what-players-want" target="_blank" rel="noopener">Game Developer</a></div></div>
+      <div class="rc"><span class="mono">Response time</span><h3>0.1s, 1s, 10s</h3><p>From Miller (1968) via Nielsen: under 0.1 seconds feels instant, under 1 second keeps your flow, past 10 seconds you lose attention and need progress plus a way out.</p><div class="so"><b>So we</b>React to presses within 100ms, open panels within a second, and give the 77MB world.glb loader a progress bar and the Short Version escape.</div><div class="src">Source: <a href="https://www.nngroup.com/videos/3-response-time-limits-interaction-design/" target="_blank" rel="noopener">NN/g, response time limits</a></div></div>
+      <div class="rc"><span class="mono">Game feel</span><h3>Juice, in moderation</h3><p>Jonasson and Purho's "Juice It or Lose It" (GDC Europe 2012) layers particles, sound and motion onto a plain game until it feels great. Critics point out that too much juice can cost immersion.</p><div class="so"><b>So we</b>Give each event one beat of juice (the Charge press, the paper plane), never a fireworks show.</div><div class="src">Source: <a href="https://gdcvault.com/play/1016487/" target="_blank" rel="noopener">GDC Vault</a></div></div>
+      <div class="rc"><span class="mono">Accessibility</span><h3>Big enough to hit</h3><p>WCAG 2.2 adds 2.5.8 (AA): pointer targets at least 24 by 24 CSS pixels, or spaced so they don't crowd. The stricter 2.5.5 (AAA) asks for 44 by 44.</p><div class="so"><b>So we</b>Use 44px as the minimum for every control in the world UI, and make whole tags and cards clickable.</div><div class="src">Source: <a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html" target="_blank" rel="noopener">W3C, Understanding 2.5.8</a></div></div>
+      <div class="rc"><span class="mono">Accessibility</span><h3>Reduce motion, don't remove meaning</h3><p>The prefers-reduced-motion setting exists for people with vestibular disorders and motion sensitivity. Guidance is to swap big movement for fades, avoid autoplay, and offer an in-app toggle too.</p><div class="so"><b>So we</b>Honour both the OS setting and your existing Options toggle in every new animation, and never autoplay video under reduced motion.</div><div class="src">Source: <a href="https://web.dev/learn/accessibility/motion" target="_blank" rel="noopener">web.dev, animation and motion</a></div></div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section class="cx-section" id="roadmap">
+    <div class="cx-eyebrow">How to ship it</div>
+    <h2 class="cx-h2">The <em>roadmap</em></h2>
+    <p class="cx-sub">Ordered so every phase ships something visible and nothing is left half built.</p>
+    <div class="road">
+      <div class="ph"><div class="when"><b>Phase 1</b>about a day</div><div><h3>Copy and quick wins</h3><ul><li>All nine audit fixes above (dashes, "dive in", grad line, procedural claim, one location)</li><li>Résumé button on Desert and the About dock</li><li>Remove the stock photos from Mountain, swap flags for ISO codes</li></ul></div></div>
+      <div class="ph"><div class="when"><b>Phase 2</b>about a week</div><div><h3>The system</h3><ul><li>v2 shell header (eyebrow where, title what, ‹ › hop, Esc)</li><li>Side Stage dive with the Iris entrance, bottom sheet on mobile</li><li>Prompt: Peek teaser first, then the World Tag</li><li>The Short Version page, linked from loader and HUD</li><li>Type swap: Instrument Serif titles, Cinzel wordmark only</li></ul></div></div>
+      <div class="ph"><div class="when"><b>Phase 3</b>1 to 2 weeks</div><div><h3>The islands</h3><ul><li>Mountain Game Hub (plus Index toggle)</li><li>Lava Strata, once each role has an outcome line</li><li>Pirate Night Globe</li><li>Desert upgrades 01 to 06</li></ul></div></div>
+      <div class="ph"><div class="when"><b>Phase 4</b>1 to 2 weeks</div><div><h3>The locals</h3><ul><li>Meadow Character Select with emotes and quest log</li><li>Ask Mochi: api/ask.mjs, grounding, rate limits, offline fallback</li><li>Mochi on Arctic, Pip in the snow, a secret for 6 / 6</li></ul></div></div>
+      <div class="ph"><div class="when"><b>Phase 5</b>ongoing</div><div><h3>Juice</h3><ul><li>Area titles on first find, biome entrances, the Charge press</li><li>Paper plane, true sky, sonic identity</li></ul></div></div>
+    </div>
+    <h3 style="margin:40px 0 14px;font-family:var(--f-display);font-weight:400;font-size:32px">What I need from you</h3>
+    <div class="need">
+      <div><span data-icon="download" data-size="16"></span>Your résumé PDF</div>
+      <div><span data-icon="play" data-size="16"></span>Demo videos or real posters for Eric's World!, ELK Pipeline, Blender and Ada Hack</div>
+      <div><span data-icon="spark" data-size="16"></span>One "what I did, what happened" line per project and per role</div>
+      <div><span data-icon="clock" data-size="16"></span>Real start and end months for each role</div>
+      <div><span data-icon="snow" data-size="16"></span>A yes or no on Ask Mochi (fallback: The Lab, which needs build photos)</div>
+      <div><span data-icon="user" data-size="16"></span>Languages you speak, for the Meadow profile</div>
+      <div><span data-icon="globe" data-size="16"></span>More of your own travel photos</div>
+      <div><span data-icon="check" data-size="16"></span>Logos for Outlier, Finexus and Petaling Utama Motor</div>
+    </div>
+    <h3 style="margin:40px 0 14px;font-family:var(--f-display);font-weight:400;font-size:32px">Sources</h3>
+    <ol class="sources">
+      <li><a href="https://www.hrdive.com/news/eye-tracking-study-shows-recruiters-look-at-resumes-for-7-seconds/" target="_blank" rel="noopener">HR Dive: Eye-tracking study shows recruiters look at résumés for 7 seconds</a></li>
+      <li><a href="https://www.theladders.com/career-advice/is-it-true-that-recruiters-reject-a-resume-in-six-seconds" target="_blank" rel="noopener">Ladders: Is it true recruiters reject a résumé in six seconds?</a></li>
+      <li><a href="https://dev.to/profydev/this-survey-among-60-hiring-managers-reveals-don-t-waste-your-time-on-a-react-portfolio-website-17ge" target="_blank" rel="noopener">Profy.dev: survey of 60+ hiring managers</a></li>
+      <li><a href="https://www.nngroup.com/alertbox/information-scent.html" target="_blank" rel="noopener">Nielsen Norman Group: Information scent</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Information_foraging" target="_blank" rel="noopener">Wikipedia: Information foraging</a></li>
+      <li><a href="https://publications.lib.chalmers.se/records/fulltext/111921.pdf" target="_blank" rel="noopener">Fagerholt and Lorentzon (2009): Beyond the HUD</a></li>
+      <li><a href="https://www.gamedeveloper.com/design/game-ui-discoveries-what-players-want" target="_blank" rel="noopener">Game Developer: Game UI discoveries, what players want</a></li>
+      <li><a href="https://www.nngroup.com/videos/3-response-time-limits-interaction-design/" target="_blank" rel="noopener">Nielsen Norman Group: The 3 response time limits</a></li>
+      <li><a href="https://gdcvault.com/play/1016487/" target="_blank" rel="noopener">GDC Vault: Juice It or Lose It (Jonasson and Purho, 2012)</a></li>
+      <li><a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html" target="_blank" rel="noopener">W3C: Understanding SC 2.5.8 Target Size (Minimum)</a></li>
+      <li><a href="https://web.dev/learn/accessibility/motion" target="_blank" rel="noopener">web.dev: Animation and motion</a></li>
+      <li><a href="https://a11yproject.com/posts/understanding-vestibular-disorders/" target="_blank" rel="noopener">The A11Y Project: A primer to vestibular disorders</a></li>
+    </ol>
+  </section>
+
+  <footer class="cx-footer">
+    <a href="pirate.html"><small>← Previous</small><span>Pirate</span></a>
+    <a href="prompt.html"><small>Start here →</small><span>The Prompt</span></a>
+  </footer>
+</main>
+
+<script>
+;(function () {
+  var REDUCED = CX.reduced()
+  /* souls */
+  var SOULS = [
+    ['meadow', '01', 'Meadow Island', 'About Me', 'Golden-hour grass', 'Character stage', 'He emotes, talks, and is the hub for warping', 'Bloom', 'G5', 784],
+    ['mountain', '02', 'Mountain Island', 'Projects', 'Alpenglow coral', 'Game hub', 'A live demo plays full-bleed behind its title', 'Rise', 'D5', 587],
+    ['arctic', '03', 'Arctic Island', 'Ask Mochi', 'Ice and aurora', 'NPC conversation', 'A yeti who knows your whole history', 'Frost', 'E5', 659],
+    ['lava', '04', 'Lava Island', 'Experience', 'Ember to molten', 'Strata', 'Heat equals recency, newest is molten', 'Cool-down', 'A4', 440],
+    ['desert', '05', 'Desert Island', 'Contact', 'Sand and dusk plum', 'Sky and letter', 'A sky that shows your real London time', 'Heat haze', 'B4', 494],
+    ['pirate', '06', 'Pirate Ship', 'Travel Log', 'Moonlit sea', 'Globe and log', 'Spin the planet, your countries glow', 'Tide', 'G4', 392]
+  ]
+  var grid = document.getElementById('souls-grid')
+  grid.innerHTML = SOULS.map(function (s) {
+    return '<article class="soul isl-' + s[0] + '"><div class="soul-top"><div class="soul-sw"><i style="background:var(--ic)"></i><i style="background:var(--ic-2)"></i><i style="background:var(--ic-deep)"></i></div><span class="mono">' + s[1] + ' · ' + s[3] + '</span><h3>' + s[2] + '</h3></div>' +
+      '<dl><dt>Temperature</dt><dd>' + s[4] + '</dd><dt>Layout</dt><dd>' + s[5] + '</dd><dt>Signature</dt><dd>' + s[6] + '</dd><dt>Entrance</dt><dd>' + s[7] + '</dd><dt>Note</dt><dd>' + s[8] + '<button class="play" data-f="' + s[9] + '" aria-label="Play ' + s[2] + ' note">play</button></dd></dl></article>'
+  }).join('')
+
+  /* sound */
+  var ctx = null
+  function tone(f, at, dur, vol) {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)()
+    var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + (at || 0)
+    o.type = 'triangle'; o.frequency.value = f
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || 0.1, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.6))
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + (dur || 0.6) + 0.05)
+  }
+  grid.addEventListener('click', function (e) { var b = e.target.closest('.play'); if (b) tone(Number(b.dataset.f), 0, 0.7, 0.12) })
+  document.querySelectorAll('[data-snd]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.dataset.snd
+      if (k === 'found') { tone(587, 0, 0.5); tone(784, 0.1, 0.7) }
+      if (k === 'dive') { tone(587, 0, 0.4); tone(880, 0.08, 0.6) }
+      if (k === 'close') { tone(880, 0, 0.3, 0.07); tone(587, 0.07, 0.4, 0.07) }
+      if (k === 'all') { [392, 440, 494, 587, 659, 784].forEach(function (f, i) { tone(f, i * 0.09, 0.9, 0.08) }) }
+    })
+  })
+
+  /* motion curves */
+  var CURVES = [
+    ['Ease out', 'cubic-bezier(0.22, 1, 0.36, 1)', [0.22, 1, 0.36, 1], 'Everything that enters: panels, prompts, cards.'],
+    ['Ease in', 'cubic-bezier(0.55, 0, 0.75, 0.2)', [0.55, 0, 0.75, 0.2], 'Everything that leaves. Shorter than the enter.'],
+    ['Spring', 'cubic-bezier(0.34, 1.56, 0.64, 1)', [0.34, 1.56, 0.64, 1], 'Small, playful things: the prompt pop, keycaps, emotes.']
+  ]
+  var host = document.getElementById('curves')
+  CURVES.forEach(function (c) {
+    var p = c[2], W = 220, H = 100
+    var d = 'M0 ' + H + ' C' + (p[0] * W) + ' ' + (H - p[1] * H) + ' ' + (p[2] * W) + ' ' + (H - p[3] * H) + ' ' + W + ' 0'
+    var el = document.createElement('button')
+    el.className = 'curve'; el.type = 'button'; el.style.textAlign = 'left'; el.style.cursor = 'pointer'; el.style.color = 'inherit'
+    el.innerHTML = '<svg viewBox="-6 -20 232 140" aria-hidden="true"><path class="g" d="M0 100 H220 M0 0 H220"/><path class="c" d="' + d + '"/></svg><b>' + c[0] + '</b><code>' + c[1] + '</code><p>' + c[3] + '</p><div class="track"><i></i></div>'
+    el.addEventListener('click', function () {
+      var dot = el.querySelector('.track i'), w = el.querySelector('.track').clientWidth - 32
+      dot.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + w + 'px)' }], { duration: REDUCED ? 1 : 700, easing: c[1], fill: 'forwards' })
+    })
+    host.appendChild(el)
+  })
+})()
+</script>
+</body>
+</html>
