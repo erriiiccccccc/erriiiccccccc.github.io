@@ -50,7 +50,7 @@ export const ISLANDS = {
     iconKey: 'flame',
     name: 'Lava Island',
     section: 'Experience',
-    shell: 'slab',
+    shell: 'eruption',
     color: '#E53935',
     variant: 'exp',
     html: EXPERIENCE_HTML,

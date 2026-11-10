@@ -743,7 +743,7 @@ html.glass-solid {
 .wp-card, .wp-scrim { transition: none; }
 .wp-card:focus { outline: none; }
 /* The exits own the way out. Without this the old closing rule hid the card on
-   the first frame, so an exit that only moves or clips it (slab, frost) played
+   the first frame, so an exit that only moves or clips it (frost) played
    over nothing. */
 #world-panel.is-closing .wp-card  { opacity: 1; transform: none; }
 #world-panel.is-closing .wp-scrim { opacity: 1; }
@@ -805,7 +805,7 @@ html.glass-solid {
 #world-panel.no-hop .wp-hop { display: none; }
 
 /* Shell-only layers. Hidden unless their shell asks for them. */
-.wp-beam, .wp-edge, .wp-frost { display: none; pointer-events: none; }
+.wp-beam, .wp-frost { display: none; pointer-events: none; }
 
 /* ── Cinema (Mountain) ─────────────────────────────────────────────────────── */
 #world-panel[data-shell="cinema"] { padding: 0; }
@@ -878,33 +878,32 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.35'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
 }
 
-/* ── Slab (Lava) ───────────────────────────────────────────────────────────── */
-#world-panel[data-shell="slab"] { align-items: flex-end; padding: 0 clamp(12px, 2.5vw, 40px); }
-#world-panel[data-shell="slab"] .wp-scrim {
-  background: linear-gradient(180deg, rgba(10, 4, 3, 0.04) 0%, rgba(12, 4, 2, 0.34) 45%, rgba(10, 3, 2, 0.78) 100%);
+/* ── Eruption (Lava) ───────────────────────────────────────────────────────
+   An obsidian card sized to the timeline, warm glow underneath, and the
+   embers it rides up on. */
+#world-panel[data-shell="eruption"] .wp-scrim {
+  background: radial-gradient(80% 80% at 50% 62%, rgba(34, 9, 4, 0.55) 0%, rgba(10, 3, 2, 0.9) 100%);
 }
-#world-panel[data-shell="slab"] .wp-card {
-  --col: 780px;
-  width: min(1480px, 100%);
-  height: min(72vh, 780px);
-  max-height: none;
-  border-radius: 24px 24px 0 0;
-  border-color: rgba(255, 140, 80, 0.16);
-  border-bottom: 0;
-  background: linear-gradient(180deg, rgba(46, 20, 15, 0.95) 0%, rgba(24, 10, 8, 0.97) 55%, rgba(14, 6, 5, 0.98) 100%);
+#world-panel[data-shell="eruption"] .wp-card {
+  background: linear-gradient(180deg, #1d1010 0%, #120a0a 60%, #0a0606 100%);
+  border-color: rgba(255, 130, 70, 0.22);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.5), 0 -2px 40px rgba(255, 90, 30, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55),
+              0 18px 50px -12px rgba(255, 106, 31, 0.45),
+              inset 0 1px 0 rgba(255, 190, 140, 0.08);
 }
-#world-panel[data-shell="slab"] .wp-edge {
-  display: block;
+.wp-embers { display: none; position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+#world-panel[data-shell="eruption"] .wp-embers { display: block; }
+.wp-embers i {
   position: absolute;
-  left: 0; right: 0; top: 0;
-  z-index: 3;
-  height: 2px;
-  opacity: 0.7;
-  background: linear-gradient(90deg, transparent 0%, #E53935 14%, #FFB347 50%, #E53935 86%, transparent 100%);
-  box-shadow: 0 -6px 30px 4px rgba(255, 98, 40, 0.5), 0 0 10px 1px rgba(255, 170, 80, 0.6);
+  bottom: -6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #FFCF7A;
+  box-shadow: 0 0 8px #FF6A1F, 0 0 2px #fff;
+  opacity: 0;
 }
 
 /* ── Mirage (Desert) ───────────────────────────────────────────────────────── */
@@ -945,14 +944,14 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 #world-panel[data-shell="night"] .wp-halo { display: none; }
 #world-panel[data-shell="night"] .wp-content { padding-bottom: 1.6rem; }
 
-/* Slab and Night are wider than their content: centre header, rule and
-   content on one column so they line up. */
-#world-panel:is([data-shell="slab"], [data-shell="night"]) :is(.wp-header, .wp-content) {
+/* Night is wider than its content: centre header, rule and content on
+   one column so they line up. */
+#world-panel[data-shell="night"] :is(.wp-header, .wp-content) {
   width: 100%;
   max-width: var(--col);
   margin-inline: auto;
 }
-#world-panel:is([data-shell="slab"], [data-shell="night"]) .wp-rule {
+#world-panel[data-shell="night"] .wp-rule {
   width: calc(min(100%, var(--col)) - 3.6rem);
   margin-inline: auto;
 }
@@ -975,8 +974,9 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   #world-panel[data-shell="frost"] .wp-frost {
     background: radial-gradient(80% 60% at 50% 100%, rgba(225, 242, 255, 0.5), rgba(190, 222, 250, 0.3) 55%, rgba(170, 210, 245, 0.22));
   }
-  #world-panel[data-shell="slab"] { padding: 0; }
-  #world-panel[data-shell="slab"] .wp-card { height: 84vh; height: 84dvh; border-radius: 22px 22px 0 0; }
+  #world-panel[data-shell="eruption"] { padding: 10px; align-items: center; }
+  #world-panel[data-shell="eruption"] .wp-card { width: 100%; max-height: 90vh; max-height: 90dvh; border-radius: 20px; }
+  .wp-embers i:nth-child(n+11) { display: none; }
   #world-panel[data-shell="mirage"] { padding: 10px; align-items: center; }
   #world-panel[data-shell="mirage"] .wp-card { width: 100%; max-height: 90vh; max-height: 90dvh; border-radius: 20px; }
 }

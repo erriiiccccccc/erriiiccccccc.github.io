@@ -1350,7 +1350,7 @@ function tickHop() {
 // World-side half of each panel shell (the DOM half lives in ui/panelShells.js).
 //   frost  the world slides left so the planet stays in view beside the pane
 //   night  the camera pulls far back so the planet shrinks into space
-//   slab   the ground gives a short shake as the slab lands
+//   eruption the ground gives a short shake as the embers burst
 const _viewShift = { x: 0, appliedX: 0, w: 0, h: 0 }
 let _nightSavedDist = null
 let _distRestoreTo  = null   // where a closing night shell is still easing the camera back to
@@ -1396,7 +1396,7 @@ function shellWorldFx(phase, shell, card) {
     }
   }
 
-  if (shell === 'slab' && open && !reducedMotion) {
+  if (shell === 'eruption' && open && !reducedMotion) {
     const cv = document.getElementById('canvas')
     cv?.animate([
       { transform: 'translate(0, 0)' },
@@ -1405,7 +1405,7 @@ function shellWorldFx(phase, shell, card) {
       { transform: 'translate(-2px, 1px)' },
       { transform: 'translate(1px, 0)' },
       { transform: 'translate(0, 0)' },
-    ], { duration: 340, delay: 590, easing: 'linear' })
+    ], { duration: 340, delay: 140, easing: 'linear' })
   }
 }
 

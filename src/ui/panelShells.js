@@ -10,7 +10,7 @@
 //   card    plain glass card (fallback)
 //   cinema  Mountain: world goes black, the screen powers on from a line of light
 //   frost   Arctic:   a pane frosts over from the right edge, then clears
-//   slab    Lava:     a slab pushes up from below, its edge flaring as it lands
+//   eruption Lava:    embers burst up from below and the card rides up on them
 //   mirage  Desert:   far away and wavy in the heat, then glides into focus
 //   night   Pirate:   the world falls away into a night sky
 //
@@ -63,7 +63,7 @@ export class ShellDirector {
     this.card    = panel.querySelector('.wp-card')
     this.head    = panel.querySelector('.wp-header')
     this.content = panel.querySelector('.wp-content')
-    this.edge    = panel.querySelector('.wp-edge')
+    this.sparks  = [...panel.querySelectorAll('.wp-embers i')]
     this.frost   = panel.querySelector('.wp-frost')
     this._anims  = []
     this._token  = 0
@@ -94,7 +94,10 @@ export class ShellDirector {
     this._anims = []
   }
 
-  _layers() { return [this.scrim, this.beam, this.card, this.head, this.content, this.edge, this.frost] }
+  _layers() { return [this.scrim, this.beam, this.card, this.head, this.content, this.frost] }
+
+  /** Embers in play: fewer on phones (CSS hides the rest there too). */
+  _embers(n) { return this.sparks.slice(0, Math.min(n, isPhone() ? 10 : this.sparks.length)) }
 
   /** The value a property is frozen at, or the resting value when nothing was in flight. */
   _cur(el, prop, resting) {
@@ -207,22 +210,32 @@ const ENTER = {
     ])
   },
 
-  // Lava. The slab pushes up from below the screen, overshoots by a hair and
-  // settles; its molten top edge flares as it lands. main.js adds the ground
-  // shake at the landing beat.
-  slab() {
+  // Lava. A burst of embers shoots up from the bottom of the screen and the
+  // card rides up on it, overshooting a hair before it settles. Each ember is
+  // its own transform/opacity animation, so the burst stays on the compositor.
+  // main.js adds a short ground shake as the burst goes off.
+  eruption() {
+    const H = window.innerHeight, W = Math.min(window.innerWidth, 900)
     return Promise.all([
-      this._a(this.scrim, [{ opacity: 0 }, { opacity: 1 }], 480),
+      this._a(this.scrim, [{ opacity: 0 }, { opacity: 1 }], 520),
+      // Each leg eases on its own (rise, overshoot, settle) so the card is
+      // still travelling when the text arrives; never an empty box waiting.
       this._a(this.card, [
-        { transform: 'translateY(104%)' },
-        { transform: 'translateY(-1.1%)', offset: 0.72 },
-        { transform: 'translateY(0)' },
-      ], 860, { easing: 'cubic-bezier(0.3, 0, 0.25, 1)' }),
-      this._a(this.edge, [
-        { opacity: 0.25 }, { opacity: 0.25, offset: 0.5 }, { opacity: 1, offset: 0.68 }, { opacity: 0.7 },
-      ], 1200, { easing: 'ease-out' }),
-      this._rise(this.head, 560, 420),
-      this._rise(this.content, 630, 460),
+        { opacity: 0, transform: 'translateY(45vh) scale(0.96)', easing: 'cubic-bezier(0.2, 0.75, 0.35, 1)' },
+        { opacity: 1, transform: 'translateY(-1.6vh) scale(1.005)', offset: 0.66, easing: 'cubic-bezier(0.45, 0, 0.55, 1)' },
+        { opacity: 1, transform: 'none' },
+      ], 760, { delay: 100, easing: 'linear' }),
+      this._rise(this.head, 300, 380, 10),
+      this._rise(this.content, 360, 440, 14),
+      ...this._embers(22).map((el, i) => {
+        const dx = ((i * 53) % 21 - 10) * 0.014 * W
+        const h  = (0.5 + ((i * 29) % 40) / 100) * H
+        return this._a(el, [
+          { opacity: 0, transform: 'translate(0, 0) scale(1)' },
+          { opacity: 1, transform: `translate(${(dx * 0.3).toFixed(1)}px, ${(-h * 0.3).toFixed(1)}px) scale(1)`, offset: 0.15 },
+          { opacity: 0, transform: `translate(${dx.toFixed(1)}px, ${(-h).toFixed(1)}px) scale(0.3)` },
+        ], 900 + (i * 41) % 400, { delay: (i * 23) % 220, easing: 'cubic-bezier(0.2, 0.7, 0.4, 1)' })
+      }),
     ])
   },
 
@@ -305,13 +318,20 @@ const EXIT = {
     ])
   },
 
-  slab() {
+  eruption() {
+    const H = window.innerHeight
     return Promise.all([
       this._a(this.card, [
-        { transform: this._cur(this.card, 'transform', 'translateY(0)') },
-        { transform: 'translateY(104%)' },
-      ], 380, { easing: 'cubic-bezier(0.5, 0, 0.75, 0)' }),
-      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 380, { easing: 'ease-in-out' }),
+        { opacity: this._cur(this.card, 'opacity', '1'), transform: this._cur(this.card, 'transform', 'none') },
+        { opacity: 0, transform: 'translateY(30vh) scale(0.97)' },
+      ], 340, { easing: EASE.in }),
+      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 360, { delay: 60, easing: 'ease-in-out' }),
+      // a last few embers drift up as it drops
+      ...this._embers(8).map((el, i) => this._a(el, [
+        { opacity: 0, transform: 'translate(0, 0)' },
+        { opacity: 0.9, transform: `translate(0, ${(-0.06 * H).toFixed(1)}px)`, offset: 0.3 },
+        { opacity: 0, transform: `translate(${(i - 4) * 10}px, ${(-0.18 * H).toFixed(1)}px)` },
+      ], 600, { delay: 120 + i * 20, easing: 'ease-out' })),
     ])
   },
 

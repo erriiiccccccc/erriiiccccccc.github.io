@@ -81,8 +81,9 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 
 **Island panels (one chrome, six shells):**
 - Every panel shares the same chrome: eyebrow = where you are (`02 / 06 · Mountain Island`), title = what this is (`Projects`), then `‹ ›` to hop islands, `Esc`, `✕`. The About screen carries the same `‹ › Esc ✕` row.
-- Each island picks a shell (`shell:` in `src/data/content.js`) for its shape and entrance: Meadow full screen with the character, Mountain `cinema` (world goes black, the screen powers on from a line of light), Arctic `frost` (pane frosts over on the right, then clears), Lava `slab` (rises from below, edge flares, ground shakes), Desert `mirage` (wavers in from far away, then sharpens), Pirate `night` (camera pulls back into space).
+- Each island picks a shell (`shell:` in `src/data/content.js`) for its shape and entrance: Meadow full screen with the character, Mountain `cinema` (world goes black, the screen powers on from a line of light), Arctic `frost` (pane frosts over on the right, then clears), Lava `eruption` (embers burst up from the bottom of the screen, the card rides up on them, the ground shakes), Desert `mirage` (wavers in from far away, then sharpens), Pirate `night` (camera pulls back into space).
 - Motion: enters 0.5 to 1.2 s ease-out, exits about half that ease-in, closing mid-entrance reverses from where it is, reduced motion gets a short fade.
+- Performance: shells only move opacity, transform and clip-path. No animated `filter: blur()`, SVG filters or blend modes on panels: they made first openings drop to ~20 fps while the GPU built them.
 - Hop order follows the planet (nearest neighbour from the meadow), so `›` is always a short warp.
 
 **Overlays:**
