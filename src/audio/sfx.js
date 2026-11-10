@@ -66,11 +66,14 @@ export class Sfx {
       const started = () => {
         if (this._started || ctx.state !== 'running') return
         this._started = true
-        // Sound arrives softly and swells to its level over 2.5 s.
+        // Sound arrives softly and swells to its level. It starts already
+        // audible (about -14 dB) and reaches full level in 1.2 s: an
+        // exponential ramp from silence stays inaudible for its first second
+        // and a half, which just sounds broken.
         const t = ctx.currentTime
         this.out.gain.cancelScheduledValues(t)
-        this.out.gain.setValueAtTime(0.0001, t)
-        this.out.gain.exponentialRampToValueAtTime(1, t + 2.5)
+        this.out.gain.setValueAtTime(0.2, t)
+        this.out.gain.linearRampToValueAtTime(1, t + 1.2)
         this.onStart?.()
       }
       ctx.addEventListener('statechange', started)
