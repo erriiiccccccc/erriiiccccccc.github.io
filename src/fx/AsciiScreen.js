@@ -90,7 +90,7 @@ const RAMP = ' .:-=+*o#%@'
 // Cell in font pixels: the 5 x 7 glyph plus a 1 px gap right and 1 px above
 // and below, so neighbouring glyphs never touch.
 const FW = 6, FH = 9
-const RADIUS_CSS = 100            // lens radius at rest (the trail stretches it)
+const RADIUS_CSS = 80             // lens radius at rest (the trail stretches it): about 210 px across
 
 /** Ink of every glyph in a 2 x 3 grid, from the bitmaps (each pixel split exactly). */
 function measureGlyphs() {
