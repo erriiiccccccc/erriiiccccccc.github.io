@@ -2,19 +2,24 @@
 //
 // While the About screen is open, a fluid lens follows the pointer anywhere on
 // the screen (the pointer plus three trailing followers as metaballs, with a
-// slow wobble on its surface). Everything inside it, him, the planet, the sky,
-// turns into ASCII with its colours flipped, like looking through a terminal.
-// The HTML panels sit above the canvas, so they stay readable.
+// slow wobble on its surface). Inside it the world dims to a faint ghost and
+// turns into type glowing in its own colours, like a terminal or a night-vision
+// lens. The HTML panels sit above the canvas, so they stay readable.
+//
+// The game's frame is never altered: the scene renders exactly as usual, the
+// finished frame is copied, and the type is drawn on top inside the lens only.
+// (Routing the whole scene through an offscreen target instead changes how
+// glows and the sun blend, so the world would look different with it on.)
 //
 // The type is a real bitmap font: every glyph is hand-drawn on a 5 x 7 pixel
 // grid and drawn at a whole-number scale with nearest sampling, so every
 // stroke is a hard pixel, never smoothed or blurred.
 //
-// Three passes while the lens is up:
-//   1. the scene renders as usual into an offscreen target;
+// While the lens is up:
+//   1. the scene renders to the screen as usual, and that frame is copied;
 //   2. a small pass picks one glyph per cell for the whole screen (one
 //      fragment per cell, ~5k cells, so the matching is cheap);
-//   3. a fullscreen pass draws the scene, and inside the lens the cell glyphs.
+//   3. a fullscreen pass draws the type over the frame, inside the lens only.
 //
 // Glyph choice is shape matching (the approach behind Codrops' "Beyond the
 // luminance ramp"): every glyph is measured as ink in a 2 x 3 grid; flat
@@ -139,10 +144,11 @@ const VERT = /* glsl */`
   void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `
 
-// Black point and curve shared by both passes: the dark sky stays empty, lit
-// things (him, the planet, the sun, stars) get type.
+// Black point and curve shared by both passes, on the finished (display)
+// frame: the dark sky stays empty, lit things (him, the planet, the sun,
+// stars) get type.
 const TONE = /* glsl */`
-  float tone(float l) { return clamp((pow(l, 0.5) - 0.13) / 0.87 * 1.3, 0.0, 1.0); }
+  float tone(float l) { return clamp((l - 0.08) / 0.92 * 1.35, 0.0, 1.0); }
 `
 
 // Pass 2: one fragment per cell. Writes (glyph index, cell colour).
@@ -198,8 +204,7 @@ const pickFrag = (N, R) => /* glsl */`
   }
 `
 
-// Pass 3: the screen. Plain scene outside the lens; inside, the type with its
-// colours flipped.
+// Pass 3: over the finished frame, inside the lens only.
 const drawFrag = (N) => /* glsl */`
   uniform sampler2D tScene;
   uniform sampler2D tCells;
@@ -226,7 +231,6 @@ const drawFrag = (N) => /* glsl */`
 
   void main() {
     vec2 px = vUv * uRes;
-    vec3 outc = texture2D(tScene, vUv).rgb;
 
     // The lens: metaballs (pointer + trailing followers), wobbling surface.
     float field = 0.0;
@@ -236,9 +240,8 @@ const drawFrag = (N) => /* glsl */`
     }
     float n = vnoise(px / (uRadius * 0.6) + vec2(uTime * 0.4, -uTime * 0.3));
     float m = smoothstep(0.85, 1.1, field * (0.82 + 0.36 * n)) * uAmount;
-    float cm = 0.0;
-
-    if (m > 0.002) {
+    if (m < 0.002) discard;
+    {
       vec2 cell = floor(px / uCell);
       vec4 info = texture2D(tCells, (cell + 0.5) / uGrid);
       float idx = info.r;
@@ -246,7 +249,7 @@ const drawFrag = (N) => /* glsl */`
 
       // Cells flip one by one at the lens edge, scrambling like text decoding.
       float h = hash(cell);
-      cm = smoothstep(h * 0.6, h * 0.6 + 0.4, m);
+      float cm = smoothstep(h * 0.6, h * 0.6 + 0.4, m);
       if (cm > 0.02 && cm < 0.98) idx = floor(hash(cell + floor(uTime * 18.0)) * NF);
 
       // Pixel-exact lookup into the bitmap atlas (drawn at this cell size).
@@ -254,20 +257,14 @@ const drawFrag = (N) => /* glsl */`
       vec2 guv = vec2((idx * uCell.x + lp.x + 0.5) / (uCell.x * NF), (uCell.y - 1.0 - lp.y + 0.5) / uCell.y);
       float g = texture2D(tGlyph, guv).r;
 
-      // Type in the scene's hues at a readable brightness on near-black.
+      // The world dims to a faint ghost; the type glows in its own colours.
       float tn = tone(dot(col, vec3(0.2126, 0.7152, 0.0722)));
       float mx = max(max(col.r, col.g), col.b);
-      vec3 hue = mix(col / max(mx, 1e-3), vec3(1.0), 0.2);
-      vec3 glyphCol = hue * (0.35 + 0.9 * tn);
-      vec3 ascii = mix(vec3(0.004, 0.003, 0.01), glyphCol, g);
-      outc = mix(outc, ascii, cm);
+      vec3 hue = mix(col / max(mx, 1e-3), vec3(1.0), 0.25);
+      vec3 glyphCol = min(vec3(1.0), hue * (0.45 + 0.75 * tn));
+      vec3 ghost = texture2D(tScene, vUv).rgb * 0.3;
+      gl_FragColor = vec4(mix(ghost, glyphCol, g), cm);
     }
-
-    gl_FragColor = vec4(outc, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-    // Colour flip inside the lens: a negative, like a terminal window.
-    gl_FragColor.rgb = mix(gl_FragColor.rgb, 1.0 - gl_FragColor.rgb, cm);
   }
 `
 
@@ -288,14 +285,14 @@ export class AsciiScreen {
     const N = m.glyphs.length
     const R = m.rampIdx.length
 
-    this.sceneRT = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: 4 })
+    this.frame = null                    // copy of the finished frame (FramebufferTexture)
     this.cellRT  = new THREE.WebGLRenderTarget(2, 2, {
       type: THREE.HalfFloatType, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: false,
     })
 
     this.pick = new THREE.ShaderMaterial({
       uniforms: {
-        tScene:   { value: this.sceneRT.texture },
+        tScene:   { value: null },
         uShape:   { value: m.shapes },
         uRampIdx: { value: m.rampIdx },
         uRampInk: { value: m.rampInk },
@@ -308,7 +305,7 @@ export class AsciiScreen {
     })
     this.draw = new THREE.ShaderMaterial({
       uniforms: {
-        tScene:  { value: this.sceneRT.texture },
+        tScene:  { value: null },
         tCells:  { value: this.cellRT.texture },
         tGlyph:  { value: null },
         uRes:    { value: new THREE.Vector2(2, 2) },
@@ -322,7 +319,8 @@ export class AsciiScreen {
       },
       vertexShader: VERT,
       fragmentShader: drawFrag(N),
-      depthTest: false, depthWrite: false,
+      depthTest: false, depthWrite: false, toneMapped: false,
+      transparent: true,
     })
 
     const quad = (mat) => {
@@ -366,8 +364,13 @@ export class AsciiScreen {
     // 2 device px per font pixel at 1x, 3 at 1.5x and 2x, so cells stay about
     // 12 x 18 CSS px.
     const s = Math.max(2, Math.round(dpr * 1.6))
-    if (this.sceneRT.width !== this._size.x || this.sceneRT.height !== this._size.y) {
-      this.sceneRT.setSize(this._size.x, this._size.y)
+    if (!this.frame || this.frame.image.width !== this._size.x || this.frame.image.height !== this._size.y) {
+      this.frame?.dispose()
+      this.frame = new THREE.FramebufferTexture(this._size.x, this._size.y)
+      this.frame.minFilter = THREE.NearestFilter
+      this.frame.magFilter = THREE.NearestFilter
+      this.pick.uniforms.tScene.value = this.frame
+      this.draw.uniforms.tScene.value = this.frame
     }
     const cw = FW * s, ch = FH * s
     const cols = Math.ceil(this._size.x / cw), rows = Math.ceil(this._size.y / ch)
@@ -404,12 +407,16 @@ export class AsciiScreen {
     u.uTime.value = this._time
 
     const r = this.renderer
-    r.setRenderTarget(this.sceneRT)
-    r.render(scene, camera)
+    r.setRenderTarget(null)
+    r.render(scene, camera)                  // the game's frame, exactly as always
+    r.copyFramebufferToTexture(this.frame)
     r.setRenderTarget(this.cellRT)
     r.render(this.pickScene, this.cam)
     r.setRenderTarget(null)
-    r.render(this.drawScene, this.cam)
+    const autoClear = r.autoClear
+    r.autoClear = false
+    r.render(this.drawScene, this.cam)      // type over it, inside the lens only
+    r.autoClear = autoClear
     return true
   }
 }
