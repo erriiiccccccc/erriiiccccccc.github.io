@@ -29,7 +29,7 @@ const CANDIDATES = ` .'\`,:;-_~"^=+*!/\\()<>?ilrtcvxzsunoaeLJTYVXCOQ0#%&@$WMB8`
 const RAMP = ` .:-=+*oa#%@`          // fill glyphs for flat cells
 const CELL_W_CSS = 7                  // a terminal-shaped cell, in CSS pixels
 const CELL_H_CSS = 12
-const RADIUS_CSS = 48                 // blob radius at rest (the trail adds to it)
+const RADIUS_CSS = 24                 // blob radius at rest (the trail adds to it): about 60 px across
 const GW = 40, GH = 68                // glyph cell in the atlas, same aspect as above
 
 /**
@@ -224,10 +224,9 @@ const frag = (N, R) => /* glsl */`
       float tone = clamp(pow(dot(col, vec3(0.2126, 0.7152, 0.0722)), 0.45) * 1.35, 0.0, 1.0);
       vec3 glyphCol = mix(col / max(mx, 1e-3), vec3(1.0), 0.12) * (0.4 + 0.75 * tone);
 
-      // He fades out cell by cell; the type fades in on a dark backing inside
-      // his silhouette, so he reads as a figure made of type and nothing
-      // behind him shows through.
-      float aBg = 0.88 * smoothstep(0.02, 0.4, cov);
+      // He fades out cell by cell and turns see-through: only the type is
+      // left, with the world showing between the letters.
+      float aBg = 0.0;
       float a   = g + aBg * (1.0 - g);
       vec3  bg  = vec3(0.01, 0.008, 0.02);
       vec4 ascii = vec4(glyphCol * g + bg * aBg * (1.0 - g), a);
@@ -275,7 +274,7 @@ export class AsciiCharacter {
         uAmount: { value: 0 },
         uTime:   { value: 0 },
         uBlob:   { value: this._blob },
-        uBlobW:  { value: [1, 0.45, 0.3, 0.2] },
+        uBlobW:  { value: [1, 0.35, 0.22, 0.14] },
       },
       vertexShader: VERT,
       fragmentShader: frag(glyphs.count, glyphs.rampIdx.length),
