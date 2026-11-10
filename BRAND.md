@@ -94,6 +94,12 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 - Ambience (wandering wind and a low space hum) sits under everything at about -44 dB, dips while a panel is open and steps aside for the Jukebox.
 - Levels: effects stay between about -24 and -49 dB, nothing peaks above -15 dB. Options has Sound (on/off) and Volume (scales everything, the Jukebox included).
 
+**Loading into the world:**
+- The loader shows `press anything to enter` (`tap anywhere to enter` on touch) from its first frame, because browsers block sound until a press. Loading carries on either way.
+- After the press, every 5% of the bar plays a balloon pop climbing the world's scale. A late press plays the whole run fast while a light sweeps the bar. If nobody presses by 100%, the loader waits there as a title screen (`Ready`, prompt lit gold).
+- The world opens with the welcome: a low bloom, rising air, a warm G major chord and a sparkle on top.
+- Sound off in Options: no prompt, no wait, the world opens on its own as before.
+
 **Overlays:**
 - Intro: "Welcome to Eric's World!" / "Six islands. Explore them all."
 - Map subtitle: "Walk there yourself, or jump straight to any island."

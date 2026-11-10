@@ -214,6 +214,53 @@ body {
   font-variant-numeric: tabular-nums;
   color: rgba(255,255,255,0.85);
 }
+/* "press anything to enter": sound needs one press before it may play */
+#ldr-enter {
+  margin-top: 1.1rem;
+  padding: 7px 15px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.4s ease, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+  animation: ldr-enter-breathe 2.4s ease-in-out infinite;
+}
+#ldr-enter:focus-visible { outline: 2px solid #FBBF24; outline-offset: 3px; }
+/* Ready and waiting: the prompt lights up like a title screen */
+#ldr-enter.is-ready {
+  color: #fff;
+  border-color: rgba(251,191,36,0.6);
+  box-shadow: 0 0 22px rgba(251,191,36,0.32);
+}
+#ldr-enter.is-gone { opacity: 0; pointer-events: none; animation: none; }
+@keyframes ldr-enter-breathe { 50% { opacity: 0.55; } }
+/* A light that runs along the bar with the catch-up pops */
+#ldr-bar-track::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+  opacity: 0;
+  transform: translateX(-100%);
+}
+#ldr-bar-track.is-sweeping::after { animation: ldr-sweep var(--sweep, 600ms) linear forwards; }
+@keyframes ldr-sweep {
+  0%   { opacity: 1; transform: translateX(-100%); }
+  95%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(340%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ldr-enter { animation: none; }
+  #ldr-bar-track.is-sweeping::after { animation: none; }
+}
+
 #ldr-label {
   margin-top: 0.75rem;
   font-family: var(--font-body, 'Inter', sans-serif);

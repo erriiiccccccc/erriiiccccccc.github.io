@@ -304,6 +304,38 @@ export class Sfx {
     if (SURFACE[island] === 'snow') this._crackle(4, 0.08, { lo: 3500, hi: 6000, gain: [0.015, 0.03] })
   }
 
+  // ── Loading into the world ────────────────────────────────────────────────
+
+  /**
+   * One balloon pop on the loading bar. `frac` is how full the bar is (0 to 1):
+   * the pitch climbs the world's scale as it fills. A pop is a tiny bright
+   * snap of air plus a rubbery "bloop" that bends up into its note.
+   */
+  loadPop(frac, at = 0) {
+    if (!this._ok()) return
+    const SCALE = [392, 440, 493.88, 587.33, 659.25, 783.99, 880, 987.77, 1174.66, 1318.51]
+    const f = SCALE[Math.min(SCALE.length - 1, Math.floor(frac * SCALE.length))]
+    const pan = rand(-0.3, 0.3)
+    this.noise({ at, a: 0.001, d: 0.025, gain: 0.09, type: 'bandpass', f: 1800 + frac * 1600, q: 1.2, verb: 0.1, pan })
+    this.tone(f * 0.6, { at, a: 0.003, d: 0.11, gain: 0.06, to: f, verb: 0.25, pan })
+    this.tone(f * 2, { at: at + 0.005, a: 0.002, d: 0.05, gain: 0.012, verb: 0.2, pan })
+  }
+
+  /**
+   * The welcome as the world opens: a soft low bloom, air rising, a warm
+   * G major chord swelling in, and a sparkle climbing over the top.
+   */
+  welcome() {
+    if (!this._ok() || this._throttle('welcome', 3000)) return
+    this.tone(98, { a: 0.05, d: 1.6, gain: 0.08, to: 82, verb: 0.3 })
+    this.noise({ a: 0.5, d: 1.4, gain: 0.06, type: 'bandpass', f: 600, fTo: 3000, q: 0.8, verb: 0.5 })
+    for (const [f, g] of [[196, 0.04], [246.94, 0.03], [293.66, 0.03], [392, 0.035], [440, 0.02], [587.33, 0.02]]) {
+      this.tone(f, { type: 'triangle', a: 0.45, d: 2.6, gain: g, verb: 0.6 })
+      this.tone(f * 1.004, { a: 0.5, d: 2.4, gain: g * 0.6, verb: 0.6 })   // slight detune: warmth
+    }
+    ;[783.99, 987.77, 1174.66, 1567.98].forEach((f, i) => this._bell(f, { at: 0.35 + i * 0.11, gain: 0.03, d: 1.2, verb: 0.6 }))
+  }
+
   // ── Panels ────────────────────────────────────────────────────────────────
 
   /** A panel opening. Each shell has its own texture, all over the island's note and fifth. */
