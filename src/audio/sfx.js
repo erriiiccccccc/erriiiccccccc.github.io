@@ -260,13 +260,16 @@ export class Sfx {
     this.tone(220, { a: 0.4, d: 0.5, gain: 0.018, to: 880, verb: 0.4 })
   }
 
-  /** One footstep. The ground decides the sound; pitch and level wobble a little. */
-  footstep(island, sprint) {
+  /**
+   * One footstep. The ground decides the sound; pitch and level wobble a
+   * little. `side` is -1 for the left foot, 1 for the right (a touch of pan).
+   */
+  footstep(island, sprint, side) {
     if (!this._ok()) return
     this._foot = !this._foot
-    const pan = this._foot ? -0.08 : 0.08
+    const pan = 0.08 * (side ?? (this._foot ? -1 : 1))
     const k = rand(0.85, 1.15)
-    const v = (sprint ? 1.15 : 1) * rand(0.8, 1.1)
+    const v = 0.75 * (sprint ? 1.15 : 1) * rand(0.8, 1.1)
     switch (SURFACE[island] || 'grass') {
       case 'snow':
         this.noise({ a: 0.006, d: 0.09, gain: 0.12 * v, type: 'bandpass', f: 2400 * k, q: 0.9, verb: 0.05, pan })

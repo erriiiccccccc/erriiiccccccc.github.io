@@ -1094,6 +1094,9 @@ gltfCharLoader.load(LOCO_BASE + 'ericlowpolyskeleton.glb', gltf => {
     animCtrl.loadGlbClips(root, { idle: null, walk: walkClip, run: runClip, emotes })
     modelLoaded = true
 
+    _footBones.L = root.getObjectByName('L_Foot')
+    _footBones.R = root.getObjectByName('R_Foot')
+
     // Traverse bones for About overlay mouse tracking
     root.traverse(obj => {
       if (!obj.isBone && obj.type !== 'Bone') return
@@ -1241,7 +1244,40 @@ function tryJump() {
 }
 let _jumpSounding = false   // a player jump is in the air (so the landing thumps)
 let _teleDest     = null    // where the current warp lands (islands flown past stay quiet)
-let _stepTimer    = 0       // seconds to the next footstep
+let _stepTimer    = 0       // seconds to the next footstep (stand-in character only)
+let _sinceMoving  = 1       // seconds since movement input stopped
+
+// Footsteps follow the animation, not a timer: each foot's height above the
+// character's root is tracked, and a step plays on the frame the foot stops
+// falling (its touchdown), as long as that's in the bottom third of its swing.
+// It re-arms once the foot lifts again, so one contact is one step. The
+// swing's floor and ceiling relax slowly, so walk and run each re-fit.
+const _footBones = { L: null, R: null }
+const _footSt    = { L: { down: true, lo: Infinity, hi: -Infinity, y: 0, falling: false },
+                     R: { down: true, lo: Infinity, hi: -Infinity, y: 0, falling: false } }
+const _footV     = new THREE.Vector3()
+function stepFromFeet(dt, allowed, sprint) {
+  for (const side of ['L', 'R']) {
+    const st = _footSt[side]
+    _footBones[side].getWorldPosition(_footV)
+    modelGroup.worldToLocal(_footV)
+    const y  = _footV.y
+    const dy = y - st.y
+    st.y = y
+    st.lo = Math.min(y, st.lo + dt * 0.15)
+    st.hi = Math.max(y, st.hi - dt * 0.15)
+    const swing = st.hi - st.lo
+    const wasFalling = st.falling
+    st.falling = dy < -1e-4
+    if (swing < 0.04) { st.down = true; continue }     // standing still
+    if (!st.down && wasFalling && !st.falling && y < st.lo + swing * 0.35) {
+      st.down = true
+      if (allowed) sfx.footstep(activeIslandName, sprint, side === 'L' ? -1 : 1)
+    } else if (st.down && y > st.lo + swing * 0.45) {
+      st.down = false
+    }
+  }
+}
 
 // ─── Shared "open island panel" logic ────────────────────────────────────────
 function openIslandPanel() {
@@ -1485,6 +1521,7 @@ if (import.meta.env.DEV) {
     },
     hop: (dir) => hopIsland(dir),
     sfx,
+    feet: () => ({ L: { ..._footSt.L }, R: { ..._footSt.R } }),
     get order() { return HOP_ORDER.slice() },
   }
 }
@@ -2093,8 +2130,14 @@ function animate() {
     character.update(dt, moving, time, !isGrounded)
   }
 
-  // ── Sound: footsteps on whatever ground is underfoot, ambience ducking ──
-  if (moving && isGrounded && !isTeleporting && !uiLocked && !presentationMode) {
+  // ── Sound: a footstep the moment a foot touches down, ambience ducking ──
+  const canStep = isGrounded && !isTeleporting && !uiLocked && !presentationMode
+  _sinceMoving = moving ? 0 : _sinceMoving + dt
+  if (_footBones.L && _footBones.R && modelLoaded) {
+    // the last step as he stops still lands, so allow a beat after letting go
+    stepFromFeet(dt, canStep && _sinceMoving < 0.35, sprint)
+  } else if (moving && canStep) {
+    // procedural stand-in character (model still loading): plain cadence
     _stepTimer -= dt
     if (_stepTimer <= 0) {
       sfx.footstep(activeIslandName, sprint)
