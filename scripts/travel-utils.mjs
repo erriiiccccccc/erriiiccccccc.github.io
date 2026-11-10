@@ -1,5 +1,6 @@
 import { createRequire } from 'module'
 import { feature } from 'topojson-client'
+import { geoArea, geoCentroid, geoDistance, geoAzimuthalEqualArea, geoPath } from 'd3-geo'
 
 const require = createRequire(import.meta.url)
 
@@ -39,6 +40,48 @@ function metaFor(name) {
     iso:       (c.cca2 || '').toLowerCase() || null,
     continent: continentOf(c.region, c.subregion),
     latlng:    Array.isArray(c.latlng) ? c.latlng : null,
+  }
+}
+
+// ── Shapes for the globe and the country tiles ───────────────────────────────
+// The Pirate panel draws each visited country twice: painted onto the globe
+// (filled with its flag) and as a little tile in the list. Both come from here
+// so a newly visited country just works, with no files to add.
+const round = (g, d) => JSON.parse(JSON.stringify(g, (k, v) => typeof v === 'number' ? +v.toFixed(d) : v))
+
+// Keep the mainland and what sits near it; drop far-flung overseas bits
+// (French Guiana, the Azores...) and specks too small to see.
+function mainland(geom) {
+  if (geom.type !== 'MultiPolygon') return geom
+  const polys = geom.coordinates.map(p => {
+    const g = { type: 'Polygon', coordinates: p }
+    return { p, a: geoArea(g), c: geoCentroid(g) }
+  })
+  const big = polys.reduce((a, b) => (b.a > a.a ? b : a))
+  const keep = polys.filter(q => q === big || (geoDistance(q.c, big.c) < 0.2 && q.a > big.a * 0.003))
+  return keep.length === 1
+    ? { type: 'Polygon', coordinates: keep[0].p }
+    : { type: 'MultiPolygon', coordinates: keep.map(q => q.p) }
+}
+
+const FEATURE_BY_NAME = {}
+for (const f of GEO_FEATURES) {
+  const n = NAME_MAP[parseInt(f.id)]
+  if (n) FEATURE_BY_NAME[n] = f
+}
+
+/** { geom, centre, shape } for a country, or null if the atlas lacks it. */
+function shapesFor(name) {
+  const f = FEATURE_BY_NAME[name]
+  if (!f?.geometry) return null
+  const geom = mainland(f.geometry)
+  const ctr = geoCentroid(geom)
+  // the tile: true shape (equal-area, centred on the country) in a 100 box
+  const proj = geoAzimuthalEqualArea().rotate([-ctr[0], -ctr[1]]).fitExtent([[4, 4], [96, 96]], geom)
+  return {
+    geom:   round(geom, 2),
+    centre: ctr.map(v => +v.toFixed(2)),
+    shape:  geoPath(proj).digits(1)(geom),
   }
 }
 
@@ -108,22 +151,33 @@ export async function fetchTravelStats() {
   log(`Found ${points.length} placemarks — running point-in-polygon...`)
 
   const countries = new Set()
+  const pinsIn = {}
   for (const { lat, lon } of points) {
     const name = findCountry(lat, lon)
-    if (name) countries.add(name)
+    if (name) { countries.add(name); pinsIn[name] = (pinsIn[name] || 0) + 1 }
   }
 
   const countriesList = [...countries].sort()
   log(`Countries (${countriesList.length}): ${countriesList.join(', ')}`)
 
   // Derive iso / continent / lat-lng for each country.
-  const countryData = countriesList.map(metaFor)
+  // plus pin count, globe outline and tile shape.
+  const countryData = countriesList.map(name => ({ ...metaFor(name), pins: pinsIn[name] || 0, ...shapesFor(name) }))
+
+  // Pins for the globe: one glowing dot per ~10 km square, so 1,000 pins
+  // packed into one city don't weigh down the feed.
+  const seen = new Set(), pinDots = []
+  for (const { lat, lon } of points) {
+    const k = `${lon.toFixed(1)},${lat.toFixed(1)}`
+    if (!seen.has(k)) { seen.add(k); pinDots.push([+lon.toFixed(2), +lat.toFixed(2)]) }
+  }
 
   return {
     countries:     countriesList.length || null,
     countriesList,
     countryData,
     landmarks:     points.length || null,
+    pinDots,
     worldPct:      countriesList.length ? Math.round(countriesList.length / 195 * 100) : null,
     updatedAt:     new Date().toISOString(),
     logs,

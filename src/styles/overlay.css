@@ -944,7 +944,7 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 #world-panel[data-shell="night"] .wp-scrim {
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><circle cx='0' cy='552' r='0.50' fill='%23fff' fill-opacity='0.69'/><circle cx='320' cy='198' r='0.88' fill='%23fff' fill-opacity='0.58'/><circle cx='411' cy='382' r='0.52' fill='%23fff' fill-opacity='0.47'/><circle cx='425' cy='419' r='1.30' fill='%23fff' fill-opacity='0.66'/><circle cx='281' cy='553' r='0.44' fill='%23fff' fill-opacity='0.56'/><circle cx='554' cy='413' r='0.75' fill='%23fff' fill-opacity='0.80'/><circle cx='545' cy='223' r='0.94' fill='%23fff' fill-opacity='0.45'/><circle cx='92' cy='179' r='0.56' fill='%23fff' fill-opacity='0.81'/><circle cx='334' cy='438' r='0.39' fill='%23fff' fill-opacity='0.41'/><circle cx='336' cy='305' r='0.49' fill='%23fff' fill-opacity='0.80'/><circle cx='33' cy='219' r='0.82' fill='%23fff' fill-opacity='0.80'/><circle cx='309' cy='99' r='0.55' fill='%23fff' fill-opacity='0.47'/><circle cx='254' cy='200' r='0.78' fill='%23fff' fill-opacity='0.39'/><circle cx='544' cy='275' r='0.79' fill='%23fff' fill-opacity='0.63'/><circle cx='310' cy='303' r='1.01' fill='%23fff' fill-opacity='0.49'/><circle cx='425' cy='151' r='0.60' fill='%23fff' fill-opacity='0.45'/><circle cx='235' cy='477' r='0.43' fill='%23fff' fill-opacity='0.74'/><circle cx='47' cy='244' r='0.40' fill='%23fff' fill-opacity='0.85'/><circle cx='132' cy='379' r='0.67' fill='%23fff' fill-opacity='0.61'/><circle cx='83' cy='553' r='0.97' fill='%23fff' fill-opacity='0.78'/><circle cx='545' cy='457' r='0.36' fill='%23fff' fill-opacity='0.40'/><circle cx='46' cy='1' r='0.51' fill='%23fff' fill-opacity='0.69'/><circle cx='294' cy='413' r='0.97' fill='%23fff' fill-opacity='0.39'/><circle cx='224' cy='537' r='0.69' fill='%23fff' fill-opacity='0.25'/><circle cx='548' cy='382' r='0.36' fill='%23fff' fill-opacity='0.79'/><circle cx='113' cy='581' r='0.83' fill='%23fff' fill-opacity='0.41'/><circle cx='134' cy='125' r='0.39' fill='%23fff' fill-opacity='0.71'/><circle cx='420' cy='428' r='0.37' fill='%23fff' fill-opacity='0.32'/><circle cx='551' cy='78' r='0.98' fill='%23fff' fill-opacity='0.27'/><circle cx='530' cy='517' r='1.02' fill='%23fff' fill-opacity='0.71'/><circle cx='252' cy='149' r='0.97' fill='%23fff' fill-opacity='0.49'/><circle cx='141' cy='243' r='0.74' fill='%23fff' fill-opacity='0.46'/><circle cx='373' cy='441' r='0.86' fill='%23fff' fill-opacity='0.50'/><circle cx='119' cy='187' r='1.05' fill='%23fff' fill-opacity='0.63'/><circle cx='523' cy='551' r='0.80' fill='%23fff' fill-opacity='0.33'/><circle cx='298' cy='334' r='1.01' fill='%23fff' fill-opacity='0.54'/><circle cx='112' cy='268' r='0.81' fill='%23fff' fill-opacity='0.56'/><circle cx='337' cy='304' r='0.60' fill='%23fff' fill-opacity='0.70'/><circle cx='16' cy='179' r='0.49' fill='%23fff' fill-opacity='0.68'/><circle cx='175' cy='141' r='0.65' fill='%23fff' fill-opacity='0.30'/><circle cx='464' cy='494' r='0.99' fill='%23fff' fill-opacity='0.66'/><circle cx='575' cy='15' r='0.77' fill='%23fff' fill-opacity='0.68'/><circle cx='539' cy='22' r='0.41' fill='%23fff' fill-opacity='0.31'/><circle cx='51' cy='6' r='1.01' fill='%23fff' fill-opacity='0.37'/><circle cx='80' cy='121' r='0.52' fill='%23fff' fill-opacity='0.52'/><circle cx='596' cy='254' r='0.89' fill='%23fff' fill-opacity='0.49'/><circle cx='250' cy='37' r='0.92' fill='%23fff' fill-opacity='0.83'/><circle cx='91' cy='555' r='0.44' fill='%23fff' fill-opacity='0.38'/><circle cx='362' cy='102' r='1.30' fill='%23fff' fill-opacity='0.41'/><circle cx='388' cy='334' r='1.05' fill='%23fff' fill-opacity='0.30'/><circle cx='248' cy='189' r='1.30' fill='%23fff' fill-opacity='0.25'/><circle cx='248' cy='55' r='1.00' fill='%23fff' fill-opacity='0.72'/><circle cx='458' cy='262' r='1.02' fill='%23fff' fill-opacity='0.73'/><circle cx='397' cy='343' r='0.63' fill='%23fff' fill-opacity='0.55'/><circle cx='297' cy='340' r='0.82' fill='%23fff' fill-opacity='0.63'/><circle cx='437' cy='531' r='1.04' fill='%23fff' fill-opacity='0.51'/><circle cx='292' cy='574' r='0.60' fill='%23fff' fill-opacity='0.30'/><circle cx='206' cy='530' r='0.87' fill='%23fff' fill-opacity='0.82'/><circle cx='472' cy='124' r='0.91' fill='%23fff' fill-opacity='0.31'/><circle cx='549' cy='480' r='0.85' fill='%23fff' fill-opacity='0.57'/><circle cx='266' cy='523' r='0.96' fill='%23fff' fill-opacity='0.41'/><circle cx='412' cy='260' r='0.48' fill='%23fff' fill-opacity='0.60'/><circle cx='139' cy='539' r='0.59' fill='%23fff' fill-opacity='0.66'/><circle cx='526' cy='70' r='0.99' fill='%23fff' fill-opacity='0.25'/><circle cx='79' cy='238' r='1.30' fill='%23fff' fill-opacity='0.67'/><circle cx='539' cy='104' r='1.01' fill='%23fff' fill-opacity='0.67'/><circle cx='105' cy='70' r='0.36' fill='%23fff' fill-opacity='0.74'/><circle cx='355' cy='451' r='0.58' fill='%23fff' fill-opacity='0.68'/><circle cx='573' cy='329' r='0.89' fill='%23fff' fill-opacity='0.67'/><circle cx='440' cy='359' r='0.38' fill='%23fff' fill-opacity='0.62'/></svg>"),
-    radial-gradient(80% 70% at 50% 50%, rgba(10, 22, 52, 0.55) 0%, rgba(5, 10, 28, 0.9) 55%, #02040b 100%);
+    radial-gradient(80% 70% at 50% 50%, rgba(10, 22, 52, 0.93) 0%, rgba(5, 10, 28, 0.97) 55%, #02040b 100%);
   background-size: 600px 600px, auto;
 }
 #world-panel[data-shell="night"] .wp-card {
@@ -1646,154 +1646,301 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TRAVEL — split map ‖ stats
+   TRAVEL LOG (Pirate Ship): the Storybook globe ‖ the log
+   Left, the globe fills its column with the postcard tucked in the corner.
+   Right, the six numbers, then the countries, the only part that scrolls.
    ═══════════════════════════════════════════════════════════════════════════ */
-.travel-split {
+.tl {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 1.4rem;
-  height: 100%;           /* fill wp-content so each column can own its scroll */
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: 1.6rem;
+  height: 100%;
+  min-height: 0;
 }
-.travel-map-col {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;          /* let the map fill, never overflow the grid track */
-}
-/* Map fills the whole left column, full height, and stays put while you scroll right */
-.travel-map-col #tp-map-slot { flex: 1; width: 100%; display: flex; min-height: 0; }
-.travel-info-col {
+.tl-globe {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.4rem;
   min-width: 0;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  overflow-y: auto;       /* independent scroll — doesn't move the map */
-  padding-right: 6px;     /* breathing room for the scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-stroke) transparent;
 }
-.travel-info-col::-webkit-scrollbar { width: 8px; }
-.travel-info-col::-webkit-scrollbar-thumb { background: var(--glass-stroke); border-radius: 4px; }
-.travel-info-col .tp-actions { margin: 0; }
-.travel-info-col .tp-stats { grid-template-columns: repeat(3, 1fr); margin-top: 0; }
-
-/* ── TEST: photo overlay card at the top of the right column ──────────────────
-   A real snapshot framed like a postcard, with an ocean scrim + caption.
-   To remove: delete this block + the <figure class="tp-photo"> in TravelStats.js. */
-.tp-photo {
-  position: relative;
-  margin: 0;
-  flex: 0 0 auto;
-  height: 420px;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background-size: cover;
-  background-position: center 50%;
-  border: 1px solid color-mix(in srgb, var(--ic) 40%, var(--glass-stroke));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
-              0 8px 22px rgba(0, 0, 0, 0.35);
-}
-/* teal ocean scrim — darkens the bottom so the caption stays readable */
-.tp-photo::after {
-  content: '';
+.tl-stage { position: relative; min-height: 0; }
+.tl-canvas {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg,
-      transparent 55%,
-      color-mix(in srgb, var(--ic) 18%, rgba(8, 20, 24, 0.32)) 82%,
-      rgba(6, 16, 20, 0.62) 100%);
+  display: block;
+  cursor: grab;
+  touch-action: pan-y;           /* vertical swipes still scroll the panel on phones */
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
-.tp-photo-cap {
-  position: absolute;
-  z-index: 1;
-  left: 0.95rem;
-  bottom: 0.8rem;
-  right: 0.95rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
-}
-.tp-photo-eyebrow {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--ic) 30%, #ffffff);
-}
-.tp-photo-line {
-  font-family: var(--font-display);
-  font-size: 1.02rem;
-  font-weight: 600;
-  color: #fff;
-}
+.tl-stage.is-ready .tl-canvas { opacity: 1; }
+.tl-canvas.is-dragging { cursor: grabbing; }
 
-/* Country wall heading */
-.tp-cloud-head {
+/* the label that rides on the lit-up country */
+.tl-tag {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  top: 0;
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: #EEF2FF;
+  background: rgba(8, 14, 34, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
-.tp-cloud-title {
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--txt-mute);
-}
-.tp-cloud-count {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--ic);
+.tl-tag b { font-weight: 500; }
+.tl-tag span { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.7rem; color: rgba(226, 232, 255, 0.62); }
+.tl-tag::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 14px;
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
 }
 
-/* Full-bleed flag chips — the flag fills the chip, name on a dark scrim */
-.tp-flags {
+/* the fishing postcard, tucked in the corner the round globe leaves empty */
+.tl-card {
+  position: absolute;
+  z-index: 2;
+  left: 2%;
+  bottom: 3%;
+  width: clamp(92px, min(11vw, 19vh), 150px);
+  margin: 0;
+  padding: 6px;
+  background: #f6f2e9;
+  border-radius: 4px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: rotate(-6deg);
+  transform-origin: 50% 100%;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s;
+}
+.tl-card:hover {
+  transform: rotate(-1.5deg) translateY(-6px) scale(1.06);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.tl-card img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 2px; }
+/* perforated stamp: a solid middle with holes punched round the edge */
+.tl-stamp {
+  position: absolute;
+  top: -9px;
+  right: -11px;
+  width: 34px;
+  height: 41px;
+  padding: 3px;
+  background: #f6f2e9;
+  transform: rotate(9deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, radial-gradient(circle, #0000 1.6px, #000 1.75px) -2.5px -2.5px / 5px 5px;
+  mask: linear-gradient(#000 0 0) content-box, radial-gradient(circle, #0000 1.6px, #000 1.75px) -2.5px -2.5px / 5px 5px;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35));
+}
+.tl-stamp i {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 9px;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, #19a8b8, #0b6f86);
+  outline: 1px solid rgba(255, 255, 255, 0.55);
+  outline-offset: -3px;
 }
-.tp-flag {
+.tl-stamp svg { width: 70%; }
+.tl-postmark { position: absolute; top: 6px; right: 6px; width: 64px; opacity: 0.75; transform: rotate(-12deg); pointer-events: none; }
+
+.tl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  font-size: 0.76rem;
+  color: rgba(226, 232, 255, 0.45);
+}
+.tl-live { display: inline-flex; align-items: center; gap: 7px; }
+.tl-live.is-live::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+}
+.tl-refresh {
   position: relative;
-  height: 58px;
-  border-radius: 11px;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--glass-raise-2);
-  border: 1px solid var(--glass-stroke);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(226, 232, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
-.tp-flag::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.04) 38%, rgba(0,0,0,0.74) 100%);
+.tl-refresh::after { content: ""; position: absolute; inset: -8px; }   /* 44px hit area */
+.tl-refresh:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.tl-refresh:focus-visible { outline: 2px solid var(--ic); outline-offset: 2px; }
+.tl-refresh:disabled { cursor: default; }
+.tl-refresh.is-spinning svg { animation: tl-spin 0.8s linear infinite; }
+@keyframes tl-spin { to { transform: rotate(360deg); } }
+.tl-maplink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(226, 232, 255, 0.68);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(160, 190, 255, 0.2);
 }
-.tp-flag-name {
+.tl-maplink:hover { color: #fff; }
+.tl-maplink:focus-visible { outline: 2px solid var(--ic); outline-offset: 3px; border-radius: 2px; }
+
+/* the log */
+.tl-log {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0;
+  min-height: 0;
+}
+.tl-nums {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(160, 190, 255, 0.14);
+  flex: none;
+}
+.tl-num { min-width: 0; padding: 0.85rem 0.75rem 0.85rem 0; border-bottom: 1px solid rgba(160, 190, 255, 0.14); }
+.tl-num:not(:nth-child(3n+1)) { padding-left: 0.9rem; border-left: 1px solid rgba(160, 190, 255, 0.14); }
+.tl-num p { margin: 0; }
+.tl-v {
+  font-weight: 300;
+  font-size: clamp(1.7rem, 2.8vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #EEF2FF;
+  overflow-wrap: anywhere;
+}
+.tl-v.is-word { font-weight: 400; font-size: clamp(1.15rem, 1.8vw, 1.5rem); letter-spacing: 0; padding-top: 0.45rem; }
+.tl-l { margin-top: 0.25rem !important; font-size: 0.76rem; color: rgba(226, 232, 255, 0.62); }
+.tl-s { font-size: 0.72rem; color: rgba(226, 232, 255, 0.38); }
+.tl-home {
+  position: relative;
+  color: rgba(226, 232, 255, 0.62);
+  text-decoration: underline dotted rgba(226, 232, 255, 0.55);
+  text-underline-offset: 3px;
+  cursor: help;
+  outline: none;
+}
+.tl-home::after {
+  content: attr(data-tip);
   position: absolute;
-  left: 9px;
-  right: 9px;
-  bottom: 7px;
-  z-index: 1;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.65);
+  left: 50%;
+  bottom: calc(100% + 8px);
+  padding: 4px 10px;
+  border-radius: 999px;
   white-space: nowrap;
+  font-size: 0.75rem;
+  color: #EEF2FF;
+  background: rgba(8, 14, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transform: translate(-50%, 4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.tl-home:hover::after, .tl-home:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.tl-home:focus-visible { color: #EEF2FF; }
+
+.tl-cc-head { display: flex; align-items: baseline; justify-content: space-between; flex: none; font-size: 0.82rem; font-weight: 500; color: #EEF2FF; }
+.tl-cc-count { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.7rem; font-weight: 400; color: rgba(226, 232, 255, 0.38); }
+
+/* the countries: the one part of the panel that scrolls, with a slim
+   sea-glass scrollbar and a soft fade where the list runs on */
+.tl-cc {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-content: start;
+  gap: 4px;
+  padding: 10px 8px 22px 0;
+  -webkit-mask-image: linear-gradient(transparent, #000 12px, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(transparent, #000 12px, #000 calc(100% - 26px), transparent);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 209, 197, 0.4) transparent;
+}
+.tl-cc::-webkit-scrollbar { width: 6px; }
+.tl-cc::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); border-radius: 99px; margin: 12px 0 20px; }
+.tl-cc::-webkit-scrollbar-thumb { background: linear-gradient(rgba(79, 209, 197, 0.55), rgba(79, 209, 197, 0.28)); border-radius: 99px; }
+.tl-cc::-webkit-scrollbar-thumb:hover { background: rgba(79, 209, 197, 0.7); }
+.tl-c {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 2px 5px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tl-c:hover, .tl-c.is-on { background: rgba(255, 255, 255, 0.06); }
+.tl-c:focus-visible { outline: 2px solid var(--ic); outline-offset: 1px; }
+.tl-c svg, .tl-c-flat {
+  width: 100%;
+  max-width: 58px;
+  aspect-ratio: 1;
+  overflow: visible;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  transition: transform 0.2s;
+}
+.tl-c-flat { display: block; background: center / 80% auto no-repeat; }
+.tl-c:hover svg, .tl-c.is-on svg { transform: translateY(-2px) scale(1.06); }
+.tl-c small {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.66rem;
+  line-height: 1.2;
+  color: rgba(226, 232, 255, 0.62);
 }
-.tp-flag:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 26px rgba(0,0,0,0.42);
+
+/* Narrow screens: one column, the whole panel scrolls as one */
+@media (max-width: 900px) {
+  #world-panel .wp-card.wp--travel .wp-content { overflow-y: auto; }
+  .tl { grid-template-columns: 1fr; height: auto; gap: 1.2rem; }
+  .tl-stage { aspect-ratio: 1 / 1; max-height: 62vh; width: 100%; margin-inline: auto; }
+  .tl-cc { overflow: visible; -webkit-mask-image: none; mask-image: none; padding: 2px 0 0; }
 }
-.tp-flag--plain { display: flex; align-items: flex-end; }
-.tp-flag--plain::after { background: linear-gradient(180deg, transparent, rgba(0,0,0,0.4)); }
+@media (max-width: 520px) {
+  .tl-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tl-num:not(:nth-child(3n+1)) { padding-left: 0; border-left: 0; }
+  .tl-num:nth-child(2n) { padding-left: 0.8rem; border-left: 1px solid rgba(160, 190, 255, 0.14); }
+  .tl-cc { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tl-card { width: 92px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-card, .tl-card:hover, .tl-canvas { transition: none; }
+}
+.reduced-motion .tl-card, .reduced-motion .tl-canvas { transition: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CONTACT — desert-sunset "drop me a line"
@@ -2037,14 +2184,6 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 
 /* ── Custom layouts: small screens ─────────────────────────────────────────── */
 @media (max-width: 720px) {
-  /* Drop the dual-scroll on mobile — single column, the panel scrolls as one */
-  .wp-card.wp--travel { height: auto; max-height: 92vh; }
-  .wp-card.wp--travel .wp-content { overflow-y: auto; }
-  .travel-split { grid-template-columns: 1fr; height: auto; }
-  .travel-map-col { min-height: 240px; order: 2; }   /* map under the stats on mobile */
-  .travel-info-col { overflow: visible; padding-right: 0; }
-  .travel-info-col .tp-stats { grid-template-columns: repeat(2, 1fr); }
-  .tp-flags { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   /* Contact: stack — form first, desert panel below */
   .contact-split { grid-template-columns: 1fr; gap: 1.1rem; }
   .contact-main  { order: 1; }
@@ -2080,84 +2219,6 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   /* Keyboard control bar is irrelevant on touch — hide to save room */
   #controls-hint { display: none; }
   .hp-label { display: none; }
-}
-
-/* ── Travel panel (pirate_ship) ──────────────────────────────────────────── */
-.tp-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.tp-btn {
-  background: color-mix(in srgb, var(--ic) 16%, transparent);
-  color: var(--ic);
-  border: 1px solid color-mix(in srgb, var(--ic) 40%, transparent);
-  border-radius: var(--r-sm);
-  padding: 5px 11px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.tp-btn:hover  { background: color-mix(in srgb, var(--ic) 28%, transparent); }
-.tp-btn:disabled { opacity: 0.5; cursor: default; }
-.tp-status { font-size: 0.72rem; color: var(--txt-mute); }
-
-.tp-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 0.2rem;
-}
-/* Every box is identical: same min-height, same internal rhythm → OCD-clean grid */
-.tp-box {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-  min-height: 92px;
-  background: var(--glass-raise);
-  border: 1px solid var(--glass-stroke);
-  border-radius: var(--r-md);
-  padding: 12px 15px;
-}
-/* Countries box doubles as a shortcut to the flags wall below */
-button.tp-box {
-  font: inherit;
-  text-align: left;
-  width: 100%;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-.tp-box--link { border-color: color-mix(in srgb, var(--ic) 35%, var(--glass-stroke)); }
-.tp-box--link:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--ic) 60%, var(--glass-stroke));
-  background: color-mix(in srgb, var(--ic) 10%, var(--glass-raise));
-}
-.tp-box--link:focus-visible {
-  outline: 2px solid var(--ic);
-  outline-offset: 2px;
-}
-.tp-box--link .tp-sub { display: inline-flex; align-items: center; gap: 4px; }
-.tp-box--link .tp-sub svg { opacity: 0.7; }
-.tp-label {
-  order: -1;
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--txt-mute);
-}
-.tp-value {
-  font-size: 1.7rem;
-  font-weight: 700;
-  color: var(--ic);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tp-sub {
-  font-size: 0.68rem;
-  color: var(--txt-faint);
-  min-height: 0.9em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2723,36 +2784,6 @@ button.tp-box {
    CONTROLS HINT — auto-fade out (transition timing also defined in base rule)
    ═══════════════════════════════════════════════════════════════════════════ */
 #controls-hint.faded { opacity: 0; }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PRIVACY: click-to-load Google Maps embed (Travel panel)
-   ═══════════════════════════════════════════════════════════════════════════ */
-.tp-map-consent {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-start;
-  background: rgba(255,255,255,0.04);
-  border: 1px dashed rgba(255,255,255,0.12);
-  border-radius: 8px;
-  padding: 0.85rem 1rem;
-  margin: 0.6rem 0;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  color: rgba(255,255,255,0.62);
-}
-.tp-map-consent button {
-  background: color-mix(in srgb, var(--ic) 16%, transparent);
-  color: var(--ic);
-  border: 1px solid color-mix(in srgb, var(--ic) 40%, transparent);
-  border-radius: var(--r-sm);
-  padding: 6px 13px;
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background 0.18s;
-}
-.tp-map-consent button:hover { background: color-mix(in srgb, var(--ic) 28%, transparent); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    REDUCED MOTION — respect user preference

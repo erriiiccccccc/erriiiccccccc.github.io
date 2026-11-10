@@ -62,6 +62,8 @@ export default defineConfig({
           if (id.includes('node_modules/gsap')) return 'gsap'
           if (id.includes('node_modules/three-mesh-bvh')) return 'bvh'
           if (id.includes('/islands/')) return 'islands'
+          // the Pirate globe and its map data load in idle time, never at startup
+          if (id.includes('/travel/TravelGlobe') || /node_modules\/(d3-|world-atlas|topojson-client|internmap)/.test(id)) return 'travel-globe'
           if (id.includes('/travel/')) return 'travel'
           if (id.includes('/scene/Asteroids') || id.includes('/scene/Flyers')
             || id.includes('/scene/Comet') || id.includes('/scene/Aurora')) {
