@@ -257,13 +257,14 @@ const drawFrag = (N) => /* glsl */`
       vec2 guv = vec2((idx * uCell.x + lp.x + 0.5) / (uCell.x * NF), (uCell.y - 1.0 - lp.y + 0.5) / uCell.y);
       float g = texture2D(tGlyph, guv).r;
 
-      // The world dims to a faint ghost; the type glows in its own colours.
+      // Behind the type: the world's own space colour (#0d0820), so the lens
+      // reads as part of the sky. The type glows in the scene's colours.
       float tn = tone(dot(col, vec3(0.2126, 0.7152, 0.0722)));
       float mx = max(max(col.r, col.g), col.b);
       vec3 hue = mix(col / max(mx, 1e-3), vec3(1.0), 0.25);
       vec3 glyphCol = min(vec3(1.0), hue * (0.45 + 0.75 * tn));
-      vec3 ghost = texture2D(tScene, vUv).rgb * 0.3;
-      gl_FragColor = vec4(mix(ghost, glyphCol, g), cm);
+      vec3 space = vec3(13.0, 8.0, 32.0) / 255.0;
+      gl_FragColor = vec4(mix(space, glyphCol, g), cm);
     }
   }
 `
