@@ -52,13 +52,29 @@ export class Sfx {
 
   // ── Setup ─────────────────────────────────────────────────────────────────
 
-  /** Call from any user gesture. Builds or wakes the shared context. */
+  /**
+   * Build or wake the shared context. Called once at page load (browsers that
+   * allow autoplay for this site start sound straight away) and again from
+   * every press or click (everyone else starts on their first one).
+   */
   unlock() {
     const ctx = audio.ensure()
     if (!ctx) return
     if (!this.ctx) {
       this.attach(ctx, audio.master)
       this._startAmbience()
+      const started = () => {
+        if (this._started || ctx.state !== 'running') return
+        this._started = true
+        // Sound arrives softly and swells to its level over 2.5 s.
+        const t = ctx.currentTime
+        this.out.gain.cancelScheduledValues(t)
+        this.out.gain.setValueAtTime(0.0001, t)
+        this.out.gain.exponentialRampToValueAtTime(1, t + 2.5)
+        this.onStart?.()
+      }
+      ctx.addEventListener('statechange', started)
+      started()
     }
   }
 
@@ -66,6 +82,7 @@ export class Sfx {
   attach(ctx, destination) {
     this.ctx = ctx
     this.out = ctx.createGain()
+    this.out.gain.value = this._offline ? 1 : 0.0001   // unlock() fades it in once sound starts
     this.out.connect(destination)
 
     // One small room every effect sits in, so they read as one family.
@@ -316,9 +333,10 @@ export class Sfx {
     const SCALE = [392, 440, 493.88, 587.33, 659.25, 783.99, 880, 987.77, 1174.66, 1318.51]
     const f = SCALE[Math.min(SCALE.length - 1, Math.floor(frac * SCALE.length))]
     const pan = rand(-0.3, 0.3)
-    this.noise({ at, a: 0.001, d: 0.025, gain: 0.09, type: 'bandpass', f: 1800 + frac * 1600, q: 1.2, verb: 0.1, pan })
-    this.tone(f * 0.6, { at, a: 0.003, d: 0.11, gain: 0.06, to: f, verb: 0.25, pan })
-    this.tone(f * 2, { at: at + 0.005, a: 0.002, d: 0.05, gain: 0.012, verb: 0.2, pan })
+    const v = 0.55 + 0.45 * frac          // the pops grow as the bar fills
+    this.noise({ at, a: 0.001, d: 0.025, gain: 0.09 * v, type: 'bandpass', f: 1800 + frac * 1600, q: 1.2, verb: 0.1, pan })
+    this.tone(f * 0.6, { at, a: 0.003, d: 0.11, gain: 0.06 * v, to: f, verb: 0.25, pan })
+    this.tone(f * 2, { at: at + 0.005, a: 0.002, d: 0.05, gain: 0.012 * v, verb: 0.2, pan })
   }
 
   /**

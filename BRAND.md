@@ -95,10 +95,9 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 - Levels: effects stay between about -24 and -49 dB, nothing peaks above -15 dB. Options has Sound (on/off) and Volume (scales everything, the Jukebox included).
 
 **Loading into the world:**
-- The loader shows `press anything to enter` (`tap anywhere to enter` on touch) from its first frame, because browsers block sound until a press. Loading carries on either way.
-- After the press, every 5% of the bar plays a balloon pop climbing the world's scale. A late press plays the whole run fast while a light sweeps the bar. If nobody presses by 100%, the loader waits there as a title screen (`Ready`, prompt lit gold).
-- The world opens with the welcome: a low bloom, rising air, a warm G major chord and a sparkle on top.
-- Sound off in Options: no prompt, no wait, the world opens on its own as before.
+- No gate: the world opens on its own. Sound is tried the moment the page loads and always fades in softly over 2.5 s.
+- If the browser allows autoplay for the site, every 5% of the bar plays a balloon pop climbing the world's scale (growing as the bar fills), and the welcome plays as the world opens: a low bloom, rising air, a warm G major chord and a sparkle on top.
+- Otherwise (most first visits) sound starts on the first press or click, usually closing How to Play: it fades in, pops catch up if the bar is still going, and the welcome plays then.
 
 **Overlays:**
 - Intro: "Welcome to Eric's World!" / "Six islands. Explore them all."

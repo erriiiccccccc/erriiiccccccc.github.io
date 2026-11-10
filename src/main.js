@@ -471,26 +471,18 @@ let sceneStarted = false
 let scenePlayTime = 0
 
 // ── Loading sound: pops along the bar, a welcome as the world opens ──────────
-// Browsers block sound until the visitor presses something, so the loader asks
-// for that press ("press anything to enter") from its first frame. Loading
-// carries on either way. A press during loading turns the pops on, with a
-// quick run (and a light sweeping the bar) to catch up to where the bar is;
-// if nobody has pressed by 100%, the loader waits there like a title screen
-// and the press plays the whole run. Then the welcome, as the world opens.
-// With Sound off in Options there's no prompt and no wait.
-const ldrEnter    = document.getElementById('ldr-enter')
+// Sound is tried the moment the page loads. Browsers that allow autoplay for
+// this site (Chrome once you've used it a lot, Safari or Firefox if allowed per
+// site) start straight away: pops climb the scale along the bar and the
+// welcome plays as the world opens. Everyone else gets sound on their first
+// press or click (usually closing How to Play): it fades in from there, the
+// pops catch up if the bar is still going, and the welcome plays then.
 const ldrTrack    = document.getElementById('ldr-bar-track')
 const POP_STEP    = 5          // a pop every 5% of the bar
-let _entered      = false
 let _popped       = 0          // pops already played
 let _loaderShown  = 0          // last % on the bar
-let _catchUpMs    = 0          // how long the catch-up run takes to play
 let _popClock     = 0          // performance.now() before which no new pop may start
-const loaderGated = () => settingsOverlay.soundOn && audio.supported
-if (ldrEnter && loaderGated()) {
-  ldrEnter.textContent = IS_TOUCH ? 'tap anywhere to enter' : 'press anything to enter'
-  ldrEnter.hidden = false
-}
+let _welcomed     = false
 /**
  * Play the pops the bar has passed, at least `gapMs` apart even when the bar
  * jumps several steps at once (so two pops never land on top of each other).
@@ -509,28 +501,25 @@ function popTo(pct, gapMs) {
   }
   return n
 }
-function enterWorld() {
-  if (_entered || sceneStarted || !loaderGated()) return
-  _entered = true
-  sfx.unlock()
-  ldrEnter?.classList.add('is-gone')
-  const n = popTo(_loaderShown, 30)
-  _catchUpMs = n ? Math.max(0, _popClock - performance.now()) + 160 : 0
-  if (n > 3 && ldrTrack) {
-    ldrTrack.style.setProperty('--sweep', `${n * 30}ms`)
-    ldrTrack.classList.remove('is-sweeping')
-    void ldrTrack.offsetWidth
-    ldrTrack.classList.add('is-sweeping')
+// The moment sound actually starts (at load, or on the first press).
+sfx.onStart = () => {
+  if (!sceneStarted) {
+    const n = popTo(_loaderShown, 30)        // quick run up to where the bar is
+    if (n > 3 && ldrTrack) {
+      ldrTrack.style.setProperty('--sweep', `${n * 30}ms`)
+      ldrTrack.classList.add('is-sweeping')
+    }
+  } else if (!_welcomed) {
+    _welcomed = true
+    sfx.welcome()
   }
-  tryBeginReveal()
 }
-window.addEventListener('keydown', () => enterWorld(), true)
-window.addEventListener('pointerdown', () => enterWorld(), true)
+if (settingsOverlay.soundOn) sfx.unlock()
 
 function setLoaderProgress(p, label) {
   const shown = Math.min(100, Math.max(0, Math.floor(p)))
   _loaderShown = shown
-  if (_entered && !sceneStarted) popTo(shown, 45)
+  if (sfx.live && !sceneStarted) popTo(shown, 45)
   if (ldrPct)     ldrPct.textContent     = shown + '%'
   if (ldrBarFill) ldrBarFill.style.width = shown + '%'
   if (label && ldrLabel && label !== _lastStageLabel && !loadDirector?.isFatal) {
@@ -1684,14 +1673,12 @@ let _introFrameLogged = false
 function tryBeginReveal() {
   if (_revealScheduled || loadDirector?.isFatal) return
   if (!loadDirector?.isReady || !_arrivalDone) return
-  // Title screen: ready, but waiting for the press that lets sound play.
-  if (loaderGated() && !_entered) { ldrEnter?.classList.add('is-ready'); return }
   _revealScheduled = true
 
-  // Let the catch-up run of pops finish before the welcome.
-  const dwell = Math.max(loadDirector.minDwellMs, _catchUpMs)
+  // Let any run of pops still sounding finish before the welcome.
+  const dwell = Math.max(loadDirector.minDwellMs, _popClock - performance.now() + 120)
   const start = () => {
-    sfx.welcome()
+    if (sfx.live) { _welcomed = true; sfx.welcome() }
     loadDirector.beginReveal()
     startScene()
   }
