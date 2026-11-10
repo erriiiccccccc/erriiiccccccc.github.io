@@ -607,10 +607,10 @@ html.glass-solid {
   width: 130%;
   height: 95%;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--ic) 0%, transparent 68%);
-  opacity: 0.18;
-  mix-blend-mode: screen;
-  filter: blur(8px);
+  /* Already a soft gradient: no blur filter or blend mode (both cost a GPU
+     effect build the first time a panel opens). */
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--ic) 0%, transparent 72%);
+  opacity: 0.15;
   pointer-events: none;
 }
 
@@ -742,6 +742,11 @@ html.glass-solid {
    ═══════════════════════════════════════════════════════════════════════════ */
 .wp-card, .wp-scrim { transition: none; }
 .wp-card:focus { outline: none; }
+/* The exits own the way out. Without this the old closing rule hid the card on
+   the first frame, so an exit that only moves or clips it (slab, frost) played
+   over nothing. */
+#world-panel.is-closing .wp-card  { opacity: 1; transform: none; }
+#world-panel.is-closing .wp-scrim { opacity: 1; }
 
 .wp-header {
   align-items: flex-start;
@@ -801,7 +806,6 @@ html.glass-solid {
 
 /* Shell-only layers. Hidden unless their shell asks for them. */
 .wp-beam, .wp-edge, .wp-frost { display: none; pointer-events: none; }
-.wp-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 /* ── Cinema (Mountain) ─────────────────────────────────────────────────────── */
 #world-panel[data-shell="cinema"] { padding: 0; }
@@ -869,18 +873,10 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   inset: 0;
   z-index: 4;
   opacity: 0;
-  mix-blend-mode: screen;
   background:
-    radial-gradient(80% 70% at 100% 50%, rgba(225, 242, 255, 0.5), rgba(190, 222, 250, 0.3) 55%, rgba(170, 210, 245, 0.22)),
+    radial-gradient(80% 70% at 100% 50%, rgba(226, 242, 255, 0.55), rgba(186, 220, 250, 0.32) 55%, rgba(150, 196, 240, 0.22)),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.35'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
 }
-/* The tech spread folds into one column inside the pane: photo as a banner. */
-#world-panel[data-shell="frost"] .tech-layout {
-  grid-template-columns: 1fr;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 1rem;
-}
-#world-panel[data-shell="frost"] .tech-photo { height: 150px; }
 
 /* ── Slab (Lava) ───────────────────────────────────────────────────────────── */
 #world-panel[data-shell="slab"] { align-items: flex-end; padding: 0 clamp(12px, 2.5vw, 40px); }
@@ -896,6 +892,8 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   border-color: rgba(255, 140, 80, 0.16);
   border-bottom: 0;
   background: linear-gradient(180deg, rgba(46, 20, 15, 0.95) 0%, rgba(24, 10, 8, 0.97) 55%, rgba(14, 6, 5, 0.98) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.5), 0 -2px 40px rgba(255, 90, 30, 0.12);
 }
 #world-panel[data-shell="slab"] .wp-edge {
@@ -914,7 +912,10 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   background: radial-gradient(ellipse at 50% 55%, rgba(40, 18, 6, 0.45) 0%, rgba(14, 6, 3, 0.84) 100%);
 }
 #world-panel[data-shell="mirage"] .wp-card {
-  background: linear-gradient(170deg, rgba(74, 40, 20, 0.8) 0%, rgba(34, 17, 10, 0.9) 100%);
+  /* Near-opaque so it needs no backdrop blur (cheap to move every frame). */
+  background: linear-gradient(170deg, rgba(70, 38, 19, 0.94) 0%, rgba(32, 16, 9, 0.97) 100%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-color: rgba(255, 196, 140, 0.24);
   box-shadow: 0 0 90px -24px rgba(251, 146, 60, 0.4), var(--glass-shadow), inset 0 1px 0 rgba(255, 220, 180, 0.14);
 }
@@ -974,7 +975,6 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   #world-panel[data-shell="frost"] .wp-frost {
     background: radial-gradient(80% 60% at 50% 100%, rgba(225, 242, 255, 0.5), rgba(190, 222, 250, 0.3) 55%, rgba(170, 210, 245, 0.22));
   }
-  #world-panel[data-shell="frost"] .tech-photo { height: 120px; }
   #world-panel[data-shell="slab"] { padding: 0; }
   #world-panel[data-shell="slab"] .wp-card { height: 84vh; height: 84dvh; border-radius: 22px 22px 0 0; }
   #world-panel[data-shell="mirage"] { padding: 10px; align-items: center; }
@@ -1077,12 +1077,6 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 /* Auto height — the card grows to the taller (left) panel; the message box on
    the right then stretches to fill, so both columns bottom out together. */
 .wp-card.wp--contact { width: min(1040px, 96vw); max-height: min(92vh, 880px); }
-/* Tech stack — widest content card so the largest category (11 logos) sits on a
-   single row of fixed-width chips, killing the orphan "one logo on row two".
-   A definite height lets the full-height glacier photo rail stay fixed on the
-   left while the logo categories scroll on the right (like the travel panel). */
-.wp-card.wp--tech { width: min(1220px, 96vw); height: min(88vh, 840px); max-height: 90vh; }
-.wp-card.wp--tech .wp-content { overflow: hidden; }   /* the groups column scrolls, not the card */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PROJECTS — sharp paste-up collage (flush-left rows, variable widths).
@@ -1484,198 +1478,48 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TECH STACK — full-colour logo tiles, grouped, with an icy hover glow
+   ARCTIC — placeholder while the island waits for its new content (the tech
+   stack was retired). Glacier photo with a caption, one line underneath.
    ═══════════════════════════════════════════════════════════════════════════ */
-/* Magazine spread: full-height glacier photo rail on the left, logo categories
-   scrolling on the right. */
-.tech-layout {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 1.6rem;
-  height: 100%;
-  min-height: 0;
-}
-.tech-photo {
+.arctic-soon { display: flex; flex-direction: column; gap: 1.1rem; }
+.arctic-photo {
   position: relative;
+  height: 240px;
   border-radius: var(--r-md);
   overflow: hidden;
   background-size: cover;
   background-position: center 30%;
   border: 1px solid color-mix(in srgb, var(--ic) 42%, var(--glass-stroke));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
-              0 10px 28px rgba(0, 0, 0, 0.4);
-  min-height: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 28px rgba(0, 0, 0, 0.4);
 }
-/* icy scrim — frosts the bottom so the caption reads, with a cool blue cast */
-.tech-photo::after {
+/* icy scrim: frosts the bottom so the caption reads */
+.arctic-photo::after {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--ic) 8%, transparent) 0%,
-      transparent 35%,
-      color-mix(in srgb, var(--ic) 22%, rgba(10, 22, 34, 0.5)) 76%,
-      rgba(8, 18, 30, 0.86) 100%);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--ic) 8%, transparent) 0%, transparent 35%,
+    color-mix(in srgb, var(--ic) 22%, rgba(10, 22, 34, 0.5)) 76%, rgba(8, 18, 30, 0.86) 100%);
 }
-.tech-photo-cap {
+.arctic-cap {
   position: absolute;
   z-index: 1;
-  left: 1.05rem;
-  right: 1.05rem;
-  bottom: 1rem;
+  left: 1.05rem; right: 1.05rem; bottom: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
 }
-.tech-photo-eyebrow {
+.arctic-eyebrow {
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--ic) 35%, #ffffff);
 }
-.tech-photo-line {
-  font-family: var(--font-display);
-  font-size: 1.12rem;
-  font-weight: 600;
-  color: #fff;
-}
-.tech-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--glass-stroke) transparent;
-}
-.tech-groups::-webkit-scrollbar { width: 8px; }
-.tech-groups::-webkit-scrollbar-thumb { background: var(--glass-stroke); border-radius: 4px; }
-.tech-group-label {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--ic) 58%, #fff);
-  margin-bottom: 0.8rem;
-  font-weight: 700;
-}
-.tech-group-label::after {       /* frosted rule trailing the label */
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--ic) 28%, transparent), transparent);
-}
-/* small count pill so each category reads as a tidy, finite set */
-.tech-group-count {
-  flex: none;
-  order: 1;                        /* sits right after the label text, before the rule */
-  min-width: 1.25rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  font-size: 0.6rem;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: color-mix(in srgb, var(--ic) 72%, #fff);
-  background: color-mix(in srgb, var(--ic) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ic) 26%, transparent);
-}
-.tech-group-label::after { order: 2; }
-/* the whole label slides in with its category (.is-in via IntersectionObserver) */
-.tech-group-label {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out);
-}
-.tech-group.is-in .tech-group-label { opacity: 1; transform: none; }
-/* Fixed-width chips on a wrapping row: the wide tech card fits the biggest
-   category (11) on one line, so categories read as clean single rows. */
-.tech-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-.tech-chip {
-  width: 88px;
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.95rem 0.4rem 0.7rem;
-  border-radius: var(--r-md);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--glass-stroke);
-  cursor: default;
-  /* per-chip reveal: rises + fades when its group enters (.is-in) */
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.2s var(--ease-out), border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.45s var(--ease-out);
-}
-.tech-group.is-in .tech-chip {
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.4s var(--ease-out) calc(var(--i, 0) * 32ms),
-              transform 0.45s var(--ease-out) calc(var(--i, 0) * 32ms),
-              border-color 0.2s, background 0.2s, box-shadow 0.2s;
-}
-/* snappy hover lift — no reveal stagger delay once a chip is in */
-.tech-group.is-in .tech-chip:hover { transition: transform 0.2s var(--ease-out), border-color 0.2s, background 0.2s, box-shadow 0.2s; }
-.tech-chip:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--ic) 55%, var(--glass-stroke));
-  background: color-mix(in srgb, var(--ic) 12%, rgba(255, 255, 255, 0.03));
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--ic) 24%, transparent);
-}
-.tech-logo { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-.tech-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: transform 0.2s var(--ease-out);
-}
-.tech-chip:hover .tech-logo img { transform: scale(1.12); }
-/* Dark monochrome marks (ros, unity, flask) → flatten to clean white on glass */
-.tech-chip--invert .tech-logo img { filter: grayscale(1) invert(1) brightness(1.4); }
-
-/* Lettered tile for tools without a brand mark (TurtleBot, Bambu, Ultimaker) */
-.tech-mono {
-  font-family: var(--font-display);
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: color-mix(in srgb, var(--ic) 72%, #fff);
-  background: color-mix(in srgb, var(--ic) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ic) 30%, transparent);
-  border-radius: var(--r-sm);
-}
-
-.tech-name {
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--txt-soft);
-  text-align: center;
-  line-height: 1.2;
-  transition: color 0.2s ease;
-}
-.tech-chip:hover .tech-name { color: #fff; }
-
-/* Mid-size screens: card narrows below 1160px, so shrink chips a touch to keep
-   big categories on one row. Phones: let chips flex-grow to fill the row tidily. */
-@media (max-width: 1100px) { .tech-chip { width: 80px; } }
-@media (max-width: 640px) {
-  .tech-grid { gap: 0.5rem; justify-content: space-between; }
-  .tech-chip { width: auto; flex: 1 0 72px; max-width: 96px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .tech-group-label, .tech-chip { opacity: 1; transform: none; transition: none; }
-}
+.arctic-line { font-family: var(--font-display); font-size: 1.12rem; font-weight: 600; color: #fff; }
+.arctic-note { color: var(--txt-soft); line-height: 1.6; padding: 0 0.2rem; }
+@media (max-width: 640px) { .arctic-photo { height: 180px; } }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EXPERIENCE — editorial timeline. A faint spine connects each role; the node is
@@ -2186,12 +2030,6 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   .contact-main  { order: 1; }
   .contact-aside { order: 2; }
   .cf-row { grid-template-columns: 1fr; }
-  /* Tech: drop the side rail to a banner on top, panel scrolls as one */
-  .wp-card.wp--tech { height: auto; max-height: 92vh; }
-  .wp-card.wp--tech .wp-content { overflow-y: auto; }
-  .tech-layout { grid-template-columns: 1fr; height: auto; gap: 1.1rem; }
-  .tech-photo { height: 200px; }
-  .tech-groups { height: auto; overflow: visible; padding-right: 0; }
   /* Projects collage: keep a definite height for row math; sheet stacks */
   .wp-card.wp--projects { height: min(92vh, 860px); max-height: 96vh; width: min(98vw, 100%); }
   .wp-card.wp--projects .wp-content { overflow: hidden; padding: 0.25rem 0.35rem 0.45rem; }

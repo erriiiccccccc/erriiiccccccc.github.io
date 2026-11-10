@@ -245,14 +245,16 @@ export class UI {
       return
     }
     const gen = this._openGen
-    // Tear down island listeners/observers immediately (videos, IO, etc.)
-    this._content._disposeIsland?.()
+    // Island teardown (videos, observers) waits until the exit has played, so
+    // nothing blanks out while the panel is still on screen.
+    const dispose = this._content._disposeIsland
     this._content._disposeIsland = null
     this._panel.classList.remove('is-open')
     this._panel.classList.add('is-closing')
     if (this._card.contains(document.activeElement)) document.activeElement.blur()
     this.onShell?.('close', this._shell, this._card)
     this._shells.exit(this._shell).then(() => {
+      dispose?.()
       if (gen !== this._openGen) return     // reopened while closing: the new open owns the panel
       this._panel.classList.add('hidden')
       this._panel.classList.remove('is-closing')

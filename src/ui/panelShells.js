@@ -16,6 +16,11 @@
 //
 // Motion rules: enters 0.5 to 1.2 s with an ease-out, exits roughly half that
 // with an ease-in, nothing loops, and reduced motion gets a short fade only.
+//
+// Performance rule: only opacity, transform and clip-path move. Animated
+// filter: blur(), SVG displacement and blend modes made the first opening of
+// an island drop to ~20 fps while the GPU built those effects, so the looks
+// they gave (frost, heat haze) are faked with cheap layers instead.
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)')
 const PHONE   = window.matchMedia('(max-width: 640px)')
@@ -29,7 +34,24 @@ const EASE = {
   cut:   'cubic-bezier(0.7, 0, 0.2, 1)',
 }
 
-const easeOutCubic = t => 1 - Math.pow(1 - t, 3)
+// Smallest circle (from the pane's right edge, or bottom edge on phones) that
+// still covers the whole frost pane, so the wipe moves from its first frame.
+const FROST_FULL = '130%'
+
+// Heat haze: the card shimmers (alternating skew, vertical stretch) while it
+// glides forward, the shimmer dying out as it arrives. Each step eases in-out.
+const MIRAGE_IN = [
+  [0,    0,    -26, 0.900, 0.860,  1.4],
+  [0.14, 0.45, -21, 0.915, 0.950, -1.1],
+  [0.28, 0.80, -15, 0.935, 0.900,  0.9],
+  [0.44, 1,     -9, 0.955, 0.975, -0.55],
+  [0.62, 1,     -4, 0.975, 0.960,  0.3],
+  [0.80, 1,     -1, 0.992, 0.995, -0.1],
+  [1,    1,      0, 1,     1,      0],
+].map(([offset, opacity, y, sx, sy, sk]) => ({
+  offset, opacity, easing: 'ease-in-out',
+  transform: `translateY(${y}px) scale(${sx}, ${sy}) skewX(${sk}deg)`,
+}))
 
 export const isPhone = () => PHONE.matches
 
@@ -43,26 +65,20 @@ export class ShellDirector {
     this.content = panel.querySelector('.wp-content')
     this.edge    = panel.querySelector('.wp-edge')
     this.frost   = panel.querySelector('.wp-frost')
-    this.map     = document.getElementById('wp-mirage-map')
-    this.noise   = document.getElementById('wp-mirage-noise')
     this._anims  = []
-    this._raf    = 0
     this._token  = 0
   }
 
   /** Cancel everything in flight and hand the look back to CSS. */
   stop() {
     this._token++
-    cancelAnimationFrame(this._raf)
     for (const a of this._anims) a.cancel()
     this._anims = []
     for (const el of this._layers()) {
       if (!el) continue
       const s = el.style
-      s.removeProperty('opacity'); s.removeProperty('transform')
-      s.removeProperty('filter'); s.removeProperty('clip-path')
+      s.removeProperty('opacity'); s.removeProperty('transform'); s.removeProperty('clip-path')
     }
-    this.map?.setAttribute('scale', '0')
   }
 
   /**
@@ -71,7 +87,6 @@ export class ShellDirector {
    */
   _freeze() {
     this._token++
-    cancelAnimationFrame(this._raf)
     for (const a of this._anims) {
       try { if (a.playState !== 'finished') a.commitStyles() } catch { /* detached */ }
       a.cancel()
@@ -92,6 +107,16 @@ export class ShellDirector {
     this.stop()
     const tok = this._token
     const run = reduced() ? this._fade(true) : (ENTER[shell] || ENTER.card).call(this)
+    // Hold on the first pose for two frames. The first frame a panel is shown
+    // the browser has to draw all of it, which can take 100 ms+; if the motion
+    // were already running it would jump ahead by that much. Holding lets that
+    // draw happen while nothing moves, then the motion starts from frame one.
+    run.catch(() => {})   // cancelled during the hold: nothing to report
+    const anims = this._anims.slice()
+    anims.forEach(a => a.pause())
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+    if (tok !== this._token) return false
+    anims.forEach(a => a.play())
     try { await run } catch { return false }
     if (tok !== this._token) return false
     this.stop()
@@ -115,22 +140,6 @@ export class ShellDirector {
     return a.finished
   }
 
-  /** rAF tween for what WAAPI can't drive (SVG filter attributes). */
-  _tween(duration, fn) {
-    const tok = this._token
-    return new Promise((resolve, reject) => {
-      const t0 = performance.now()
-      const step = (now) => {
-        if (tok !== this._token) { reject(new Error('cancelled')); return }
-        const t = Math.min(1, (now - t0) / duration)
-        fn(t)
-        if (t < 1) this._raf = requestAnimationFrame(step)
-        else resolve()
-      }
-      this._raf = requestAnimationFrame(step)
-    })
-  }
-
   _rise(el, delay, duration = 440, dy = 10) {
     return this._a(el, [
       { opacity: 0, transform: `translateY(${dy}px)` },
@@ -143,10 +152,6 @@ export class ShellDirector {
     return Promise.all([this._a(this.scrim, k, 180), this._a(this.card, k, 180)])
   }
 
-  /** Heavy filters are skipped on phones and on the low-quality glass setting. */
-  _lowFx() {
-    return isPhone() || document.documentElement.classList.contains('glass-solid')
-  }
 }
 
 // ── Entrances ─────────────────────────────────────────────────────────────────
@@ -183,15 +188,16 @@ const ENTER = {
 
   // Arctic. The pane grows out of the right edge (bottom edge on phones) as
   // solid frost, holds for a beat, then the frost clears off the content.
+  // The frost layer is what reads as "frosted"; the text just surfaces under it.
   frost() {
     const at = isPhone() ? '50% 100%' : '100% 50%'
-    const blurred = { opacity: 0.15, filter: 'blur(10px)' }
-    const clear   = { opacity: 1, filter: 'blur(0px)' }
+    const blurred = { opacity: 0, transform: 'translateX(14px)' }
+    const clear   = { opacity: 1, transform: 'none' }
     return Promise.all([
       this._a(this.scrim, [{ opacity: 0 }, { opacity: 1 }], 520),
       this._a(this.card, [
         { clipPath: `circle(0% at ${at})` },
-        { clipPath: `circle(150% at ${at})` },
+        { clipPath: `circle(${FROST_FULL} at ${at})` },
       ], 760, { easing: EASE.cut }),
       this._a(this.frost, [
         { opacity: 1 }, { opacity: 1, offset: 0.42 }, { opacity: 0 },
@@ -221,27 +227,14 @@ const ENTER = {
   },
 
   // Desert. Starts small, high and wavering like heat over sand, then glides
-  // forward and sharpens. The waver is an SVG displacement filter driven per
-  // frame; the low-quality path keeps the glide and blur without it.
+  // forward and settles. The waver is a decaying skew/stretch wobble on the
+  // transform, so the whole thing stays on the compositor.
   mirage() {
-    const card = this.card
-    const useFilter = !this._lowFx()
-    card.style.opacity = '0'
     return Promise.all([
       this._a(this.scrim, [{ opacity: 0 }, { opacity: 1 }], 650),
+      this._a(this.card, MIRAGE_IN, 1050, { easing: 'linear' }),
       this._rise(this.head, 600, 420, 6),
       this._rise(this.content, 660, 480, 8),
-      this._tween(1050, (t) => {
-        const e = easeOutCubic(t)
-        card.style.opacity   = String(Math.min(1, t / 0.38))
-        card.style.transform = `translateY(${(-26 * (1 - e)).toFixed(2)}px) scale(${(0.9 + 0.1 * e).toFixed(4)})`
-        const blur = (9 * (1 - e)).toFixed(2)
-        card.style.filter = useFilter ? `url(#wp-mirage) blur(${blur}px)` : `blur(${blur}px)`
-        if (useFilter) {
-          this.map.setAttribute('scale', (42 * (1 - e)).toFixed(1))
-          this.noise.setAttribute('baseFrequency', `0.006 ${(0.045 + 0.02 * Math.sin(t * 22)).toFixed(4)}`)
-        }
-      }),
     ])
   },
 
@@ -272,36 +265,43 @@ const EXIT = {
     ])
   },
 
+  // A TV switching off: the picture squashes into a bright line, the line
+  // pulls in to a point, and the world is already fading back under it.
+  // One continuous move, about 500 ms, transform and opacity only.
   cinema() {
     return Promise.all([
-      this._a(this.head,    [{ opacity: this._cur(this.head, 'opacity', '1') }, { opacity: 0 }], 140, { easing: EASE.in }),
-      this._a(this.content, [{ opacity: this._cur(this.content, 'opacity', '1') }, { opacity: 0 }], 140, { easing: EASE.in }),
+      this._a(this.head,    [{ opacity: this._cur(this.head, 'opacity', '1') }, { opacity: 0 }], 170, { easing: EASE.in }),
+      this._a(this.content, [{ opacity: this._cur(this.content, 'opacity', '1') }, { opacity: 0 }], 170, { easing: EASE.in }),
       this._a(this.card, [
-        { clipPath: this._cur(this.card, 'clip-path', 'inset(0% 0 0% 0)') },
-        { clipPath: 'inset(49.7% 0 49.7% 0)' },
-      ], 340, { delay: 90, easing: 'cubic-bezier(0.7, 0, 0.84, 0)' }),
+        { transform: this._cur(this.card, 'transform', 'none'), opacity: 1 },
+        { transform: 'scaleY(0.004)', opacity: 1, offset: 0.92 },
+        { transform: 'scaleY(0.004)', opacity: 0 },
+      ], 260, { easing: 'cubic-bezier(0.45, 0, 0.8, 0.5)' }),
       this._a(this.beam, [
         { transform: 'scaleX(1)', opacity: 0 },
-        { transform: 'scaleX(1)', opacity: 0.85, offset: 0.25 },
+        { transform: 'scaleX(1)', opacity: 1, offset: 0.12 },
+        { transform: 'scaleX(0.02)', opacity: 0.9, offset: 0.88 },
         { transform: 'scaleX(0)', opacity: 0 },
-      ], 380, { delay: 400, easing: EASE.in }),
-      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 340, { delay: 460, easing: 'ease-in-out' }),
+      ], 300, { delay: 205, easing: EASE.in }),
+      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 330, { delay: 190, easing: 'ease-out' }),
     ])
   },
 
   frost() {
     const at = isPhone() ? '50% 100%' : '100% 50%'
-    const from = (el) => ({ opacity: this._cur(el, 'opacity', '1'), filter: this._cur(el, 'filter', 'blur(0px)') })
-    const blurred = { opacity: 0.2, filter: 'blur(8px)' }
+    const from = (el) => ({ opacity: this._cur(el, 'opacity', '1'), transform: this._cur(el, 'transform', 'none') })
+    const blurred = { opacity: 0, transform: 'translateX(10px)' }
     return Promise.all([
-      this._a(this.frost,   [{ opacity: this._cur(this.frost, 'opacity', '0') }, { opacity: 1 }], 200, { easing: 'ease-out' }),
-      this._a(this.head,    [from(this.head), blurred], 200),
-      this._a(this.content, [from(this.content), blurred], 200),
+      // Frosts over, then the frozen pane draws back into its edge. The circle
+      // starts just big enough to cover the pane, so it shrinks from frame one.
+      this._a(this.frost,   [{ opacity: this._cur(this.frost, 'opacity', '0') }, { opacity: 0.9 }], 110, { easing: 'ease-out' }),
+      this._a(this.head,    [from(this.head), blurred], 150),
+      this._a(this.content, [from(this.content), blurred], 150),
       this._a(this.card, [
-        { clipPath: this._cur(this.card, 'clip-path', `circle(150% at ${at})`) },
+        { clipPath: this._cur(this.card, 'clip-path', `circle(${FROST_FULL} at ${at})`) },
         { clipPath: `circle(0% at ${at})` },
-      ], 380, { delay: 160, easing: EASE.in }),
-      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 380, { delay: 140, easing: 'ease-in-out' }),
+      ], 380, { delay: 50, easing: 'cubic-bezier(0.35, 0, 0.65, 0.7)' }),
+      this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 380, { delay: 60, easing: 'ease-in-out' }),
     ])
   },
 
@@ -316,23 +316,13 @@ const EXIT = {
   },
 
   mirage() {
-    const card = this.card
-    const useFilter = !this._lowFx()
-    const o0 = Math.min(1, parseFloat(card.style.opacity || '1'))
-    card.style.opacity = String(o0)   // hold it where it is until the first tween frame
     return Promise.all([
       this._a(this.scrim, [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 420, { easing: 'ease-in-out' }),
-      this._tween(420, (t) => {
-        const e = t * t
-        card.style.opacity   = String(o0 * (1 - Math.min(1, t * 1.15)))
-        card.style.transform = `translateY(${(-16 * e).toFixed(2)}px) scale(${(1 - 0.05 * e).toFixed(4)})`
-        const blur = (6 * e).toFixed(2)
-        card.style.filter = useFilter ? `url(#wp-mirage) blur(${blur}px)` : `blur(${blur}px)`
-        if (useFilter) {
-          this.map.setAttribute('scale', (30 * e).toFixed(1))
-          this.noise.setAttribute('baseFrequency', `0.006 ${(0.045 + 0.02 * Math.sin(t * 22)).toFixed(4)}`)
-        }
-      }),
+      this._a(this.card, [
+        { opacity: this._cur(this.card, 'opacity', '1'), transform: this._cur(this.card, 'transform', 'none') },
+        { opacity: 0.6, transform: 'translateY(-6px) scale(0.98, 0.96) skewX(0.6deg)', easing: 'ease-in-out' },
+        { opacity: 0, transform: 'translateY(-16px) scale(0.95, 0.9) skewX(-0.8deg)' },
+      ], 420, { easing: EASE.in }),
     ])
   },
 

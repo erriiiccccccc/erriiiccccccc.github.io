@@ -1,6 +1,6 @@
 // Island registry. Panel modules are eager so pressing E never pays for a
 // cold dynamic-import + parse hitch. meadow_island → AboutOverlay in main.js.
-import { TECH_HTML, initTech } from '../islands/tech.js'
+import { ARCTIC_HTML } from '../islands/arctic.js'
 import { PROJECTS_HTML, initProjects } from '../islands/projects.js'
 import { EXPERIENCE_HTML } from '../islands/experience.js'
 import { CONTACT_HTML, initContact } from '../islands/contact.js'
@@ -29,12 +29,10 @@ export const ISLANDS = {
   arctic_island: {
     iconKey: 'snowflake',
     name: 'Arctic Island',
-    section: 'Tech Stack',
+    section: 'Coming Soon',
     shell: 'frost',
     color: '#64B5F6',
-    variant: 'tech',
-    html: TECH_HTML,
-    init: initTech,
+    html: ARCTIC_HTML,
   },
 
   mountain_island: {
@@ -118,6 +116,36 @@ export function prebuildIslandPanels() {
     if (key === 'meadow_island') continue
     ensurePanelCached(key, island)
   }
+  warmPanelImages()
+}
+
+/**
+ * Fetch and decode every photo and logo the panels show, one at a time in
+ * idle time, so the first opening of an island doesn't pay for the network,
+ * the decode and the GPU upload in the middle of its entrance.
+ */
+function warmPanelImages() {
+  const urls = new Set()
+  for (const tmpl of _panelCache.values()) {
+    tmpl.querySelectorAll('img[src], img[data-src]').forEach(img => {
+      urls.add(img.getAttribute('src') || img.getAttribute('data-src'))
+    })
+    tmpl.querySelectorAll('[style*="url("]').forEach(el => {
+      const m = el.getAttribute('style').match(/url\(['"]?([^'")]+)['"]?\)/)
+      if (m) urls.add(m[1])
+    })
+  }
+  const queue = [...urls].filter(Boolean)
+  const idle = window.requestIdleCallback || (fn => setTimeout(fn, 120))
+  const next = () => {
+    const src = queue.shift()
+    if (!src) return
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = src
+    img.decode().catch(() => {}).finally(() => idle(next, { timeout: 2000 }))
+  }
+  idle(next, { timeout: 2000 })
 }
 
 /** @deprecated name kept for call sites — now idle-prebuilds panel DOM. */
