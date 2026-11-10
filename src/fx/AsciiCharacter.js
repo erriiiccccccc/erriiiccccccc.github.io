@@ -2,45 +2,105 @@
 //
 // While the About screen is open, the character is drawn on his own into an
 // offscreen target, and that image is composited back over the world by a
-// fullscreen shader. Everywhere outside a fluid blob that follows the pointer
-// the composite is a plain copy, so he looks exactly as before. Inside the
-// blob he turns into ASCII.
+// fullscreen shader. Outside a small fluid blob that follows the pointer the
+// composite is a plain copy, so he looks exactly as before. Inside the blob he
+// fades away and only type is left: he becomes ASCII art.
 //
-// The ASCII follows the shape-aware approach (Acerola, and Codrops' "Beyond
-// the luminance ramp"): the image is cut into cells; each cell's brightness
-// picks a fill glyph from a density ramp ( .,:-=+*#%@), and where a Sobel
-// filter over the cells finds a strong edge (his outline, the folds of his
-// clothes), a directional glyph (| / - \) follows the edge instead. Glyphs keep
-// his own colours, so he still reads as a lit 3D figure, just made of type.
+// How the glyphs are chosen (shape matching, the approach behind Codrops'
+// "Beyond the luminance ramp" and "ASCII characters are not pixels"): a plain
+// brightness ramp only knows how dark a cell is. Here every cell is read as a
+// 2 x 3 grid of patches, and every glyph in the set is measured the same way
+// from the real font (how much ink falls in each of its six patches). Each
+// cell then gets the glyph whose ink pattern is closest to the image, so a
+// diagonal edge picks / or \, a lit top picks " or ^, a solid area @ or #, a
+// soft gradient : then o. Edges and form come out of the type itself.
 //
-// Cost: one extra fullscreen pass while the About screen is open. The
-// character is drawn once either way (into the target instead of the screen).
+// Cells are text-shaped (taller than wide, like a terminal), glyphs keep his
+// colours, and cells at the blob's edge scramble through random glyphs before
+// they settle, like text decoding, while he fades out underneath.
+//
+// Cost: one extra fullscreen pass while the About screen is open; the match
+// loop only runs inside the blob.
 import * as THREE from 'three'
 
 const CHAR_LAYER = 3
-const FILL  = ' .,:-=+*#%@'          // dark to bright
-const EDGE  = '|/-\\'                // indexed by edge direction
-const GLYPHS = FILL + EDGE
-const CELL_CSS   = 8                 // glyph cell size in CSS pixels
-const RADIUS_CSS = 92                // blob radius at rest (the trail adds to it)
+// Candidates; the set actually used is measured and thinned at startup.
+const CANDIDATES = ` .'\`,:;-_~"^=+*!/\\()<>?ilrtcvxzsunoaeLJTYVXCOQ0#%&@$WMB8`
+const RAMP = ` .:-=+*oa#%@`          // fill glyphs for flat cells
+const CELL_W_CSS = 7                  // a terminal-shaped cell, in CSS pixels
+const CELL_H_CSS = 12
+const RADIUS_CSS = 48                 // blob radius at rest (the trail adds to it)
+const GW = 40, GH = 68                // glyph cell in the atlas, same aspect as above
 
-function makeGlyphAtlas() {
-  const S = 64
+/**
+ * Draw the glyphs, measure each one's ink in a 2 x 3 grid, drop near
+ * duplicates, and pack the survivors into an atlas texture plus two vec3s of
+ * shape per glyph (left column, right column; top to bottom).
+ */
+function buildGlyphs() {
+  const font = `600 ${Math.round(GH * 0.82)}px "JetBrains Mono", "Cascadia Mono", Consolas, "Courier New", monospace`
+  const probe = document.createElement('canvas')
+  probe.width = GW; probe.height = GH
+  const pg = probe.getContext('2d', { willReadFrequently: true })
+  const measured = []
+  for (const ch of CANDIDATES) {
+    pg.clearRect(0, 0, GW, GH)
+    pg.fillStyle = '#fff'
+    pg.font = font
+    pg.textAlign = 'center'
+    pg.textBaseline = 'middle'
+    pg.fillText(ch, GW / 2, GH / 2 + GH * 0.03)
+    const d = pg.getImageData(0, 0, GW, GH).data
+    const v = [0, 0, 0, 0, 0, 0]          // [L top, L mid, L bot, R top, R mid, R bot]
+    for (let y = 0; y < GH; y++) {
+      const row = Math.min(2, Math.floor(y / (GH / 3)))
+      for (let x = 0; x < GW; x++) {
+        const col = x < GW / 2 ? 0 : 1
+        v[col * 3 + row] += d[(y * GW + x) * 4 + 3] / 255
+      }
+    }
+    const area = (GW / 2) * (GH / 3)
+    measured.push({ ch, v: v.map(n => n / area) })
+  }
+  // Normalise so the inkiest patch of any glyph is 1, then drop glyphs whose
+  // shape is nearly identical to one already kept.
+  const peak = Math.max(...measured.flatMap(m => m.v))
+  measured.forEach(m => { m.v = m.v.map(n => n / peak) })
+  measured.sort((a, b) => a.v.reduce((s, n) => s + n, 0) - b.v.reduce((s, n) => s + n, 0))
+  const kept = []
+  for (const m of measured) {
+    if (kept.every(k => k.v.reduce((s, n, i) => s + (n - m.v[i]) ** 2, 0) > 0.004)) kept.push(m)
+  }
+
   const c = document.createElement('canvas')
-  c.width = S * GLYPHS.length
-  c.height = S
+  c.width = GW * kept.length
+  c.height = GH
   const g = c.getContext('2d')
   g.fillStyle = '#fff'
+  g.font = font
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  g.font = `700 ${S * 0.86}px "JetBrains Mono", "Cascadia Mono", Consolas, "Courier New", monospace`
-  for (let i = 0; i < GLYPHS.length; i++) g.fillText(GLYPHS[i], i * S + S / 2, S / 2 + S * 0.04)
+  kept.forEach((k, i) => g.fillText(k.ch, i * GW + GW / 2, GH / 2 + GH * 0.03))
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.NoColorSpace
   tex.minFilter = THREE.LinearMipmapLinearFilter
   tex.magFilter = THREE.LinearFilter
   tex.generateMipmaps = true
-  return tex
+
+  const shapes = []
+  for (const k of kept) {
+    shapes.push(new THREE.Vector3(k.v[0], k.v[1], k.v[2]), new THREE.Vector3(k.v[3], k.v[4], k.v[5]))
+  }
+  // The density ramp for flat cells: classic fill glyphs, ordered by the ink
+  // they really carry in this font (measured, not assumed).
+  const ramp = kept
+    .map((k, i) => ({ i, ch: k.ch, ink: k.v.reduce((s, n) => s + n, 0) / 6 }))
+    .filter(r => RAMP.includes(r.ch))
+    .sort((a, b) => a.ink - b.ink)
+  return {
+    tex, shapes, count: kept.length, chars: kept.map(k => k.ch).join(''),
+    rampIdx: ramp.map(r => r.i), rampInk: ramp.map(r => r.ink), ramp: ramp.map(r => r.ch).join(''),
+  }
 }
 
 const VERT = /* glsl */`
@@ -48,11 +108,14 @@ const VERT = /* glsl */`
   void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `
 
-const FRAG = /* glsl */`
+const frag = (N, R) => /* glsl */`
   uniform sampler2D tChar;
   uniform sampler2D tGlyph;
+  uniform vec3  uShape[${N * 2}];
+  uniform float uRampIdx[${R}];
+  uniform float uRampInk[${R}];
   uniform vec2  uRes;
-  uniform float uCell;
+  uniform vec2  uCell;
   uniform float uRadius;
   uniform float uAmount;
   uniform float uTime;
@@ -60,9 +123,9 @@ const FRAG = /* glsl */`
   uniform float uBlobW[4];
   varying vec2 vUv;
 
-  const float NFILL  = ${FILL.length}.0;
-  const float NGLYPH = ${GLYPHS.length}.0;
-  const float PI = 3.14159265;
+  const int   N  = ${N};
+  const int   R  = ${R};
+  const float NF = ${N}.0;
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vnoise(vec2 p) {
@@ -72,20 +135,22 @@ const FRAG = /* glsl */`
                mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
   }
 
-  // Average of four taps inside a cell (premultiplied colour + coverage).
-  vec4 cellAvg(vec2 cell) {
-    vec2 b = cell * uCell;
-    return 0.25 * (texture2D(tChar, (b + uCell * vec2(0.25, 0.25)) / uRes)
-                 + texture2D(tChar, (b + uCell * vec2(0.75, 0.25)) / uRes)
-                 + texture2D(tChar, (b + uCell * vec2(0.25, 0.75)) / uRes)
-                 + texture2D(tChar, (b + uCell * vec2(0.75, 0.75)) / uRes));
-  }
-  // What the edge filter looks at: coverage lifted by brightness, so both his
-  // outline and the light and shade inside it register as edges.
-  float height(vec2 cell) {
-    vec4 c = texture2D(tChar, (cell + 0.5) * uCell / uRes);
+  // Ink the image wants at a point: coverage times a tone curve on brightness,
+  // scaled into the glyphs' range so the whole set gets used: shadow is
+  // sparse ( . : ; ), mid tones are letters ( o a e + ), only highlights hit
+  // the densest glyphs ( # @ ).
+  float ink(vec2 p) {
+    vec4 c = texture2D(tChar, p / uRes);
     float l = dot(c.rgb / max(c.a, 1e-4), vec3(0.2126, 0.7152, 0.0722));
-    return c.a * (0.35 + 1.0 - exp(-l * 1.6));
+    // glyph ink tops out near 0.45 (normalised to the inkiest patch of any
+    // glyph), so the image is scaled into that range
+    return c.a * clamp(pow(l, 0.6) * 1.25, 0.0, 1.0) * 0.46;
+  }
+  // One of the cell's six patches (two taps across it).
+  float cellPatch(vec2 o, float col, float row) {
+    vec2 c = o + uCell * vec2((col + 0.5) / 2.0, 1.0 - (row + 0.5) / 3.0);
+    vec2 dx = vec2(uCell.x * 0.12, 0.0);
+    return 0.5 * (ink(c - dx) + ink(c + dx));
   }
 
   void main() {
@@ -93,65 +158,80 @@ const FRAG = /* glsl */`
     vec4 base = texture2D(tChar, vUv);          // him, exactly as rendered
     vec4 outc = base;
 
-    // Fluid blob: four metaballs (the pointer and three trailing followers),
+    // Fluid blob: the pointer plus three trailing followers as metaballs,
     // with a slow noise pushing the surface in and out.
     float field = 0.0;
     for (int i = 0; i < 4; i++) {
       vec2 d = px - uBlob[i];
       field += uBlobW[i] * uRadius * uRadius / (dot(d, d) + 1.0);
     }
-    float n = vnoise(px / (uRadius * 0.45) + vec2(uTime * 0.35, -uTime * 0.27));
-    float m = smoothstep(0.82, 1.12, field * (0.78 + 0.44 * n)) * uAmount;
+    float n = vnoise(px / (uRadius * 0.6) + vec2(uTime * 0.4, -uTime * 0.3));
+    float m = smoothstep(0.8, 1.15, field * (0.8 + 0.4 * n)) * uAmount;
 
     if (m > 0.002) {
       vec2 cell = floor(px / uCell);
-      vec4 c    = cellAvg(cell);
-      float cov = c.a;
-      vec3 col  = c.rgb / max(c.a, 1e-4);
-      float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      // Contrast curve: lifts his dark clothes into the middle of the ramp
-      // so they get real glyphs, not just dots, while his face stays densest.
-      float tone = clamp(pow(lum, 0.42) * 1.3, 0.0, 1.0);
+      vec2 o    = cell * uCell;
+      vec4 c    = texture2D(tChar, (o + uCell * 0.5) / uRes);
+      float cov = 0.25 * (texture2D(tChar, (o + uCell * vec2(0.25, 0.25)) / uRes).a
+                        + texture2D(tChar, (o + uCell * vec2(0.75, 0.25)) / uRes).a
+                        + texture2D(tChar, (o + uCell * vec2(0.25, 0.75)) / uRes).a
+                        + texture2D(tChar, (o + uCell * vec2(0.75, 0.75)) / uRes).a);
 
-      // Fill glyph from the density ramp. Near the blob's edge a few cells
-      // flicker to the next glyph, so the boundary shimmers as it moves.
-      float idx = floor(clamp(tone, 0.0, 0.999) * NFILL);
-      if (m < 0.9 && hash(cell + floor(uTime * 14.0)) > 0.75) idx = min(NFILL - 1.0, idx + 1.0);
-      if (cov > 0.05 && idx < 1.0) idx = 1.0;   // inside him, never a blank cell
+      // Per-cell switch: each cell flips at its own moment as the blob's edge
+      // passes, so he dissolves cell by cell instead of fading as one sheet.
+      float h  = hash(cell);
+      float cm = smoothstep(h * 0.65, h * 0.65 + 0.3, m);
 
-      // Sobel over neighbouring cells: a strong edge gets a directional glyph.
-      float tl = height(cell + vec2(-1,  1)), t = height(cell + vec2(0,  1)), tr = height(cell + vec2(1,  1));
-      float l  = height(cell + vec2(-1,  0)),                                 r  = height(cell + vec2(1,  0));
-      float bl = height(cell + vec2(-1, -1)), b = height(cell + vec2(0, -1)), br = height(cell + vec2(1, -1));
-      float gx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl);
-      float gy = (tl + 2.0 * t + tr) - (bl + 2.0 * b + br);
-      float mag = length(vec2(gx, gy));
-      bool edge = mag > 0.55 && cov > 0.04;
-      if (edge) {
-        // The gradient points across the edge; the glyph runs along it.
-        float q = floor(mod(atan(gy, gx) + PI / 8.0, PI) / (PI / 4.0));
-        float e = q < 0.5 ? 0.0 : q < 1.5 ? 3.0 : q < 2.5 ? 2.0 : 1.0;   // | \\ - /
-        idx = NFILL + e;
+      // Read the cell as six patches.
+      vec3 sl = vec3(cellPatch(o, 0.0, 0.0), cellPatch(o, 0.0, 1.0), cellPatch(o, 0.0, 2.0));
+      vec3 sr = vec3(cellPatch(o, 1.0, 0.0), cellPatch(o, 1.0, 1.0), cellPatch(o, 1.0, 2.0));
+      float mu = (sl.x + sl.y + sl.z + sr.x + sr.y + sr.z) / 6.0;
+      float spread = max(max(max(sl.x, sl.y), max(sl.z, sr.x)), max(sr.y, sr.z))
+                   - min(min(min(sl.x, sl.y), min(sl.z, sr.x)), min(sr.y, sr.z));
+      float idx = 0.0;
+      if (spread < 0.08) {
+        // Flat cell: the density ramp, nearest by ink.
+        float best = 1e9;
+        for (int i = 0; i < R; i++) {
+          float d = abs(uRampInk[i] - mu);
+          if (d < best) { best = d; idx = uRampIdx[i]; }
+        }
+      } else {
+        // Structure in the cell: shape match, with the differences between
+        // patches amplified so the glyph follows the edge, not the average.
+        vec3 el = clamp(mu + (sl - mu) * 2.2, 0.0, 1.0);
+        vec3 er = clamp(mu + (sr - mu) * 2.2, 0.0, 1.0);
+        float best = 1e9;
+        for (int i = 0; i < N; i++) {
+          vec3 a = el - uShape[i * 2], b = er - uShape[i * 2 + 1];
+          float d = dot(a, a) + dot(b, b);
+          if (d < best) { best = d; idx = float(i); }
+        }
       }
+      // Cells mid-flip scramble through random glyphs, like text decoding.
+      if (cm > 0.02 && cm < 0.98) idx = floor(hash(cell + floor(uTime * 18.0)) * NF);
 
+      // Explicit gradients: fract() jumps at every cell border, and letting
+      // the GPU derive the mip level from that draws a grid line there.
       vec2 luv = fract(px / uCell);
-      float g  = texture2D(tGlyph, vec2((idx + luv.x) / NGLYPH, luv.y)).r;
-      g *= step(0.04, cov);
+      float g  = textureGrad(tGlyph, vec2((idx + luv.x) / NF, luv.y),
+                             vec2(1.0 / (uCell.x * NF), 0.0), vec2(0.0, 1.0 / uCell.y)).r;
+      g *= smoothstep(0.02, 0.12, cov);
 
-      // Glyphs keep his hue at a readable brightness (a navy hoodie becomes
-      // bright navy type), scaled by the tone; edges a touch brighter. Every
-      // cell inside his silhouette gets a dark backing, so he reads as a
-      // figure made of type and nothing behind him shows through the gaps.
+      // Type in his own colours at a readable brightness.
+      vec3 col = c.rgb / max(c.a, 1e-4);
       float mx = max(max(col.r, col.g), col.b);
-      vec3 hue = mix(col / max(mx, 1e-3), vec3(1.0), 0.08);
-      vec3 glyphCol = hue * (0.28 + 0.85 * tone) * (edge ? 1.3 : 1.0);
-      vec3 bgCol = vec3(0.012, 0.010, 0.025) + col * 0.15;
-      float aBg = 0.9 * cov;
-      float a   = g + aBg * (1.0 - g);
-      vec3 straight = (glyphCol * g + bgCol * aBg * (1.0 - g)) / max(a, 1e-4);
-      vec4 ascii = vec4(straight * a, a);
+      float tone = clamp(pow(dot(col, vec3(0.2126, 0.7152, 0.0722)), 0.45) * 1.35, 0.0, 1.0);
+      vec3 glyphCol = mix(col / max(mx, 1e-3), vec3(1.0), 0.12) * (0.4 + 0.75 * tone);
 
-      outc = mix(base, ascii, m);
+      // He fades out cell by cell; the type fades in on a dark backing inside
+      // his silhouette, so he reads as a figure made of type and nothing
+      // behind him shows through.
+      float aBg = 0.88 * smoothstep(0.02, 0.4, cov);
+      float a   = g + aBg * (1.0 - g);
+      vec3  bg  = vec3(0.01, 0.008, 0.02);
+      vec4 ascii = vec4(glyphCol * g + bg * aBg * (1.0 - g), a);
+      outc = base * (1.0 - cm) + ascii * cm;
     }
 
     gl_FragColor = vec4(outc.rgb / max(outc.a, 1e-4), outc.a);
@@ -179,20 +259,26 @@ export class AsciiCharacter {
 
     this.rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: 4 })
 
+    const glyphs = buildGlyphs()
+    this.glyphSet = glyphs.chars
+    this.rampSet  = glyphs.ramp
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         tChar:   { value: this.rt.texture },
-        tGlyph:  { value: makeGlyphAtlas() },
+        tGlyph:  { value: glyphs.tex },
+        uShape:  { value: glyphs.shapes },
+        uRampIdx: { value: glyphs.rampIdx },
+        uRampInk: { value: glyphs.rampInk },
         uRes:    { value: new THREE.Vector2(2, 2) },
-        uCell:   { value: CELL_CSS },
+        uCell:   { value: new THREE.Vector2(CELL_W_CSS, CELL_H_CSS) },
         uRadius: { value: RADIUS_CSS },
         uAmount: { value: 0 },
         uTime:   { value: 0 },
         uBlob:   { value: this._blob },
-        uBlobW:  { value: [1, 0.55, 0.38, 0.25] },
+        uBlobW:  { value: [1, 0.45, 0.3, 0.2] },
       },
       vertexShader: VERT,
-      fragmentShader: FRAG,
+      fragmentShader: frag(glyphs.count, glyphs.rampIdx.length),
       transparent: true,
       depthTest: false,
       depthWrite: false,
@@ -272,14 +358,14 @@ export class AsciiCharacter {
 
     // Trail: each follower chases the one ahead, slower down the chain.
     const p = this._toBuffer()
-    const rates = [22, 12, 8, 5]
+    const rates = [24, 14, 9, 6]
     this._blob.forEach((b, i) => b.lerp(i ? this._blob[i - 1] : p, 1 - Math.exp(-dt * rates[i])))
     this._time += dt
 
     const dpr = r.getPixelRatio()
     const u = this.material.uniforms
     u.uRes.value.copy(this._size)
-    u.uCell.value   = Math.round(CELL_CSS * dpr)
+    u.uCell.value.set(Math.round(CELL_W_CSS * dpr), Math.round(CELL_H_CSS * dpr))
     u.uRadius.value = RADIUS_CSS * dpr
     u.uAmount.value = this.amount
     u.uTime.value   = this._time
