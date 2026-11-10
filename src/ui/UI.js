@@ -1,6 +1,7 @@
 import { svgIcon } from './icons.js'
 import { takePanelBody, hasPanelCached } from '../data/content.js'
 import { isPerfEnabled, perfMark, perfMeasure } from '../loading/perfLog.js'
+import { ShellDirector } from './panelShells.js'
 
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
@@ -60,14 +61,25 @@ export class UI {
     }, { passive: false })
 
     this._panel    = document.getElementById('world-panel')
+    this._card     = this._panel.querySelector('.wp-card')
     this._icon     = document.getElementById('wp-icon')
     this._eyebrow  = document.getElementById('wp-eyebrow')
     this._title    = document.getElementById('wp-title')
     this._content  = document.getElementById('wp-content')
     this._halo     = this._panel.querySelector('.wp-halo')
     this._closeBtn = document.getElementById('wp-close')
+    this._prevBtn  = document.getElementById('wp-prev')
+    this._nextBtn  = document.getElementById('wp-next')
     this._closeBtn.innerHTML = svgIcon('close', 18, 2)
+    this._prevBtn.innerHTML  = svgIcon('chevronLeft', 18, 2)
+    this._nextBtn.innerHTML  = svgIcon('chevronRight', 18, 2)
     this._closeBtn.addEventListener('click', () => this._requestClose())
+    this._prevBtn.addEventListener('click', () => this.onHop?.(-1))
+    this._nextBtn.addEventListener('click', () => this.onHop?.(1))
+    this._panel.classList.toggle('is-touch', IS_TOUCH)
+    // Focus lands on the card itself (not a button) so keyboard and screen
+    // reader users are inside the dialog without a focus ring popping on ✕.
+    this._card.tabIndex = -1
 
     this._panel.addEventListener('click', e => {
       if (e.target === this._panel || (e.target.classList && e.target.classList.contains('wp-scrim'))) {
@@ -75,11 +87,17 @@ export class UI {
       }
     })
 
-    this._closeTimer = null
+    this._shells = new ShellDirector(this._panel)
+    this._shell  = 'card'
+    this._order  = []      // island keys in hop order, set by main.js once the world loads
     this._openGen = 0
     this.onPopupTap    = null
     this.onSubPopupTap = null
     this.onClosePanel  = null
+    /** (dir: -1 | 1) => void, the ‹ › buttons and arrow keys */
+    this.onHop         = null
+    /** (phase: 'open' | 'close', shell: string, card: HTMLElement) => void, world-side effects */
+    this.onShell       = null
 
     const badge = document.getElementById('landmark-badge')
     const hint  = document.getElementById('hint-text')
@@ -142,20 +160,30 @@ export class UI {
    * @param {object} island
    * @param {string} cacheKey ISLANDS registry key (e.g. arctic_island)
    */
+  /** Island keys in the order ‹ › walks them; also drives the "02 / 06" label. */
+  setIslandOrder(keys) {
+    this._order = keys.slice()
+  }
+
   openPanel(island, cacheKey) {
-    if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null }
     this._openGen += 1
     const gen = this._openGen
-
-    this._icon.innerHTML      = svgIcon(island.iconKey, 26)
-    this._eyebrow.textContent = island.section
-    this._title.textContent   = island.name
-    this._panel.style.setProperty('--ic', island.color)
-
-    const card = this._panel.querySelector('.wp-card')
-    card.className = 'wp-card' + (island.variant ? ` wp--${island.variant}` : '')
-
     const key = cacheKey || island.section
+
+    // Chrome: eyebrow says where you are, the title says what this is.
+    const pos   = this._order.indexOf(key)
+    const total = this._order.length
+    const pad   = n => String(n).padStart(2, '0')
+    this._icon.innerHTML      = svgIcon(island.iconKey, 14, 2)
+    this._eyebrow.textContent = pos >= 0 ? `${pad(pos + 1)} / ${pad(total)} · ${island.name}` : island.name
+    this._title.textContent   = island.section
+    this._panel.style.setProperty('--ic', island.color)
+    this._panel.classList.toggle('no-hop', total < 2 || pos < 0)
+
+    this._shell = island.shell || 'card'
+    this._panel.dataset.shell = this._shell
+    this._card.className = 'wp-card' + (island.variant ? ` wp--${island.variant}` : '')
+
     const init = island.init
     this._content.scrollTop = 0
 
@@ -166,9 +194,7 @@ export class UI {
       // Warm cache: mount body same frame as chrome (clone = no HTML parse hitch)
       const body = takePanelBody(key, island)
       this._content.replaceChildren(body)
-      this._panel.classList.remove('hidden', 'is-closing')
-      void this._panel.offsetWidth
-      this._panel.classList.add('is-open')
+      this._show(gen)
       requestAnimationFrame(() => {
         if (gen !== this._openGen) return
         init?.(this._content)
@@ -182,9 +208,7 @@ export class UI {
 
     // Cold path: chrome first, parse+cache next frame, init the frame after
     this._content.replaceChildren()
-    this._panel.classList.remove('hidden', 'is-closing')
-    void this._panel.offsetWidth
-    this._panel.classList.add('is-open')
+    this._show(gen)
 
     requestAnimationFrame(() => {
       if (gen !== this._openGen) return
@@ -198,6 +222,17 @@ export class UI {
     })
   }
 
+  /** Reveal the panel and run its shell's entrance. */
+  _show(gen) {
+    this._panel.classList.remove('hidden', 'is-closing')
+    this._panel.classList.add('is-open')
+    this._shells.enter(this._shell)
+    this.onShell?.('open', this._shell, this._card)
+    requestAnimationFrame(() => {
+      if (gen === this._openGen) this._card.focus({ preventScroll: true })
+    })
+  }
+
   _requestClose() {
     if (this.onClosePanel) this.onClosePanel()
     else this.closePanel()
@@ -205,21 +240,26 @@ export class UI {
 
   closePanel() {
     if (!this._panel.classList.contains('is-open')) {
-      this._panel.classList.add('hidden')
+      // Already on its way out: let that exit finish rather than cut it.
+      if (!this._panel.classList.contains('is-closing')) this._panel.classList.add('hidden')
       return
     }
+    const gen = this._openGen
     // Tear down island listeners/observers immediately (videos, IO, etc.)
     this._content._disposeIsland?.()
     this._content._disposeIsland = null
     this._panel.classList.remove('is-open')
     this._panel.classList.add('is-closing')
-    this._closeTimer = setTimeout(() => {
+    if (this._card.contains(document.activeElement)) document.activeElement.blur()
+    this.onShell?.('close', this._shell, this._card)
+    this._shells.exit(this._shell).then(() => {
+      if (gen !== this._openGen) return     // reopened while closing: the new open owns the panel
       this._panel.classList.add('hidden')
       this._panel.classList.remove('is-closing')
+      this._shells.stop()
       // Drop live nodes; templates stay in the island cache for the next open
       this._content.replaceChildren()
-      this._closeTimer = null
-    }, 320)
+    })
   }
 
   isPanelOpen() {

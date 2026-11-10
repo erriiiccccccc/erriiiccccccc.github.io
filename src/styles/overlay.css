@@ -731,6 +731,256 @@ html.glass-solid {
   color: var(--txt-soft);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PANEL CHROME v2 + SHELLS
+   One chrome on every island: the eyebrow says where you are ("02 / 06 ·
+   Mountain Island"), the title says what this is, then ‹ › to hop, Esc, ✕.
+   Each island then picks a shell (data-shell on #world-panel) for its shape
+   and entrance. These rules are the resting layout of each shell; the
+   entrances and exits are choreographed in src/ui/panelShells.js, so CSS
+   transitions on the card and scrim are switched off here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.wp-card, .wp-scrim { transition: none; }
+.wp-card:focus { outline: none; }
+
+.wp-header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.25rem 1rem 1.8rem;
+}
+.wp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  margin-bottom: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-eyebrow .wp-icon {
+  width: auto; height: auto;
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--ic);
+  background: none; border: 0; border-radius: 0; box-shadow: none;
+}
+.wp-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.wp-btn {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--glass-raise);
+  border: 1px solid var(--glass-stroke);
+  color: var(--txt-soft);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
+}
+.wp-btn:hover  { background: var(--glass-raise-2); border-color: var(--glass-stroke-2); color: #fff; }
+.wp-btn:active { transform: scale(0.94); }
+.wp-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--ic) 75%, #fff); outline-offset: 2px; }
+.wp-actions .wp-close { position: static; border-radius: 12px; }
+.wp-esc {
+  margin: 0 4px 0 6px;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--txt-faint);
+  border: 1px solid var(--glass-stroke);
+  border-radius: 6px;
+}
+#world-panel.is-touch .wp-esc,
+#world-panel.no-hop .wp-hop { display: none; }
+
+/* Shell-only layers. Hidden unless their shell asks for them. */
+.wp-beam, .wp-edge, .wp-frost { display: none; pointer-events: none; }
+.wp-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ── Cinema (Mountain) ─────────────────────────────────────────────────────── */
+#world-panel[data-shell="cinema"] { padding: 0; }
+#world-panel[data-shell="cinema"] .wp-scrim { background: #040309; }
+#world-panel[data-shell="cinema"] .wp-beam {
+  display: block;
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  z-index: 2;
+  height: 2px;
+  margin-top: -1px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent 0%,
+    color-mix(in srgb, var(--ic) 70%, #fff) 22%, #fff 50%,
+    color-mix(in srgb, var(--ic) 70%, #fff) 78%, transparent 100%);
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--ic) 55%, transparent),
+              0 0 70px 8px color-mix(in srgb, var(--ic) 22%, transparent);
+}
+#world-panel[data-shell="cinema"] .wp-card {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: radial-gradient(130% 90% at 50% 0%,
+    color-mix(in srgb, var(--ic) 9%, #0c0a12) 0%, #06050a 58%, #040309 100%);
+}
+#world-panel[data-shell="cinema"] .wp-header { padding: 1.5rem 1.6rem 1rem 2rem; }
+#world-panel[data-shell="cinema"] .wp-rule   { margin: 0 2rem; }
+#world-panel[data-shell="cinema"] .wp-halo   { opacity: 0.1; }
+
+/* ── Frost (Arctic) ────────────────────────────────────────────────────────── */
+#world-panel[data-shell="frost"] { justify-content: flex-end; padding: 16px; }
+#world-panel[data-shell="frost"] .wp-scrim {
+  background: linear-gradient(90deg, rgba(4, 8, 22, 0) 0%, rgba(4, 8, 22, 0.1) 45%, rgba(4, 10, 26, 0.6) 100%);
+}
+#world-panel[data-shell="frost"] .wp-card {
+  width: clamp(420px, 40vw, 640px);
+  height: 100%;
+  max-height: none;
+  border-radius: 22px;
+  border-color: rgba(206, 234, 255, 0.3);
+  background:
+    linear-gradient(165deg, rgba(214, 236, 255, 0.15) 0%, rgba(120, 165, 220, 0.08) 45%, rgba(40, 70, 120, 0.2) 100%),
+    rgba(10, 18, 36, 0.55);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26),
+              inset 0 0 50px rgba(170, 215, 255, 0.1),
+              0 30px 80px rgba(0, 0, 0, 0.45);
+}
+html.glass-solid #world-panel[data-shell="frost"] .wp-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: linear-gradient(165deg, rgba(40, 62, 96, 0.96), rgba(12, 20, 38, 0.97));
+}
+#world-panel[data-shell="frost"] .wp-frost {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(80% 70% at 100% 50%, rgba(225, 242, 255, 0.5), rgba(190, 222, 250, 0.3) 55%, rgba(170, 210, 245, 0.22)),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.35'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
+}
+/* The tech spread folds into one column inside the pane: photo as a banner. */
+#world-panel[data-shell="frost"] .tech-layout {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1rem;
+}
+#world-panel[data-shell="frost"] .tech-photo { height: 150px; }
+
+/* ── Slab (Lava) ───────────────────────────────────────────────────────────── */
+#world-panel[data-shell="slab"] { align-items: flex-end; padding: 0 clamp(12px, 2.5vw, 40px); }
+#world-panel[data-shell="slab"] .wp-scrim {
+  background: linear-gradient(180deg, rgba(10, 4, 3, 0.04) 0%, rgba(12, 4, 2, 0.34) 45%, rgba(10, 3, 2, 0.78) 100%);
+}
+#world-panel[data-shell="slab"] .wp-card {
+  --col: 780px;
+  width: min(1480px, 100%);
+  height: min(72vh, 780px);
+  max-height: none;
+  border-radius: 24px 24px 0 0;
+  border-color: rgba(255, 140, 80, 0.16);
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(46, 20, 15, 0.95) 0%, rgba(24, 10, 8, 0.97) 55%, rgba(14, 6, 5, 0.98) 100%);
+  box-shadow: 0 -30px 80px rgba(0, 0, 0, 0.5), 0 -2px 40px rgba(255, 90, 30, 0.12);
+}
+#world-panel[data-shell="slab"] .wp-edge {
+  display: block;
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  z-index: 3;
+  height: 2px;
+  opacity: 0.7;
+  background: linear-gradient(90deg, transparent 0%, #E53935 14%, #FFB347 50%, #E53935 86%, transparent 100%);
+  box-shadow: 0 -6px 30px 4px rgba(255, 98, 40, 0.5), 0 0 10px 1px rgba(255, 170, 80, 0.6);
+}
+
+/* ── Mirage (Desert) ───────────────────────────────────────────────────────── */
+#world-panel[data-shell="mirage"] .wp-scrim {
+  background: radial-gradient(ellipse at 50% 55%, rgba(40, 18, 6, 0.45) 0%, rgba(14, 6, 3, 0.84) 100%);
+}
+#world-panel[data-shell="mirage"] .wp-card {
+  background: linear-gradient(170deg, rgba(74, 40, 20, 0.8) 0%, rgba(34, 17, 10, 0.9) 100%);
+  border-color: rgba(255, 196, 140, 0.24);
+  box-shadow: 0 0 90px -24px rgba(251, 146, 60, 0.4), var(--glass-shadow), inset 0 1px 0 rgba(255, 220, 180, 0.14);
+}
+
+/* ── Night (Pirate) ────────────────────────────────────────────────────────── */
+#world-panel[data-shell="night"] { padding: 0; }
+#world-panel[data-shell="night"] .wp-scrim {
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><circle cx='0' cy='552' r='0.50' fill='%23fff' fill-opacity='0.69'/><circle cx='320' cy='198' r='0.88' fill='%23fff' fill-opacity='0.58'/><circle cx='411' cy='382' r='0.52' fill='%23fff' fill-opacity='0.47'/><circle cx='425' cy='419' r='1.30' fill='%23fff' fill-opacity='0.66'/><circle cx='281' cy='553' r='0.44' fill='%23fff' fill-opacity='0.56'/><circle cx='554' cy='413' r='0.75' fill='%23fff' fill-opacity='0.80'/><circle cx='545' cy='223' r='0.94' fill='%23fff' fill-opacity='0.45'/><circle cx='92' cy='179' r='0.56' fill='%23fff' fill-opacity='0.81'/><circle cx='334' cy='438' r='0.39' fill='%23fff' fill-opacity='0.41'/><circle cx='336' cy='305' r='0.49' fill='%23fff' fill-opacity='0.80'/><circle cx='33' cy='219' r='0.82' fill='%23fff' fill-opacity='0.80'/><circle cx='309' cy='99' r='0.55' fill='%23fff' fill-opacity='0.47'/><circle cx='254' cy='200' r='0.78' fill='%23fff' fill-opacity='0.39'/><circle cx='544' cy='275' r='0.79' fill='%23fff' fill-opacity='0.63'/><circle cx='310' cy='303' r='1.01' fill='%23fff' fill-opacity='0.49'/><circle cx='425' cy='151' r='0.60' fill='%23fff' fill-opacity='0.45'/><circle cx='235' cy='477' r='0.43' fill='%23fff' fill-opacity='0.74'/><circle cx='47' cy='244' r='0.40' fill='%23fff' fill-opacity='0.85'/><circle cx='132' cy='379' r='0.67' fill='%23fff' fill-opacity='0.61'/><circle cx='83' cy='553' r='0.97' fill='%23fff' fill-opacity='0.78'/><circle cx='545' cy='457' r='0.36' fill='%23fff' fill-opacity='0.40'/><circle cx='46' cy='1' r='0.51' fill='%23fff' fill-opacity='0.69'/><circle cx='294' cy='413' r='0.97' fill='%23fff' fill-opacity='0.39'/><circle cx='224' cy='537' r='0.69' fill='%23fff' fill-opacity='0.25'/><circle cx='548' cy='382' r='0.36' fill='%23fff' fill-opacity='0.79'/><circle cx='113' cy='581' r='0.83' fill='%23fff' fill-opacity='0.41'/><circle cx='134' cy='125' r='0.39' fill='%23fff' fill-opacity='0.71'/><circle cx='420' cy='428' r='0.37' fill='%23fff' fill-opacity='0.32'/><circle cx='551' cy='78' r='0.98' fill='%23fff' fill-opacity='0.27'/><circle cx='530' cy='517' r='1.02' fill='%23fff' fill-opacity='0.71'/><circle cx='252' cy='149' r='0.97' fill='%23fff' fill-opacity='0.49'/><circle cx='141' cy='243' r='0.74' fill='%23fff' fill-opacity='0.46'/><circle cx='373' cy='441' r='0.86' fill='%23fff' fill-opacity='0.50'/><circle cx='119' cy='187' r='1.05' fill='%23fff' fill-opacity='0.63'/><circle cx='523' cy='551' r='0.80' fill='%23fff' fill-opacity='0.33'/><circle cx='298' cy='334' r='1.01' fill='%23fff' fill-opacity='0.54'/><circle cx='112' cy='268' r='0.81' fill='%23fff' fill-opacity='0.56'/><circle cx='337' cy='304' r='0.60' fill='%23fff' fill-opacity='0.70'/><circle cx='16' cy='179' r='0.49' fill='%23fff' fill-opacity='0.68'/><circle cx='175' cy='141' r='0.65' fill='%23fff' fill-opacity='0.30'/><circle cx='464' cy='494' r='0.99' fill='%23fff' fill-opacity='0.66'/><circle cx='575' cy='15' r='0.77' fill='%23fff' fill-opacity='0.68'/><circle cx='539' cy='22' r='0.41' fill='%23fff' fill-opacity='0.31'/><circle cx='51' cy='6' r='1.01' fill='%23fff' fill-opacity='0.37'/><circle cx='80' cy='121' r='0.52' fill='%23fff' fill-opacity='0.52'/><circle cx='596' cy='254' r='0.89' fill='%23fff' fill-opacity='0.49'/><circle cx='250' cy='37' r='0.92' fill='%23fff' fill-opacity='0.83'/><circle cx='91' cy='555' r='0.44' fill='%23fff' fill-opacity='0.38'/><circle cx='362' cy='102' r='1.30' fill='%23fff' fill-opacity='0.41'/><circle cx='388' cy='334' r='1.05' fill='%23fff' fill-opacity='0.30'/><circle cx='248' cy='189' r='1.30' fill='%23fff' fill-opacity='0.25'/><circle cx='248' cy='55' r='1.00' fill='%23fff' fill-opacity='0.72'/><circle cx='458' cy='262' r='1.02' fill='%23fff' fill-opacity='0.73'/><circle cx='397' cy='343' r='0.63' fill='%23fff' fill-opacity='0.55'/><circle cx='297' cy='340' r='0.82' fill='%23fff' fill-opacity='0.63'/><circle cx='437' cy='531' r='1.04' fill='%23fff' fill-opacity='0.51'/><circle cx='292' cy='574' r='0.60' fill='%23fff' fill-opacity='0.30'/><circle cx='206' cy='530' r='0.87' fill='%23fff' fill-opacity='0.82'/><circle cx='472' cy='124' r='0.91' fill='%23fff' fill-opacity='0.31'/><circle cx='549' cy='480' r='0.85' fill='%23fff' fill-opacity='0.57'/><circle cx='266' cy='523' r='0.96' fill='%23fff' fill-opacity='0.41'/><circle cx='412' cy='260' r='0.48' fill='%23fff' fill-opacity='0.60'/><circle cx='139' cy='539' r='0.59' fill='%23fff' fill-opacity='0.66'/><circle cx='526' cy='70' r='0.99' fill='%23fff' fill-opacity='0.25'/><circle cx='79' cy='238' r='1.30' fill='%23fff' fill-opacity='0.67'/><circle cx='539' cy='104' r='1.01' fill='%23fff' fill-opacity='0.67'/><circle cx='105' cy='70' r='0.36' fill='%23fff' fill-opacity='0.74'/><circle cx='355' cy='451' r='0.58' fill='%23fff' fill-opacity='0.68'/><circle cx='573' cy='329' r='0.89' fill='%23fff' fill-opacity='0.67'/><circle cx='440' cy='359' r='0.38' fill='%23fff' fill-opacity='0.62'/></svg>"),
+    radial-gradient(80% 70% at 50% 50%, rgba(10, 22, 52, 0.55) 0%, rgba(5, 10, 28, 0.9) 55%, #02040b 100%);
+  background-size: 600px 600px, auto;
+}
+#world-panel[data-shell="night"] .wp-card {
+  --col: 1240px;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#world-panel[data-shell="night"] .wp-halo { display: none; }
+#world-panel[data-shell="night"] .wp-content { padding-bottom: 1.6rem; }
+
+/* Slab and Night are wider than their content: centre header, rule and
+   content on one column so they line up. */
+#world-panel:is([data-shell="slab"], [data-shell="night"]) :is(.wp-header, .wp-content) {
+  width: 100%;
+  max-width: var(--col);
+  margin-inline: auto;
+}
+#world-panel:is([data-shell="slab"], [data-shell="night"]) .wp-rule {
+  width: calc(min(100%, var(--col)) - 3.6rem);
+  margin-inline: auto;
+}
+
+/* ── Phones: every shell keeps its entrance, the shapes become sheets ──────── */
+@media (max-width: 640px) {
+  .wp-header { padding: 1.1rem 0.9rem 0.8rem 1.2rem; gap: 0.6rem; }
+  .wp-btn { width: 40px; height: 40px; }
+  #world-panel[data-shell="cinema"] .wp-header { padding: 1.1rem 0.9rem 0.8rem 1.2rem; }
+  #world-panel[data-shell="cinema"] .wp-rule { margin: 0 1.2rem; }
+  #world-panel[data-shell="frost"] { padding: 0; align-items: flex-end; }
+  #world-panel[data-shell="frost"] .wp-card {
+    width: 100%;
+    height: 88vh;
+    height: 88dvh;
+    border-radius: 22px 22px 0 0;
+    border-bottom: 0;
+  }
+  #world-panel[data-shell="frost"] .wp-scrim { background: linear-gradient(180deg, rgba(4, 8, 22, 0) 0%, rgba(4, 10, 26, 0.55) 100%); }
+  #world-panel[data-shell="frost"] .wp-frost {
+    background: radial-gradient(80% 60% at 50% 100%, rgba(225, 242, 255, 0.5), rgba(190, 222, 250, 0.3) 55%, rgba(170, 210, 245, 0.22));
+  }
+  #world-panel[data-shell="frost"] .tech-photo { height: 120px; }
+  #world-panel[data-shell="slab"] { padding: 0; }
+  #world-panel[data-shell="slab"] .wp-card { height: 84vh; height: 84dvh; border-radius: 22px 22px 0 0; }
+  #world-panel[data-shell="mirage"] { padding: 10px; align-items: center; }
+  #world-panel[data-shell="mirage"] .wp-card { width: 100%; max-height: 90vh; max-height: 90dvh; border-radius: 20px; }
+}
+
 /* Muted footnote paragraph (e.g. "More on GitHub") */
 .wp-note { margin-top: 1.1rem; font-size: 0.8rem; color: var(--txt-mute); }
 .wp-note a {
@@ -1967,7 +2217,6 @@ html.glass-solid {
     border-radius: var(--r-lg) var(--r-lg) 0 0;
   }
   .wp-header  { padding: 1.3rem 1.3rem 0.9rem; gap: 0.8rem; }
-  .wp-icon    { width: 46px; height: 46px; }
   .wp-rule    { margin: 0 1.3rem; }
   .wp-content { padding: 1.1rem 1.3rem 1.4rem; }
   /* Keyboard control bar is irrelevant on touch — hide to save room */
@@ -3081,6 +3330,21 @@ button.tp-box {
   color: #fff;
 }
 .about-close:active { transform: scale(0.92); }
+
+/* About shares the island panels' action row: ‹ › Esc ✕, top right. */
+.about-nav {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.about-nav .about-close { position: static; border-radius: 12px; }
+@media (hover: none) { .about-nav .wp-esc { display: none; } }
+/* The game's own top-right buttons step aside while About owns that corner. */
+body:has(#about-overlay.is-open) #hud-buttons { opacity: 0; pointer-events: none; }
 
 /* Dock rows + identity ─────────────────────────────────────────────────────── */
 .about-dock-row {

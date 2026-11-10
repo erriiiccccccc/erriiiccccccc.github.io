@@ -18,6 +18,8 @@ export class AboutOverlay {
      *  raycast so clicking the character (drawn in the canvas behind) doesn't
      *  dismiss — only genuinely empty space does. */
     this.shouldCloseFromBackdrop = null
+    /** (dir: -1 | 1) => void, the ‹ › buttons; main.js closes it and flies on. */
+    this.onHop = null
 
     this._build()
   }
@@ -31,7 +33,12 @@ export class AboutOverlay {
     el.setAttribute('aria-label', 'About Eric')
 
     el.innerHTML = `
-      <button class="about-close" type="button" aria-label="Close">${svgIcon('close', 18, 2)}</button>
+      <div class="about-nav">
+        <button class="wp-btn about-hop" type="button" data-dir="-1" aria-label="Previous island">${svgIcon('chevronLeft', 18, 2)}</button>
+        <button class="wp-btn about-hop" type="button" data-dir="1" aria-label="Next island">${svgIcon('chevronRight', 18, 2)}</button>
+        <kbd class="wp-esc" aria-hidden="true">Esc</kbd>
+        <button class="wp-btn about-close" type="button" aria-label="Close">${svgIcon('close', 18, 2)}</button>
+      </div>
 
       <!-- Warm spotlight grounding the character -->
       <div class="about-stage" aria-hidden="true"></div>
@@ -94,6 +101,9 @@ export class AboutOverlay {
     this._el = el
 
     el.querySelector('.about-close').addEventListener('click', () => this.close())
+    el.querySelectorAll('.about-hop').forEach(b => {
+      b.addEventListener('click', () => this.onHop?.(Number(b.dataset.dir)))
+    })
     // Only a click on the bare backdrop (not on any chrome) can dismiss — and even
     // then, the predicate gets a veto (e.g. the click landed on the character).
     el.addEventListener('click', e => {

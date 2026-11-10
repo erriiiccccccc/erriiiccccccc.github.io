@@ -669,6 +669,7 @@ perfMark('world_download_start')
         }
       }
     }
+    computeHopOrder()
     await yieldToMain()
 
     {
@@ -1237,7 +1238,14 @@ function openIslandPanel() {
       }
     }
 
-    // 2. Camera starts zooming in immediately (same frame as the jump)
+    // 2. Camera starts zooming in immediately (same frame as the jump). If a
+    //    hop from the night shell is still easing the camera back, finish that
+    //    first so the About zoom saves the real resting distance.
+    if (_distRestoreTo != null) {
+      gsap.killTweensOf(camSystem, '_distTarget')
+      camSystem._distTarget = _distRestoreTo
+      _distRestoreTo = null
+    }
     _savedCamDist = camSystem._distTarget
     camSystem._distTarget = 2.5  // closer = character bigger on screen
 
@@ -1271,6 +1279,136 @@ function closeIslandPanel() {
   if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName])
 }
 
+// ─── Hopping between islands from inside a panel (‹ › and arrow keys) ───────
+// The order walks the planet: start at the meadow, then always step to the
+// nearest island not yet in the list, so › is a short hop to a neighbour and
+// the "02 / 06" label counts the same way you'd walk it.
+let HOP_ORDER  = []
+let _hopTarget = null
+let _hopLandedAt = 0   // when the hop's teleport finished; 0 while still flying
+function computeHopOrder() {
+  const left = ISLAND_NAMES.filter(n => islandDirs[n])
+  if (!left.length) return
+  const order = [left.includes('meadow_island') ? 'meadow_island' : left[0]]
+  left.splice(left.indexOf(order[0]), 1)
+  while (left.length) {
+    const from = islandDirs[order[order.length - 1]]
+    let best = 0
+    for (let i = 1; i < left.length; i++) {
+      if (islandDirs[left[i]].dot(from) > islandDirs[left[best]].dot(from)) best = i
+    }
+    order.push(left.splice(best, 1)[0])
+  }
+  HOP_ORDER = order
+  ui.setIslandOrder(order)
+}
+
+function hopIsland(dir) {
+  if (islandUIState !== 'detail' || isTeleporting || !HOP_ORDER.includes(activeIslandName)) return
+  islandUIState = 'near'
+  ui.closePanel()
+  hopFrom(activeIslandName, dir)
+}
+
+/** Teleport to the island after (dir 1) or before (dir -1) `from` and open it on landing. */
+function hopFrom(from, dir) {
+  const i = HOP_ORDER.indexOf(from)
+  if (i < 0 || isTeleporting || HOP_ORDER.length < 2) return
+  const next = HOP_ORDER[(i + dir + HOP_ORDER.length) % HOP_ORDER.length]
+  _hopTarget   = next
+  _hopLandedAt = 0
+  startTeleport(next)
+}
+
+// The About screen (meadow) has its own chrome, so it hops through here: close
+// it, let the character's drop finish (onStartClose: 200 ms + 400 ms turn),
+// then fly on.
+let _aboutHopPending = false
+function hopFromAbout(dir) {
+  if (_aboutHopPending || !aboutOverlay.isOpen()) return
+  _aboutHopPending = true
+  aboutOverlay.close()
+  setTimeout(() => {
+    _aboutHopPending = false
+    hopFrom('meadow_island', dir)
+  }, reducedMotion ? 380 : 680)
+}
+
+/** Called every frame: once a hop's teleport lands, open the island it landed on. */
+function tickHop() {
+  if (!_hopTarget || isTeleporting) return
+  if (!_hopLandedAt) _hopLandedAt = performance.now()
+  if (activeIslandName === _hopTarget && islandUIState === 'near' && !isAnyOverlayOpen()) {
+    _hopTarget = null
+    openIslandPanel()
+  } else if (performance.now() - _hopLandedAt > 1500) {
+    _hopTarget = null   // landed somewhere unexpected; just leave the player there
+    if (activeIslandName && islandUIState === 'near') ui.showPopup(ISLANDS[activeIslandName])
+  }
+}
+
+// World-side half of each panel shell (the DOM half lives in ui/panelShells.js).
+//   frost  the world slides left so the planet stays in view beside the pane
+//   night  the camera pulls far back so the planet shrinks into space
+//   slab   the ground gives a short shake as the slab lands
+const _viewShift = { x: 0, appliedX: 0, w: 0, h: 0 }
+let _nightSavedDist = null
+let _distRestoreTo  = null   // where a closing night shell is still easing the camera back to
+function applyViewShift() {
+  const cam = camSystem.camera
+  const w = window.innerWidth, h = window.innerHeight
+  const x = Math.round(_viewShift.x * 10) / 10
+  if (x === _viewShift.appliedX && w === _viewShift.w && h === _viewShift.h) return
+  _viewShift.appliedX = x; _viewShift.w = w; _viewShift.h = h
+  if (Math.abs(x) < 0.5) cam.clearViewOffset()
+  else cam.setViewOffset(w, h, x, 0, w, h)
+}
+function shellWorldFx(phase, shell, card) {
+  const open = phase === 'open'
+  if (shell === 'frost') {
+    // Centre the planet in the space the pane leaves free (desktop only).
+    let target = 0
+    if (open && window.innerWidth > 640) {
+      const r = card.getBoundingClientRect()
+      target = Math.max(0, (window.innerWidth - r.left) / 2)
+    }
+    gsap.to(_viewShift, {
+      x: target,
+      duration: reducedMotion ? 0 : (open ? 0.85 : 0.55),
+      ease: open ? 'power3.out' : 'power2.inOut',
+      overwrite: true,
+    })
+  } else if (_viewShift.x !== 0) {
+    gsap.to(_viewShift, { x: 0, duration: reducedMotion ? 0 : 0.5, ease: 'power2.inOut', overwrite: true })
+  }
+
+  if (shell === 'night') {
+    if (open) {
+      if (_nightSavedDist == null) _nightSavedDist = camSystem._distTarget
+      gsap.to(camSystem, { _distTarget: 58, duration: reducedMotion ? 0 : 1.3, ease: 'power2.inOut', overwrite: true })
+    } else if (_nightSavedDist != null) {
+      _distRestoreTo = _nightSavedDist
+      gsap.to(camSystem, {
+        _distTarget: _nightSavedDist, duration: reducedMotion ? 0 : 0.9, ease: 'power2.out', overwrite: true,
+        onComplete: () => { _distRestoreTo = null },
+      })
+      _nightSavedDist = null
+    }
+  }
+
+  if (shell === 'slab' && open && !reducedMotion) {
+    const cv = document.getElementById('canvas')
+    cv?.animate([
+      { transform: 'translate(0, 0)' },
+      { transform: 'translate(-3px, 2px)' },
+      { transform: 'translate(3px, -1px)' },
+      { transform: 'translate(-2px, 1px)' },
+      { transform: 'translate(1px, 0)' },
+      { transform: 'translate(0, 0)' },
+    ], { duration: 340, delay: 590, easing: 'linear' })
+  }
+}
+
 // ─── Opening whatever point of interest you're standing next to ─────────────
 function openPoi(poi = activePoi) {
   if (!poi || isAnyOverlayOpen() || ui.isPanelOpen()) return
@@ -1302,11 +1440,25 @@ if (import.meta.env.DEV) {
     },
     // Force one open without walking to it: __ew.openPoi('wall')
     openPoi: (key) => openPoi(POIS.find(p => p.key === key)),
+    // Warp to an island and open its panel: __ew.dive('lava_island')
+    dive: (name) => {
+      closeAnyOpenOverlay()
+      if (islandUIState === 'detail') { islandUIState = 'near'; ui.closePanel() }
+      if (activeIslandName === name) { openIslandPanel(); return }
+      _hopTarget = name
+      _hopLandedAt = 0
+      startTeleport(name)
+    },
+    hop: (dir) => hopIsland(dir),
+    get order() { return HOP_ORDER.slice() },
   }
 }
 // ✕ / backdrop click inside the world panel → run the canonical close so
 // islandUIState resyncs and the approach prompt returns.
 ui.onClosePanel = closeIslandPanel
+ui.onHop        = hopIsland
+aboutOverlay.onHop = hopFromAbout
+ui.onShell      = shellWorldFx
 
 // ─── Island interaction keys + global ESC + M for map ────────────────────────
 document.addEventListener('keydown', e => {
@@ -1320,7 +1472,22 @@ document.addEventListener('keydown', e => {
     if (islandUIState === 'detail') { closeIslandPanel(); e.preventDefault(); return }
   }
 
+  if (aboutOverlay.isOpen() && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault()
+    hopFromAbout(e.key === 'ArrowLeft' ? -1 : 1)
+    return
+  }
+
   if (isAnyOverlayOpen()) return  // suppress gameplay keys while a modal is up
+
+  if (islandUIState === 'detail' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.defaultPrevented) {
+    const content = document.getElementById('wp-content')
+    if (!content || !content.contains(document.activeElement)) {
+      e.preventDefault()
+      hopIsland(e.key === 'ArrowLeft' ? -1 : 1)
+      return
+    }
+  }
 
   if (key === 'e') {
     if (islandUIState === 'detail') closeIslandPanel()
@@ -1895,7 +2062,8 @@ function animate() {
       if (islandUIState !== 'near' || ui._lastIsland !== activeIslandName) {
         islandUIState    = 'near'
         ui._lastIsland   = activeIslandName
-        ui.showPopup(ISLANDS[activeIslandName])
+        // Mid-hop the planet spins past other islands; keep their prompts quiet
+        if (!_hopTarget) ui.showPopup(ISLANDS[activeIslandName])
       }
       // Track visited islands
       if (!visitedIslands.has(activeIslandName)) {
@@ -2179,6 +2347,8 @@ function animate() {
     introOverlay.open(returning)
   }
 
+  tickHop()
+  applyViewShift()
   renderer.render(scene, camSystem.camera)
 }
 animate()
