@@ -50,7 +50,9 @@ function metaFor(name) {
 const round = (g, d) => JSON.parse(JSON.stringify(g, (k, v) => typeof v === 'number' ? +v.toFixed(d) : v))
 
 // Keep the mainland and what sits near it; drop far-flung overseas bits
-// (French Guiana, the Azores...) and specks too small to see.
+// (French Guiana, the Azores...) and specks too small to see. A big second
+// half stays even when it's further off: Malaysia is two halves ~1,400 km
+// apart, and Borneo is the larger one, so the peninsula must not be cut.
 function mainland(geom) {
   if (geom.type !== 'MultiPolygon') return geom
   const polys = geom.coordinates.map(p => {
@@ -58,7 +60,9 @@ function mainland(geom) {
     return { p, a: geoArea(g), c: geoCentroid(g) }
   })
   const big = polys.reduce((a, b) => (b.a > a.a ? b : a))
-  const keep = polys.filter(q => q === big || (geoDistance(q.c, big.c) < 0.2 && q.a > big.a * 0.003))
+  const keep = polys.filter(q => q === big
+    || (geoDistance(q.c, big.c) < 0.2 && q.a > big.a * 0.003)    // nearby islands (~1,270 km)
+    || (geoDistance(q.c, big.c) < 0.4 && q.a > big.a * 0.2))     // a big second half (~2,550 km)
   return keep.length === 1
     ? { type: 'Polygon', coordinates: keep[0].p }
     : { type: 'MultiPolygon', coordinates: keep.map(q => q.p) }
