@@ -29,6 +29,7 @@ import { JukeboxOverlay } from './ui/JukeboxOverlay.js'
 import { StudioOverlay } from './ui/StudioOverlay.js'
 import { audio } from './jukebox/AudioEngine.js'
 import { sfx } from './audio/sfx.js'
+import { AsciiCharacter } from './fx/AsciiCharacter.js'
 import { QuestMarker } from './scene/QuestMarker.js'
 import { Jukebox } from './scene/Jukebox.js'
 import { LoadDirector } from './loading/LoadDirector.js'
@@ -1025,6 +1026,7 @@ scene.add(character.group)
 const modelGroup = new THREE.Group()
 modelGroup.position.set(0, PLANET_RADIUS + 0.9, 0)
 scene.add(modelGroup)
+const asciiFx = new AsciiCharacter(renderer, modelGroup)
 let fbxInScene = false
 
 // ─── Animation controller ────────────────────────────────────────────────────
@@ -2450,6 +2452,9 @@ function animate() {
 
   tickHop()
   applyViewShift()
-  renderer.render(scene, camSystem.camera)
+  // On the About screen he can turn to ASCII under the pointer (fx/AsciiCharacter)
+  if (!asciiFx.render(scene, camSystem.camera, dt, aboutOverlay.isOpen() && fbxInScene)) {
+    renderer.render(scene, camSystem.camera)
+  }
 }
 animate()
