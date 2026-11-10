@@ -913,6 +913,20 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
               0 18px 50px -12px rgba(255, 106, 31, 0.45),
               inset 0 1px 0 rgba(255, 190, 140, 0.08);
 }
+/* Hyperspace streaks (Pirate): thin lines that start at the centre of the
+   screen and are flung outward by panelShells.js. */
+.wp-warp { display: none; position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+#world-panel[data-shell="night"] .wp-warp { display: block; }
+.wp-warp i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 1.5px;
+  transform-origin: 0 50%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, rgba(200, 225, 255, 0), rgba(225, 238, 255, 0.95));
+  opacity: 0;
+}
 .wp-embers { display: none; position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 #world-panel[data-shell="eruption"] .wp-embers { display: block; }
 .wp-embers i {

@@ -12,7 +12,8 @@
 //   frost   Arctic:   a pane frosts over from the right edge, then clears
 //   eruption Lava:    embers burst up from below and the card rides up on them
 //   mirage  Desert:   far away and wavy in the heat, then glides into focus
-//   night   Pirate:   the world falls away into a night sky
+//   night   Pirate:   a jump to hyperspace, stars streaking past, then the
+//                     night sky softly opens
 //
 // Motion rules: enters 0.5 to 1.2 s with an ease-out, exits roughly half that
 // with an ease-in, nothing loops, and reduced motion gets a short fade only.
@@ -55,6 +56,8 @@ const MIRAGE_IN = [
 
 export const isPhone = () => PHONE.matches
 
+const WARP_STREAKS = 64
+
 export class ShellDirector {
   constructor(panel) {
     this.panel   = panel
@@ -65,6 +68,14 @@ export class ShellDirector {
     this.content = panel.querySelector('.wp-content')
     this.sparks  = [...panel.querySelectorAll('.wp-embers i')]
     this.frost   = panel.querySelector('.wp-frost')
+    // Hyperspace streaks for the night shell, built once. Angles are spread
+    // evenly with a little jitter so the burst looks random but never clumps.
+    this.warp    = panel.querySelector('.wp-warp')
+    this.streaks = []
+    if (this.warp) {
+      for (let i = 0; i < WARP_STREAKS; i++) this.warp.appendChild(document.createElement('i'))
+      this.streaks = [...this.warp.children]
+    }
     this._anims  = []
     this._token  = 0
   }
@@ -253,8 +264,27 @@ const ENTER = {
 
   // Pirate. main.js pulls the camera far out so the planet shrinks into space;
   // the night sky deepens over it and the log fades up on top.
+  //
+  // First the jump: stars streak outward from the middle of the screen,
+  // speeding up and stretching as they go, while the camera pulls away from
+  // the planet (main.js). Each streak is one transform/opacity animation, so
+  // it all stays on the compositor. Then the same soft opening as before.
   night() {
+    const M = Math.hypot(window.innerWidth, window.innerHeight) / 2
+    const n = isPhone() ? 36 : this.streaks.length
     return Promise.all([
+      ...this.streaks.slice(0, n).map((el, i) => {
+        const a  = (i / n) * 360 + ((i * 47) % 11) - 5            // degrees, evenly spread
+        const d  = 0.06 + ((i * 29) % 23) / 23 * 0.5                // where it starts, 0..1 of the way out
+        const L  = M * (0.22 + ((i * 13) % 7) / 7 * 0.2)            // full streak length
+        el.style.width = `${L.toFixed(0)}px`
+        el.style.height = `${(1 + (i % 3) * 0.5).toFixed(1)}px`
+        return this._a(el, [
+          { opacity: 0,   transform: `rotate(${a}deg) translateX(${(d * M).toFixed(0)}px) scaleX(0.03)` },
+          { opacity: 0.9, transform: `rotate(${a}deg) translateX(${(d * M * 1.25).toFixed(0)}px) scaleX(0.2)`, offset: 0.3 },
+          { opacity: 0,   transform: `rotate(${a}deg) translateX(${(M * 1.15).toFixed(0)}px) scaleX(1)` },
+        ], 620 + (i * 37) % 200, { delay: (i * 53) % 180, easing: 'cubic-bezier(0.55, 0, 0.9, 0.45)' })
+      }),
       this._a(this.scrim, [{ opacity: 0 }, { opacity: 1 }], 1000, { delay: 200, easing: 'ease-out' }),
       this._a(this.card, [{ opacity: 0 }, { opacity: 1 }], 520, { delay: 640 }),
       this._rise(this.head, 640, 520, 8),
