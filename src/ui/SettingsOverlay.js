@@ -30,6 +30,7 @@ export class SettingsOverlay {
     this._reducedMotion = typeof saved.reducedMotion === 'boolean' ? saved.reducedMotion : prefersReduced
     this._hintsVisible  = typeof saved.hintsVisible  === 'boolean' ? saved.hintsVisible  : true
     this._soundOn       = typeof saved.soundOn       === 'boolean' ? saved.soundOn       : true
+    this._volume        = typeof saved.volume        === 'number'  ? Math.max(0, Math.min(1, saved.volume)) : 0.7
 
     // Reflect persisted reduced-motion to body class so CSS can react globally
     if (this._reducedMotion) document.body.classList.add('reduced-motion')
@@ -40,6 +41,7 @@ export class SettingsOverlay {
     this.onReducedMotionChange = null
     this.onHintsChange         = null
     this.onSoundChange         = null
+    this.onVolumeChange        = null
 
     this._lastFocus = null
     this._build()
@@ -51,6 +53,7 @@ export class SettingsOverlay {
     this.onReducedMotionChange?.(this._reducedMotion)
     this.onHintsChange?.(this._hintsVisible)
     this.onSoundChange?.(this._soundOn)
+    this.onVolumeChange?.(this._volume)
   }
 
   _persist() {
@@ -59,6 +62,7 @@ export class SettingsOverlay {
       reducedMotion: this._reducedMotion,
       hintsVisible:  this._hintsVisible,
       soundOn:       this._soundOn,
+      volume:        this._volume,
     })
   }
 
@@ -104,7 +108,12 @@ export class SettingsOverlay {
         <div class="settings-row">
           <span class="settings-label">Sound</span>
           <button class="stoggle${sd ? ' active' : ''}" id="sound-toggle" type="button" aria-pressed="${sd}">${sd ? 'ON' : 'OFF'}</button>
-          <span class="settings-note">the jukebox, in the meadow</span>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label" for="volume-range">Volume</label>
+          <input class="svol" id="volume-range" type="range" min="0" max="100" step="1"
+                 value="${Math.round(this._volume * 100)}" aria-valuetext="${Math.round(this._volume * 100)}%">
+          <span class="svol-val" id="volume-val">${Math.round(this._volume * 100)}%</span>
         </div>
       </div>
     `
@@ -145,6 +154,19 @@ export class SettingsOverlay {
       this._persist()
       this.onSoundChange?.(this._soundOn)
     })
+
+    const vol = el.querySelector('#volume-range')
+    const volVal = el.querySelector('#volume-val')
+    const paintVol = () => vol.style.setProperty('--fill', `${vol.value}%`)
+    paintVol()
+    vol.addEventListener('input', () => {
+      this._volume = Number(vol.value) / 100
+      volVal.textContent = `${vol.value}%`
+      vol.setAttribute('aria-valuetext', `${vol.value}%`)
+      paintVol()
+      this.onVolumeChange?.(this._volume)
+    })
+    vol.addEventListener('change', () => this._persist())
 
     const hintsBtn = el.querySelector('#hints-toggle')
     hintsBtn.addEventListener('click', () => {

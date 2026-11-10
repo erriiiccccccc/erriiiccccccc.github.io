@@ -341,10 +341,10 @@ export class JukeboxOverlay {
 
   close() {
     if (!this.isOpen()) return
-    // Nothing should keep playing behind a closed lid, and the context parks
-    // itself so the next open starts from silence.
+    // Nothing should keep playing behind a closed lid. The context itself
+    // stays awake: the world's sound effects and ambience share it.
     this._stop()
-    audio.suspend()
+    audio.stop()
     this._el.classList.remove('is-open')
     this._newId = null
     if (this._lastFocus?.focus) this._lastFocus.focus()

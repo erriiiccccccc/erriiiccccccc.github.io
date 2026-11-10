@@ -86,6 +86,14 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 - Performance: shells only move opacity, transform and clip-path. No animated `filter: blur()`, SVG filters or blend modes on panels: they made first openings drop to ~20 fps while the GPU built them.
 - Hop order follows the planet (nearest neighbour from the meadow), so `›` is always a short warp.
 
+**Sound (`src/audio/sfx.js`):**
+- Everything is synthesised on the Jukebox's AudioContext. No sample files.
+- One key, G major pentatonic. Each island owns a note: Meadow G5, Mountain D5, Arctic E5, Lava A4, Desert B4, Pirate G4. Arriving plays the note, diving in plays it with its fifth, a first find plays a rising arpeggio, all six found rolls every note into one chord.
+- Each shell has its own texture: Mountain TV power-on hum, Arctic ice crackle, Lava rumble and ember fizz, Desert hot wind, Pirate ocean swell. Closing is a shorter, softer version.
+- Footsteps follow the ground: grass, rock, snow, sand, wood deck. Plus jump, landing, warp whoosh, UI clicks and toggles.
+- Ambience (wandering wind and a low space hum) sits under everything at about -44 dB, dips while a panel is open and steps aside for the Jukebox.
+- Levels: effects stay between about -24 and -49 dB, nothing peaks above -15 dB. Options has Sound (on/off) and Volume (scales everything, the Jukebox included).
+
 **Overlays:**
 - Intro: "Welcome to Eric's World!" / "Six islands. Explore them all."
 - Map subtitle: "Walk there yourself, or jump straight to any island."

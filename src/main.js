@@ -28,6 +28,7 @@ import { DrawOverlay } from './ui/DrawOverlay.js'
 import { JukeboxOverlay } from './ui/JukeboxOverlay.js'
 import { StudioOverlay } from './ui/StudioOverlay.js'
 import { audio } from './jukebox/AudioEngine.js'
+import { sfx } from './audio/sfx.js'
 import { QuestMarker } from './scene/QuestMarker.js'
 import { Jukebox } from './scene/Jukebox.js'
 import { LoadDirector } from './loading/LoadDirector.js'
@@ -155,6 +156,8 @@ function startTeleport(name) {
   _teleStartQ.copy(planetGroup.quaternion)
   _teleTargetQ.setFromUnitVectors(islandDirs[name], _worldUp)
   isTeleporting    = true
+  _teleDest        = name
+  sfx.warp()
   teleportProgress = 0
   // Brief purple flash — skip if user prefers reduced motion
   const flash = document.getElementById('teleport-flash')
@@ -200,6 +203,7 @@ studioOverlay.onClose  = () => {
 }
 
 aboutOverlay.onStartClose = () => {
+  sfx.close('card', 'meadow_island')
   // 1. Lights snap off first (quick) — character goes dark while still zoomed in.
   aboutLightsOn = false
   // 2. Once they're gone: pan out, then turn him away and drop him. The turn
@@ -292,7 +296,29 @@ let   hintsEnabled   = true
 let   hintShown      = true
 // Sound: the jukebox is the only thing in the world that makes any, so the
 // toggle simply arms or silences its engine.
-settingsOverlay.onSoundChange = (on) => audio.setSoundOn(on)
+settingsOverlay.onSoundChange = (on) => {
+  audio.setSoundOn(on)
+  // Switched back on after the player has interacted: wake the context now
+  // (browsers allow that once the page has had any gesture at all)
+  if (on && (navigator.userActivation?.hasBeenActive ?? true)) sfx.unlock()
+}
+settingsOverlay.onVolumeChange = (v) => sfx.setVolume(v)
+
+// Sound can only start inside a user gesture. Every key press or tap gives the
+// shared context a chance to start (first time) or wake (after a tab switch).
+const unlockAudio = () => sfx.unlock()
+window.addEventListener('keydown', unlockAudio, true)
+window.addEventListener('pointerdown', unlockAudio, true)
+
+// A soft click on every button in the world's UI. The Jukebox and the studio
+// make their own notes, so they're left alone. Bubble phase, so a toggle has
+// already flipped its aria-pressed by the time we read it.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('button, [role="button"]')
+  if (!b || b.disabled || b.closest('#jukebox-overlay, #studio-overlay')) return
+  if (b.classList.contains('stoggle')) sfx.toggle(b.getAttribute('aria-pressed') === 'true')
+  else sfx.click()
+})
 settingsOverlay.onHintsChange = (visible) => {
   hintsEnabled = visible
   if (!controlsHintEl) return
@@ -1210,7 +1236,12 @@ function tryJump() {
 
   jumpVelocity = JUMP_VEL
   isGrounded   = false
+  _jumpSounding = true
+  sfx.jump()
 }
+let _jumpSounding = false   // a player jump is in the air (so the landing thumps)
+let _teleDest     = null    // where the current warp lands (islands flown past stay quiet)
+let _stepTimer    = 0       // seconds to the next footstep
 
 // ─── Shared "open island panel" logic ────────────────────────────────────────
 function openIslandPanel() {
@@ -1219,6 +1250,7 @@ function openIslandPanel() {
   ui.hidePopup()
 
   if (activeIslandName === 'meadow_island') {
+    sfx.open('card', 'meadow_island')
     // 1. Character jumps up from the planet — the same one the player sees
     if (modelLoaded) {
       animCtrl.triggerJump()
@@ -1365,6 +1397,8 @@ function applyViewShift() {
 }
 function shellWorldFx(phase, shell, card) {
   const open = phase === 'open'
+  if (open) sfx.open(shell, activeIslandName)
+  else      sfx.close(shell, activeIslandName)
   if (shell === 'frost') {
     // Centre the planet in the space the pane leaves free (desktop only).
     let target = 0
@@ -1450,6 +1484,7 @@ if (import.meta.env.DEV) {
       startTeleport(name)
     },
     hop: (dir) => hopIsland(dir),
+    sfx,
     get order() { return HOP_ORDER.slice() },
   }
 }
@@ -1839,6 +1874,7 @@ let _pageHidden = document.hidden
 document.addEventListener('visibilitychange', () => {
   _pageHidden = document.hidden
   if (!_pageHidden) clock.getDelta() // drop accumulated time after resume
+  sfx.setHidden(_pageHidden)
 })
 
 function animate() {
@@ -2018,6 +2054,7 @@ function animate() {
     jumpOffset   += jumpVelocity * dt
     if (jumpOffset <= 0) {
       jumpOffset = 0; jumpVelocity = 0; isGrounded = true
+      if (_jumpSounding) { _jumpSounding = false; sfx.land(activeIslandName) }
       // If space is still held, queue another jump on next frame
       if (spaceHeld) tryJump()
     }
@@ -2056,18 +2093,39 @@ function animate() {
     character.update(dt, moving, time, !isGrounded)
   }
 
+  // ── Sound: footsteps on whatever ground is underfoot, ambience ducking ──
+  if (moving && isGrounded && !isTeleporting && !uiLocked && !presentationMode) {
+    _stepTimer -= dt
+    if (_stepTimer <= 0) {
+      sfx.footstep(activeIslandName, sprint)
+      _stepTimer = sprint ? 0.27 : 0.38
+    }
+  } else {
+    _stepTimer = 0.1
+  }
+  sfx.tick({ panelOpen: ui.isPanelOpen() || aboutOverlay.isOpen() })
+
   // ── Island HUD state (activeIslandName from sampleSurfaceHeight) ──
   if (islandUIState !== 'detail') {
     if (activeIslandName) {
+      const isNewFind = !visitedIslands.has(activeIslandName)
       if (islandUIState !== 'near' || ui._lastIsland !== activeIslandName) {
         islandUIState    = 'near'
         ui._lastIsland   = activeIslandName
         // Mid-hop the planet spins past other islands; keep their prompts quiet
-        if (!_hopTarget) ui.showPopup(ISLANDS[activeIslandName])
+        if (!_hopTarget) {
+          ui.showPopup(ISLANDS[activeIslandName])
+          if (!isNewFind) sfx.arrive(activeIslandName)
+        }
       }
       // Track visited islands
-      if (!visitedIslands.has(activeIslandName)) {
+      if (isNewFind) {
         visitedIslands.add(activeIslandName)
+        // Islands a warp flies past are still marked found, but only the one
+        // you land on plays its jingle.
+        if (!(isTeleporting || _hopTarget) || activeIslandName === (_hopTarget || _teleDest)) {
+          sfx.found(activeIslandName, visitedIslands.size, ISLAND_NAMES.length)
+        }
         mapOverlay.markVisited(activeIslandName)
         if (icCountEl) icCountEl.textContent = String(visitedIslands.size)
         hpPips.forEach((p, i) => p.classList.toggle('hp-pip--on', i < visitedIslands.size))
