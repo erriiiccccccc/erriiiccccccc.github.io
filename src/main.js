@@ -1082,20 +1082,22 @@ function surfaceAt(islandName, worldPoint, skip = null) {
 const _bp = new THREE.Vector3(), _bn = new THREE.Vector3(), _bf = new THREE.Vector3(), _bw = new THREE.Vector3(), _bq = new THREE.Quaternion()
 const _jbPos = new THREE.Vector3()
 
-// ─── Meadow close-ups: the camera glides in, Eric steps aside ────────────────
+// ─── Meadow close-ups: the camera glides in, Eric takes his place ────────────
 // Shots and spots are in the prop's own space (x = to its right, z = in front)
 // and turned into world space every frame, so they stay pinned to the planet
-// while it turns under Eric's feet.
+// while it turns under Eric's feet. At the Jukebox he stands just right of and
+// behind the gramophone, facing the camera, and puts records on from there.
+// His walk there goes round the front of the prop, never through it.
 let charRig       = null       // hand-made poses on top of the animation (Rig.js)
 let reachAmt      = 0          // 0..1, eased: arms out to put a record on
 let scriptMoving  = false      // a scripted walk is moving him this frame
-let _script       = null       // { prop, local, face, done, speed }
+let _script       = null       // { prop, path: [Vector3...], face, done }
 let _place        = null       // a record on its way: { phase, t, rec, done }
 const _shotP = new THREE.Vector3(), _shotL = new THREE.Vector3(), _scriptT = new THREE.Vector3(), _faceT = new THREE.Vector3()
 const CU = {
-  jukebox: { pos: [1.9, 2.35, 6.8], look: [1.9, 1.45, 0], fov: 38, aside: [-0.5, 0, 1.75], spot: [0.78, 0, 0.62] },
+  jukebox: { pos: [1.9, 2.35, 6.8], look: [1.9, 1.45, 0], fov: 38, aside: [0.98, 0, -0.28], box: [0.85, 0.75] },
   studio:  { pos: [2.2, 2.35, 6.4], look: [2.2, 1.45, 0], fov: 38 },
-  board:   { pos: [-1.15, 1.63, 4.05], look: [-1.15, 1.63, 0.13], fov: 40, aside: [1.75, 0, 0.55] },
+  board:   { pos: [-1.15, 1.63, 4.05], look: [-1.15, 1.63, 0.13], fov: 40, aside: [1.75, 0, 0.55], box: [1.3, 1.3] },
 }
 const cuProp = (which) => (which === 'board' ? doodleBoard : jukeboxProp)
 function closeUpShot(which) {
@@ -1105,9 +1107,35 @@ function closeUpShot(which) {
   return { pos: _shotP, look: _shotL, fov: c.fov }
 }
 
-/** Walk Eric to a spot by a prop, then turn him to face `face()` (world), then done(). */
-function walkTo(prop, local, face, done) {
-  _script = { prop, local: new THREE.Vector3(...local), face, done }
+/** Walk Eric along prop-local points, then turn him to face `face(out)` (world), then done(). */
+function walkPath(prop, path, face, done) {
+  _script = { prop, path: path.map(p => (p.isVector3 ? p.clone() : new THREE.Vector3(...p))), face, done }
+}
+/** Turn on the spot (no walking) to face `face(out)`, then done(). */
+function turnTo(prop, face, done) {
+  const here = prop.group.worldToLocal(modelGroup.position.clone()).setY(0)
+  walkPath(prop, [here], face, done)
+}
+/**
+ * The way from where Eric is to `goal` (both prop-local) that doesn't cut
+ * through the prop: if the straight line would, go round the front corner(s).
+ */
+function pathAround(prop, goal, [hx, hz]) {
+  const start = prop.group.worldToLocal(modelGroup.position.clone()).setY(0)
+  const g = new THREE.Vector3(...goal)
+  const hits = (a, b) => {
+    for (let i = 1; i < 12; i++) {
+      const x = a.x + (b.x - a.x) * i / 12, z = a.z + (b.z - a.z) * i / 12
+      if (Math.abs(x) < hx + 0.25 && Math.abs(z) < hz + 0.25) return true
+    }
+    return false
+  }
+  if (!hits(start, g)) return [g]
+  const front = hz + 0.6, side = Math.sign(g.x) || 1, path = []
+  if (start.z < front - 0.2 && (Math.sign(start.x) || -1) !== side) path.push(new THREE.Vector3((Math.sign(start.x) || -1) * (hx + 0.6), 0, front))
+  path.push(new THREE.Vector3(side * (hx + 0.6), 0, front))
+  path.push(g)
+  return path
 }
 const wrapAngle = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a }
 /**
@@ -1119,13 +1147,19 @@ function scriptStep(dt) {
   scriptMoving = false
   if (!_script) return null
   const sc = _script
-  sc.prop.group.localToWorld(_scriptT.copy(sc.local))
+  sc.prop.group.localToWorld(_scriptT.copy(sc.path[0]))
   const dist = Math.hypot(_scriptT.x, _scriptT.z)
-  if (dist > 0.07 && !sc.arrived) {
+  if (dist <= 0.12 && sc.path.length > 1) sc.path.shift()   // on to the next waypoint
+  if (dist > 0.05 && !sc.arrived) {
     const want = Math.atan2(_scriptT.x, -_scriptT.z), diff = wrapAngle(want - heading)
     heading += Math.sign(diff) * Math.min(Math.abs(diff), 7 * dt)
     scriptMoving = true
-    return Math.abs(diff) < 0.6 ? WALK_SPEED * 0.85 * Math.min(1, dist / 0.5 + 0.25) : 0
+    if (Math.abs(diff) > 0.6) return 0
+    // walkVel turns the planet (radians a second): ease in as he nears the
+    // spot so he stops on it instead of sliding past into the prop
+    const rWorld = Math.max(5, modelGroup.position.distanceTo(planetGroup.position))
+    const last = sc.path.length === 1
+    return Math.min(WALK_SPEED * 0.55, (last ? dist * 3.5 : 4) / rWorld)
   }
   sc.arrived = true
   if (sc.face) {
@@ -1146,13 +1180,14 @@ function openCloseUp(which) {
   syncOverlayInputGate()
   const quick = reducedMotion
   camSystem.setShot(() => closeUpShot(closeUpWhich), quick ? 0.01 : 0.9)
-  // Eric steps aside, turning to what he's using (the board) or half to it (the jukebox)
+  // Eric takes his place beside the prop and turns to face the camera
   const c = CU[which]
-  walkTo(prop, c.aside, (out) => (which === 'board'
-    ? prop.group.getWorldPosition(out)
-    : out.copy(camSystem.camera.position).lerp(prop.group.getWorldPosition(_jbPos), 0.6)))
+  walkPath(prop, pathAround(prop, c.aside, c.box), faceShot)
   setTimeout(() => { if (closeUpActive && closeUpWhich === which) closeUp.open(which) }, quick ? 0 : 560)
 }
+
+/** Face where the close-up camera sits (its final spot, not mid-glide). */
+function faceShot(out) { return out.copy(closeUpShot(closeUpWhich || 'jukebox').pos) }
 
 function exitCloseUp() {
   const playing = closeUp.playingId
@@ -1186,14 +1221,14 @@ const carryRecord = new THREE.Group()
   carryRecord.visible = false
   scene.add(carryRecord)
 }
-/** Play a record: walk round to the gramophone's side (clear of the horn), reach, put it on. */
+/** Play a record: from where he stands, he turns to the platter, reaches, puts it on. */
 closeUp.onPlace = (rec, done) => {
   if (!jukeboxProp) { done(); return }
   if (reducedMotion) { jukeboxProp.setCover(rec.cover); done(); return }
-  _place = { phase: 'walk', t: 0, rec, done }
+  _place = { phase: 'turn', t: 0, rec, done }
   carryRecord.userData.label.material.map = jukeboxProp.coverTexture(rec.cover)
   carryRecord.userData.label.material.needsUpdate = true
-  walkTo(jukeboxProp, CU.jukebox.spot, (out) => jukeboxProp.group.getWorldPosition(out), () => { if (_place) { _place.phase = 'reach'; _place.t = 0 } })
+  turnTo(jukeboxProp, (out) => jukeboxProp.platterWorld(out), () => { if (_place) { _place.phase = 'reach'; _place.t = 0 } })
 }
 const _hands = new THREE.Vector3(), _plat = new THREE.Vector3()
 const easeIO = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
@@ -1219,8 +1254,8 @@ function updatePlace(dt, charY) {
     const done = pl.done
     _place = null
     done()
-    // then he steps back and stands with it, turned half to the camera
-    walkTo(jukeboxProp, CU.jukebox.aside, (out) => out.copy(camSystem.camera.position).lerp(jukeboxProp.group.getWorldPosition(_jbPos), 0.6))
+    // then he turns back to face the camera
+    turnTo(jukeboxProp, faceShot)
   }
 }
 let _jbHeard = false   // you've stepped into the gramophone's circle (and not walked well out)
@@ -1862,6 +1897,7 @@ if (import.meta.env.DEV) {
     sfx,
     worldJukebox,
     get jukebox() { return jukeboxProp },
+    get walkDbg() { return { script: _script && { path: _script.path.map(v => v.toArray().map(n => +n.toFixed(2))), arrived: !!_script.arrived }, heading: +heading.toFixed(2), walkVel: +walkVel.toFixed(3), moving: scriptMoving } },
     get me() { return modelGroup.position },
     get audioOwner() { return audio.owner },
     feet: () => ({ L: { ..._footSt.L }, R: { ..._footSt.R } }),
@@ -2399,6 +2435,7 @@ function animate() {
     const scripted = scriptStep(dt)
     if (scripted != null) walkTarget = scripted
     walkVel += (walkTarget - walkVel) * (1 - Math.exp(-DAMP * dt))
+    if (scripted != null) walkVel = scripted   // scripted walks don't coast: no overshoot
 
     if (Math.abs(walkVel) > 0.001) {
       _savedQ.copy(planetGroup.quaternion)
