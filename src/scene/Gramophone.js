@@ -36,8 +36,11 @@ function noteTexture(ch, color) {
 }
 
 export class Gramophone {
-  /** @param {number} zoneRadius  radius of the music circle, world units */
-  constructor(zoneRadius = 3.3) {
+  /**
+   * @param {number} zoneRadius  radius of the music circle, world units
+   * @param {number} size        how big the gramophone itself is (the circle doesn't scale)
+   */
+  constructor(zoneRadius = 3.3, size = 1) {
     this.group = new THREE.Group()
     this.group.name = 'jukebox'
     this.zoneRadius = zoneRadius
@@ -56,31 +59,35 @@ export class Gramophone {
     }
     const M = (...a) => { const m = mat(...a); this._mats.push(m); return m }
 
+    this._body = new THREE.Group()
+    this._body.scale.setScalar(size)
+    this.group.add(this._body)
+
     const wood = M(0x8a5a3a), woodD = M(0x5e3b26), dark = M(0x1f1a26)
     const brass = M(0xd8a64a, { rough: 0.35, metal: 0.5 })
     this._inner = M(0xffd27a, { emissive: 0xffb347, intensity: 0.2, side: THREE.DoubleSide, rough: 0.5 })
 
     // cabinet
-    add(this.group, new THREE.BoxGeometry(1.3, 0.9, 1.1), wood, 0, 0.45, 0)
-    add(this.group, new THREE.BoxGeometry(1.38, 0.08, 1.18), woodD, 0, 0.92, 0)
-    add(this.group, new THREE.BoxGeometry(1.38, 0.1, 1.18), woodD, 0, 0.05, 0)
-    add(this.group, new THREE.BoxGeometry(0.5, 0.32, 0.04), woodD, 0, 0.45, 0.56)
+    add(this._body, new THREE.BoxGeometry(1.3, 0.9, 1.1), wood, 0, 0.45, 0)
+    add(this._body, new THREE.BoxGeometry(1.38, 0.08, 1.18), woodD, 0, 0.92, 0)
+    add(this._body, new THREE.BoxGeometry(1.38, 0.1, 1.18), woodD, 0, 0.05, 0)
+    add(this._body, new THREE.BoxGeometry(0.5, 0.32, 0.04), woodD, 0, 0.45, 0.56)
     // record and tone arm
-    this._record = add(this.group, new THREE.CylinderGeometry(0.5, 0.5, 0.04, 24), dark, 0, 0.98, 0.05)
+    this._record = add(this._body, new THREE.CylinderGeometry(0.5, 0.5, 0.04, 24), dark, 0, 0.98, 0.05)
     // the label carries the playing record's sleeve
     this._labelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 })
     this._mats.push(this._labelMat)
     this._labelTex = new Map()
     add(this._record, new THREE.CylinderGeometry(0.17, 0.17, 0.012, 24), this._labelMat, 0, 0.026, 0)
     this.setCover('meadow')
-    add(this.group, new THREE.BoxGeometry(0.5, 0.05, 0.05), brass, 0.3, 1.06, -0.25, 0, 0.6, 0)
+    add(this._body, new THREE.BoxGeometry(0.5, 0.05, 0.05), brass, 0.3, 1.06, -0.25, 0, 0.6, 0)
     // the horn: a post, a curved neck, then a big flared bell facing forward
-    add(this.group, new THREE.CylinderGeometry(0.07, 0.07, 0.7, 8), brass, -0.38, 1.3, -0.35)
-    add(this.group, new THREE.CylinderGeometry(0.08, 0.12, 0.5, 8), brass, -0.33, 1.68, -0.3, 0.35, 0, 0.2)
+    add(this._body, new THREE.CylinderGeometry(0.07, 0.07, 0.7, 8), brass, -0.38, 1.3, -0.35)
+    add(this._body, new THREE.CylinderGeometry(0.08, 0.12, 0.5, 8), brass, -0.33, 1.68, -0.3, 0.35, 0, 0.2)
     this._bell = new THREE.Group()
     this._bell.position.set(-0.22, 1.95, -0.1)
     this._bell.rotation.set(0.95, 0, 0.35)
-    this.group.add(this._bell)
+    this._body.add(this._bell)
     const flare = add(this._bell, new THREE.CylinderGeometry(0.95, 0.14, 1.2, 12, 1, true), brass, 0, 0.5, 0)
     flare.receiveShadow = false
     const glow = add(this._bell, new THREE.CylinderGeometry(0.9, 0.13, 1.16, 12, 1, true), this._inner, 0, 0.5, 0)
@@ -121,8 +128,36 @@ export class Gramophone {
   /** Put a sleeve on the platter record's label. */
   setCover(key) { this._labelMat.map = this.coverTexture(key); this._labelMat.needsUpdate = true }
 
-  /** Hide the platter record (while a new one is carried over), or show it. */
+  /** Hide the platter record, or show it. */
   showRecord(on) { this._record.visible = !!on }
+
+  /**
+   * Change the record: the old one lifts off and slides away, the new one
+   * (with `key` on its label) drops onto the platter, then done() runs.
+   */
+  swapTo(key, done) {
+    this._swap = { t: 0, key, done, labelled: false }
+  }
+
+  _tickSwap(dt, reducedMotion) {
+    const sw = this._swap
+    if (!sw) return
+    sw.t += reducedMotion ? 1 : dt
+    const rec = this._record, OUT = 0.28, IN = 0.32
+    if (sw.t < OUT) {                                   // lift off and slide back
+      const k = sw.t / OUT
+      rec.position.set(0, 0.98 + 0.35 * k, 0.05 - 0.5 * k * k)
+    } else if (sw.t < OUT + IN) {                       // the new one drops on
+      if (!sw.labelled) { this.setCover(sw.key); sw.labelled = true }
+      const k = (sw.t - OUT) / IN, e = 1 - Math.pow(1 - k, 3)
+      rec.position.set(0, 0.98 + 0.45 * (1 - e), 0.05)
+    } else {
+      if (!sw.labelled) this.setCover(sw.key)
+      rec.position.set(0, 0.98, 0.05)
+      this._swap = null
+      sw.done?.()
+    }
+  }
 
   /** Where a record lands on the platter, in world space. */
   platterWorld(target = new THREE.Vector3()) {
@@ -142,6 +177,7 @@ export class Gramophone {
 
     this.ring.update(dt, { lit, near, reducedMotion, bpm })
 
+    this._tickSwap(dt, reducedMotion)
     // the gramophone itself: the record turns, the horn glows and pulses
     if (!reducedMotion) this._record.rotation.y += dt * (playing ? 3.0 : 0.25)
     this._inner.emissiveIntensity = 0.2 + this._lit * (0.35 + 0.2 * Math.sin(this._t * 6))

@@ -4,11 +4,11 @@
 //
 //   Jukebox    the gramophone on the left, its records on the right with no
 //              box (vinyls with their sleeves on the label, readable over
-//              anything thanks to a feathered wash). The list scrolls; "Press
+//              anything thanks to a feathered wash). The list scrolls; "Make
 //              your own" is always the row underneath. Each record can be
 //              remixed or reported. Playing one hands off to main.js, which
-//              walks Eric over to put it on, then calls back to start it.
-//   Studio     press your own record: a sixteen-step grid you drag across,
+//              swaps the record on the gramophone, then calls back to start it.
+//   Studio     make your own record: a sixteen-step grid you drag across,
 //              mood (the panel takes its colour), tempo, one of five sleeves,
 //              a name (needed) and who made it (optional).
 //   Whiteboard the board on the right, the Doodle Wall's drawings pinned on
@@ -42,7 +42,7 @@ export class CloseUp {
     this.onExit = null
     /** (open: boolean) => void  the studio needs a slightly wider shot */
     this.onStudio = null
-    /** (record, done) => void  main walks Eric over and calls done() as it lands */
+    /** (record, done) => void  main swaps the record on the platter, done() as it lands */
     this.onPlace = null
     /** () => void  the record list stopped a record */
     this.onStopRecord = null
@@ -77,10 +77,10 @@ export class CloseUp {
         </div>
       </section>
 
-      <section class="cu-screen" id="cu-studio" aria-label="Press your own record">
+      <section class="cu-screen" id="cu-studio" aria-label="Make your own record">
         <div class="cu-panel cu-studio">
           <span class="cu-tint warm"></span><span class="cu-tint dreamy"></span><span class="cu-tint night"></span>
-          <div class="cu-top"><div><div class="cu-eyebrow">The Jukebox · Studio</div><h2 class="cu-h">Press your own record</h2></div>
+          <div class="cu-top"><div><div class="cu-eyebrow">The Jukebox · Studio</div><h2 class="cu-h">Make your own record</h2></div>
             <button class="cu-txt" type="button" data-records>← Back to the records</button></div>
           <div class="cu-pressing">
             <div class="cu-bigvinyl" id="cu-bigvinyl"><span class="cu-disc"><span class="cu-lbl" id="cu-biglabel"></span></span><span class="cu-sheen"></span></div>
@@ -100,7 +100,7 @@ export class CloseUp {
               <button class="cu-txt" type="button" id="cu-clear">Clear</button>
             </div>
           </div>
-          <div class="cu-pressrow"><small>Name it, sign it if you like, then press it.</small><button class="cu-press" type="button" id="cu-press">Press it</button></div>
+          <div class="cu-pressrow"><small>Name it, sign it if you like, then put it on the shelf.</small><button class="cu-press" type="button" id="cu-press">Put it on the shelf</button></div>
         </div>
       </section>
 
@@ -249,9 +249,9 @@ export class CloseUp {
           ${r.house ? '' : `<button class="cu-mini cu-flag" type="button" data-report="${esc(r.id)}" aria-label="Report this record" title="Report this record">⚑</button>`}
         </span></div>`
     }).join('')
-    $('#cu-pinned').innerHTML = `<div class="cu-rec cu-blank"><button class="cu-recplay" type="button" data-write aria-label="Press your own record">
+    $('#cu-pinned').innerHTML = `<div class="cu-rec cu-blank"><button class="cu-recplay" type="button" data-write aria-label="Make your own record">
       <span class="cu-vinyl"><span class="cu-disc"><span class="cu-lbl"></span></span><span class="cu-sheen"></span></span>
-      <span class="cu-info"><b>Press your own</b><small>pick a sleeve · set the pads</small></span><span class="cu-state">＋</span></button></div>`
+      <span class="cu-info"><b>Make your own</b><small>pick a sleeve · set the pads</small></span><span class="cu-state">＋</span></button></div>`
   }
 
   _rec(id) { return this._records.find(r => r.id === id) }
@@ -265,7 +265,7 @@ export class CloseUp {
     if (audio.isPlaying(this._playing)) audio.stop(this._playing)
     this._playing = id
     this._renderRecords()
-    // Eric puts it on; the music starts as it lands on the platter
+    // the record changes on the gramophone; the music starts as it lands
     const start = () => { if (this._playing === id) audio.play(pattern, id) }
     if (this.onPlace) this.onPlace({ ...rec, pattern }, start)
     else start()
@@ -415,9 +415,9 @@ export class CloseUp {
       const houses = this._records.filter(r => r.house).length
       this._records.splice(houses, 0, rec)
       this._toRecords()
-      this._toast(offline ? 'Pressed! Saved on this device for now.' : 'Pressed! It’s on the shelf.')
+      this._toast(offline ? 'Saved on this device for now.' : 'It’s on the shelf!')
     } catch (err) {
-      this._toast(err.message === 'empty' ? 'Set a few pads first, or hit Surprise me.' : 'Couldn’t press it. Try again in a moment.')
+      this._toast(err.message === 'empty' ? 'Set a few pads first, or hit Surprise me.' : 'Couldn’t put it on the shelf. Try again in a moment.')
     } finally { btn.disabled = false }
   }
 
