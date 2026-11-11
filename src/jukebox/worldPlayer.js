@@ -5,11 +5,14 @@
 // edge. Press F and the shelf opens: the world music stops so you can play
 // what you like. Close the shelf while you're still in the circle and it
 // goes back to random loops. A new random loop comes on about every 48 s.
+// The pool is the shelf plus a few house loops (houseLoops.js), so the
+// meadow has music even while the shelf is empty.
 //
 // It drives the same AudioEngine as the shelf (owner 'world'), so whatever
 // the shelf is doing always wins, and the shelf always gets its own level.
 import { audio } from './AudioEngine.js'
 import { fetchTunes, fetchPattern } from './jukeboxApi.js'
+import { HOUSE_LOOPS } from './houseLoops.js'
 
 const OWNER  = 'world'
 const LEVEL  = 0.42     // about half the shelf's level: there, not loud
@@ -32,9 +35,10 @@ export class WorldJukebox {
   async _list() {
     if (this._tracks) return this._tracks
     if (!this._loading) {
+      // the shelf plus the Jukebox's own records, so there's always something
       this._loading = fetchTunes()
-        .then(r => (this._tracks = r.items || []))
-        .catch(() => (this._tracks = []))
+        .then(r => (this._tracks = [...HOUSE_LOOPS, ...(r.items || [])]))
+        .catch(() => (this._tracks = [...HOUSE_LOOPS]))
     }
     return this._loading
   }
