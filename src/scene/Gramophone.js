@@ -79,6 +79,8 @@ export class Gramophone {
     this._mats.push(this._labelMat)
     this._labelTex = new Map()
     add(this._record, new THREE.CylinderGeometry(0.17, 0.17, 0.012, 24), this._labelMat, 0, 0.026, 0)
+    // the same label underneath, so the record looks right while it flips over
+    add(this._record, new THREE.CylinderGeometry(0.17, 0.17, 0.012, 24), this._labelMat, 0, -0.026, 0)
     this.setCover('meadow')
     add(this._body, new THREE.BoxGeometry(0.5, 0.05, 0.05), brass, 0.3, 1.06, -0.25, 0, 0.6, 0)
     // the horn: a post, a curved neck, then a big flared bell facing forward
@@ -132,31 +134,50 @@ export class Gramophone {
   showRecord(on) { this._record.visible = !!on }
 
   /**
-   * Change the record: the old one lifts off and slides away, the new one
-   * (with `key` on its label) drops onto the platter, then done() runs.
+   * Change the record: it lifts a little off the platter, flips over like
+   * turning to side B (still spinning), and settles back down with the new
+   * sleeve on its label. The label changes at the halfway point, when the
+   * record is edge-on, so the switch is never seen. Then done() runs.
    */
   swapTo(key, done) {
+    if (this._swap) { this.setCover(this._swap.key); this._swap.done?.() }   // a swap mid-flight finishes now
     this._swap = { t: 0, key, done, labelled: false }
   }
 
   _tickSwap(dt, reducedMotion) {
     const sw = this._swap
     if (!sw) return
-    sw.t += reducedMotion ? 1 : dt
-    const rec = this._record, OUT = 0.28, IN = 0.32
-    if (sw.t < OUT) {                                   // lift off and slide back
-      const k = sw.t / OUT
-      rec.position.set(0, 0.98 + 0.35 * k, 0.05 - 0.5 * k * k)
-    } else if (sw.t < OUT + IN) {                       // the new one drops on
-      if (!sw.labelled) { this.setCover(sw.key); sw.labelled = true }
-      const k = (sw.t - OUT) / IN, e = 1 - Math.pow(1 - k, 3)
-      rec.position.set(0, 0.98 + 0.45 * (1 - e), 0.05)
-    } else {
+    const DUR = 0.66
+    sw.t += reducedMotion ? DUR : dt
+    const rec = this._record, k = Math.min(1, sw.t / DUR)
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2
+    rec.position.set(0, 0.98 + Math.sin(k * Math.PI) * 0.3, 0.05)
+    rec.rotation.x = e * Math.PI
+    if (!sw.labelled && k >= 0.5) { this.setCover(sw.key); sw.labelled = true }
+    if (k >= 1) {
       if (!sw.labelled) this.setCover(sw.key)
       rec.position.set(0, 0.98, 0.05)
+      // Flipped over at spin θ looks exactly like upright at spin π − θ (both faces
+      // carry the label), so this hand-back is invisible.
+      rec.rotation.x = 0
+      rec.rotation.y = Math.PI - rec.rotation.y
       this._swap = null
       sw.done?.()
     }
+  }
+
+  /** The gramophone's own box (not its ring or notes) in this group's space, for framing a close-up. */
+  localBounds() {
+    if (this._bounds) return this._bounds
+    this.group.updateWorldMatrix(true, true)
+    const inv = new THREE.Matrix4().copy(this.group.matrixWorld).invert(), m = new THREE.Matrix4()
+    const box = new THREE.Box3(), b = new THREE.Box3()
+    this._body.traverse(o => {
+      if (!o.isMesh) return
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+      box.union(b.copy(o.geometry.boundingBox).applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld)))
+    })
+    return (this._bounds = box)
   }
 
   /** Where a record lands on the platter, in world space. */
@@ -179,7 +200,9 @@ export class Gramophone {
 
     this._tickSwap(dt, reducedMotion)
     // the gramophone itself: the record turns, the horn glows and pulses
-    if (!reducedMotion) this._record.rotation.y += dt * (playing ? 3.0 : 0.25)
+    // upside down, local spin runs the other way, so the turn reads the same on screen
+    const way = Math.cos(this._record.rotation.x) < 0 ? -1 : 1
+    if (!reducedMotion) this._record.rotation.y += way * dt * (playing ? 3.0 : 0.25)
     this._inner.emissiveIntensity = 0.2 + this._lit * (0.35 + 0.2 * Math.sin(this._t * 6))
     this._bell.scale.setScalar(reducedMotion ? 1 : 1 + this._lit * 0.02 * Math.sin(this._t * 9))
 

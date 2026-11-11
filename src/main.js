@@ -769,6 +769,12 @@ perfMark('world_download_start')
         // so the board stands a couple of steps away from it, and turns to
         // face the camera once you're on Meadow.
         const at = new THREE.Box3().setFromObject(scope).getCenter(new THREE.Vector3())
+        _scopeRoot = scope
+        scope.traverse(o => {
+          if (!o.isMesh) return
+          o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone()
+          for (const m of [].concat(o.material)) _scopeMats.push(m)
+        })
         const skip = new Set(); scope.traverse(o => skip.add(o))
         const toCam = new THREE.Vector3(0, 0, 1)
           .applyQuaternion(planetGroup.getWorldQuaternion(new THREE.Quaternion()).invert())
@@ -1088,23 +1094,88 @@ const _jbPos = new THREE.Vector3()
 // out while the camera is in close (on a planet that turns under him he can't
 // be placed exactly beside a prop, and the prop reads better on its own) and
 // fades back in as it glides out.
-const _shotP = new THREE.Vector3(), _shotL = new THREE.Vector3()
+// Every shot also carries the prop's own up: a prop stands on the curve of the
+// planet, so with the world's up it would sit at a slant on screen.
+const _shotP = new THREE.Vector3(), _shotL = new THREE.Vector3(), _shotU = new THREE.Vector3()
+const _bx = new THREE.Vector3(), _bz = new THREE.Vector3(), _bc = new THREE.Vector3()
 const CU = {
   jukebox: { pos: [2.3, 2.9, 8.4], look: [2.3, 1.85, 0], fov: 38 },
   studio:  { pos: [2.6, 2.9, 7.9], look: [2.6, 1.85, 0], fov: 38 },
-  board:   { pos: [-1.15, 1.63, 4.05], look: [-1.15, 1.63, 0.13], fov: 40 },
+}
+// The board, frame, tray and markers around the face's centre (face units).
+const BOARD_BOX = { w: 2.34, h: 1.8, cy: -0.06 }
+const BOARD_FOV = 36
+// the wide Jukebox shot's angle (slightly above, straight on), reused for the fitted one
+const JB_DIR = new THREE.Vector3(0, 1.05, 8.4).normalize()
+const JB_RIGHT = new THREE.Vector3(1, 0, 0)
+const JB_UP = new THREE.Vector3(0, JB_DIR.z, -JB_DIR.y)
+const _bsz = new THREE.Vector3()
+
+/** The gramophone fitted into the free part of the screen, from the wide shot's angle. */
+function fitPropShot(prop, f, fov) {
+  const box = prop.localBounds()
+  box.getCenter(_bc); box.getSize(_bsz)
+  const aspect = camSystem.camera.aspect, t = Math.tan(THREE.MathUtils.degToRad(fov / 2)), fill = 0.9
+  const d = Math.max(_bsz.x / (2 * t * aspect * f.w * fill), _bsz.y / (2 * t * f.h * fill))
+  const vh = 2 * d * t, vw = vh * aspect
+  _shotL.copy(_bc).addScaledVector(JB_RIGHT, -(f.cx - 0.5) * vw).addScaledVector(JB_UP, (f.cy - 0.5) * vh)
+  _shotP.copy(_shotL).addScaledVector(JB_DIR, d)
+  prop.group.localToWorld(_shotL); prop.group.localToWorld(_shotP)
+  _shotU.copy(JB_UP).transformDirection(prop.group.matrixWorld)
+  return { pos: _shotP, look: _shotL, fov, up: _shotU }
 }
 const cuProp = (which) => (which === 'board' ? doodleBoard : jukeboxProp)
 function closeUpShot(which) {
+  if (which === 'board') return boardShot()
   const prop = cuProp(which === 'studio' ? 'jukebox' : which), c = CU[which]
+  // phones: the panel runs along the bottom, so fit the gramophone above it
+  const f = closeUp.frameFor(which)
+  if (f.below) return fitPropShot(prop, f, c.fov)
   prop.group.localToWorld(_shotP.set(...c.pos))
   prop.group.localToWorld(_shotL.set(...c.look))
-  return { pos: _shotP, look: _shotL, fov: c.fov }
+  prop.group.updateWorldMatrix(true, false)
+  prop.group.matrixWorld.extractBasis(_bx, _shotU, _bz)
+  return { pos: _shotP, look: _shotL, fov: c.fov, up: _shotU.normalize() }
+}
+
+/**
+ * The whiteboard, square on and level: the camera looks straight down the
+ * face's normal with the face's own up, from just far enough back that the
+ * board fills the free part of the screen (beside the panel, or above it on a
+ * phone), whatever the window's shape.
+ */
+function boardShot() {
+  const face = doodleBoard.face
+  face.updateWorldMatrix(true, false)
+  face.matrixWorld.extractBasis(_bx, _shotU, _bz)
+  _bx.normalize(); _shotU.normalize(); _bz.normalize()
+  _bc.setFromMatrixPosition(face.matrixWorld).addScaledVector(_shotU, BOARD_BOX.cy)
+  const f = closeUp.frameFor('board'), aspect = camSystem.camera.aspect
+  const t = Math.tan(THREE.MathUtils.degToRad(BOARD_FOV / 2)), fill = 0.94
+  const d = Math.max(BOARD_BOX.w / (2 * t * aspect * f.w * fill), BOARD_BOX.h / (2 * t * f.h * fill))
+  const vh = 2 * d * t, vw = vh * aspect
+  _shotL.copy(_bc).addScaledVector(_bx, -(f.cx - 0.5) * vw).addScaledVector(_shotU, (f.cy - 0.5) * vh)
+  _shotP.copy(_shotL).addScaledVector(_bz, d)
+  return { pos: _shotP, look: _shotL, fov: BOARD_FOV, up: _shotU }
 }
 
 let charFade = 1, charFadeTo = 1   // Eric's opacity, eased towards charFadeTo
 const _charFadeMats = []           // filled when his model loads
 let _charRoot = null               // his model (hidden outright once faded, shadow and all)
+// The telescope stands between the camera and the whiteboard on narrow
+// screens, where the board shot is head-on, so it fades out for the board's
+// close-up and back in after (it stays part of the meadow otherwise).
+let scopeFade = 1, scopeFadeTo = 1
+const _scopeMats = []
+let _scopeRoot = null
+function updateScopeFade(dt) {
+  if (scopeFade === scopeFadeTo || !_scopeRoot) return
+  scopeFade += (scopeFadeTo - scopeFade) * Math.min(1, dt * 7)
+  if (Math.abs(scopeFade - scopeFadeTo) < 0.01) scopeFade = scopeFadeTo
+  for (const m of _scopeMats) { m.transparent = scopeFade < 1; m.opacity = scopeFade; m.depthWrite = scopeFade > 0.6 }
+  _scopeRoot.visible = scopeFade > 0.02
+}
+
 function updateCharFade(dt) {
   if (charFade === charFadeTo) return
   charFade += (charFadeTo - charFade) * Math.min(1, dt * 7)
@@ -1122,6 +1193,7 @@ function openCloseUp(which) {
   const quick = reducedMotion
   camSystem.setShot(() => closeUpShot(closeUpWhich), quick ? 0.01 : 0.9)
   charFadeTo = 0
+  if (which === 'board') scopeFadeTo = 0
   setTimeout(() => { if (closeUpActive && closeUpWhich === which) closeUp.open(which) }, quick ? 0 : 560)
 }
 
@@ -1130,6 +1202,7 @@ function exitCloseUp() {
   closeUp.close()
   camSystem.clearShot(reducedMotion ? 0.01 : 0.7)
   charFadeTo = 1
+  scopeFadeTo = 1
   setTimeout(() => {
     closeUpActive = false
     closeUpWhich = null
@@ -2500,6 +2573,7 @@ function animate() {
       doodleBoard.update(dt, reducedMotion, db < BOARD_ZONE)
     }
     updateCharFade(dt)
+    updateScopeFade(dt)
     // Once you're standing on Meadow, turn the props to face the camera.
     // Done here rather than at load because the planet turns after loading.
     if (activeIslandName === MEADOW_ISLAND && !isTeleporting) {

@@ -29,6 +29,7 @@ const INTRO_LAUNCH_K0    = 0.4   // fraction of intro k at the very first frame
 
 const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 const ORBIT_FOV = 65
+const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
 function smoothUnit(t) {
   const x = Math.min(1, Math.max(0, t))
@@ -141,12 +142,14 @@ export class Camera {
   // planet holds still while the planet turns under a walking character.
 
   get inShot() { return !!this._shot }
+  // A shot may carry its own `up` (world space): a prop standing on the curve
+  // of the planet isn't level with the world, so the camera rolls to match it.
 
   /** Glide from wherever the camera is to the shot. */
   setShot(getShot, dur = 0.9) {
     this._shot = {
       getShot, phase: 'in', t: 0, dur: Math.max(0.01, dur),
-      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov,
+      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov, fromU: this.camera.up.clone(),
     }
   }
 
@@ -158,7 +161,7 @@ export class Camera {
     if (!this._shot) return
     this._shot = {
       getShot: null, phase: 'out', t: 0, dur: Math.max(0.01, dur),
-      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov,
+      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov, fromU: this.camera.up.clone(),
     }
   }
 
@@ -245,21 +248,23 @@ export class Camera {
       const sh = this._shot
       sh.t = Math.min(1, sh.t + dt / sh.dur)
       const k = easeInOutCubic(sh.t)
-      let toP, toL, toF
+      let toP, toL, toF, toU = WORLD_UP
       if (sh.phase === 'out') {
         toP = this._camPos; toL = this._pivot; toF = ORBIT_FOV
       } else {
         const s = sh.getShot()
         toP = s.pos; toL = s.look; toF = s.fov ?? 40
+        if (s.up) toU = s.up
       }
       this.camera.position.lerpVectors(sh.fromP, toP, k)
       this._lookNow.lerpVectors(sh.fromL, toL, k)
+      this.camera.up.lerpVectors(sh.fromU, toU, k).normalize()
       const fov = sh.fromF + (toF - sh.fromF) * k
       if (Math.abs(fov - this.camera.fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
       this.camera.lookAt(this._lookNow)
       if (sh.t >= 1) {
         if (sh.phase === 'in') sh.phase = 'hold'
-        else if (sh.phase === 'out') { this._shot = null; this._pivotSmooth.copy(this._pivot) }
+        else if (sh.phase === 'out') { this._shot = null; this._pivotSmooth.copy(this._pivot); this.camera.up.copy(WORLD_UP) }
       }
       // keep the orbit's own smoothing settled so the hand-back is seamless
       this._pivotSmooth.copy(this._pivot)

@@ -11,7 +11,9 @@
 //
 // Up close (the Doodle Wall's close-up), the cycling pauses: show() wipes any
 // drawing onto it, and startDrawing() turns the face into a canvas you draw
-// on directly (strokes come in as face UVs from a raycast).
+// on directly (strokes come in as face UVs from a raycast). Ink goes on its
+// own layer, so the eraser only lifts marker, never the board; strokes are
+// smoothed through their midpoints and drawn a segment at a time.
 //
 // Units: the character stands about 2.2 tall. The group's origin is the point
 // it stands on and the board faces +Z, so a caller drops it onto a surface
@@ -20,9 +22,14 @@ import * as THREE from 'three'
 import { GroundRing } from './GroundRing.js'
 
 const BW = 2.0, BH = 1.5          // drawing surface, 4:3 like the drawings
-const FACE_W = 768, FACE_H = 576
+export const FACE_W = 768
+const FACE_H = 576
 const HOLD = 4.5                  // seconds a drawing stays up
 const WIPE = 1.1                  // seconds the eraser takes to cross
+/** The markers on the tray, left to right. The close-up's colour swatches use these. */
+export const MARKERS = ['#222222', '#1e88e5', '#e53935', '#43a047', '#7c3aed']
+export const ERASER_SIZE = 34     // face pixels
+const GLOW_FAR = 0.3, GLOW_NEAR = 0.72   // the face's own light, out in the world / in the close-up
 
 function mat(color, { rough = 0.75, metal = 0, map = null } = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, flatShading: !map, map })
@@ -47,10 +54,15 @@ export class DoodleBoard {
       x: ((i * 197) % 100) / 100 * FACE_W, y: ((i * 61) % 100) / 100 * FACE_H, r: 30 + (i * 37) % 70, a: i * 0.8,
     }))
 
-    // the face
+    // the face, the clean board behind it, and the ink on its own layer
     this._cv = document.createElement('canvas')
     this._cv.width = FACE_W; this._cv.height = FACE_H
     this._ctx = this._cv.getContext('2d')
+    this._bgCv = document.createElement('canvas')
+    this._bgCv.width = FACE_W; this._bgCv.height = FACE_H
+    this._inkCv = document.createElement('canvas')
+    this._inkCv.width = FACE_W; this._inkCv.height = FACE_H
+    this._ink = this._inkCv.getContext('2d')
     this._tex = new THREE.CanvasTexture(this._cv)
     this._tex.colorSpace = THREE.SRGBColorSpace
     this._tex.anisotropy = 4
@@ -99,7 +111,10 @@ export class DoodleBoard {
     panel.rotation.x = tilt
     this.group.add(panel)
     add(panel, new THREE.BoxGeometry(BW + 0.1, BH + 0.1, 0.06), backing, 0, 0, -0.02)
-    this._faceMat = new THREE.MeshStandardMaterial({ map: this._tex, roughness: 0.35, metalness: 0 })
+    // The board faces away from the sun much of the time, so the face lights
+    // itself a little (more up close) to read as a white board, not a grey one.
+    this._faceMat = new THREE.MeshStandardMaterial({ map: this._tex, roughness: 0.35, metalness: 0, emissive: 0xffffff, emissiveMap: this._tex, emissiveIntensity: GLOW_FAR })
+    this._glow = GLOW_FAR
     const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), this._faceMat)
     face.position.z = 0.012; face.receiveShadow = true
     panel.add(face)
@@ -111,12 +126,13 @@ export class DoodleBoard {
     add(panel, new THREE.BoxGeometry(fw, BH, 0.08), frame, -BW / 2 - fw / 2, 0, 0)
     add(panel, new THREE.BoxGeometry(fw, BH, 0.08), frame,  BW / 2 + fw / 2, 0, 0)
 
-    // markers on the tray
-    ;[0xe53935, 0x1e88e5, 0x222222].forEach((c, i) => {
+    // markers on the tray, one per colour; the one in your hand lifts a little
+    this._pens = MARKERS.map((c, i) => {
       const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, flatShading: true })
       this._mats.push(m)
-      const pen = add(panel, new THREE.CylinderGeometry(0.035, 0.035, 0.32, 6), m, -0.55 + i * 0.2, -BH / 2 - 0.07, 0.1, 0, 0, Math.PI / 2)
+      const pen = add(panel, new THREE.CylinderGeometry(0.035, 0.035, 0.3, 6), m, -0.9 + i * 0.19, -BH / 2 - 0.07, 0.1, 0, 0, Math.PI / 2)
       pen.castShadow = false
+      return pen
     })
 
     // the eraser, resting on the tray until it's time to wipe
@@ -171,44 +187,103 @@ export class DoodleBoard {
   }
 
   get isDrawing() { return this._drawing }
-  get hasInk() { return this._strokes.some(s => s.pts.length > 1) }
+  get hasInk() { return this._strokes.some(s => !s.erase) }
 
-  startDrawing() { this._drawing = true; this._strokes = []; this._wipe = null; this._paint() }
-  stopDrawing() { if (!this._drawing) return; this._drawing = false; this._strokes = []; this._paint() }
-  clearDrawing() { this._strokes = []; this._paint() }
+  get canUndo() { return this._strokes.length > 0 }
 
-  /** Add a point at face UV (u, v), starting a new stroke when `fresh`. */
-  ink(u, v, fresh, color) {
+  startDrawing() { this._drawing = true; this._strokes = []; this._wipe = null; this._redrawInk(); this._paint() }
+  stopDrawing() { if (!this._drawing) return; this._drawing = false; this._strokes = []; this._redrawInk(); this.liftTool(null); this._paint() }
+  clearDrawing() { this._strokes = []; this._redrawInk(); this._paint() }
+  undo() { if (!this._strokes.length) return; this._strokes.pop(); this._redrawInk(); this._paint() }
+
+  /**
+   * Add a point at face UV (u, v), starting a new stroke when `fresh`.
+   * @param {{ color: string, size: number, erase?: boolean }} tool
+   */
+  ink(u, v, fresh, tool) {
     if (!this._drawing) return
     const pt = [u * FACE_W, (1 - v) * FACE_H]
-    if (fresh || !this._strokes.length) this._strokes.push({ color, pts: [pt] })
-    else this._strokes[this._strokes.length - 1].pts.push(pt)
+    let s = this._strokes[this._strokes.length - 1]
+    if (fresh || !s) {
+      s = { color: tool.color, size: tool.erase ? ERASER_SIZE : tool.size, erase: !!tool.erase, pts: [pt] }
+      this._strokes.push(s)
+      this._dot(this._ink, s, 1)
+    } else {
+      const last = s.pts[s.pts.length - 1]
+      if (Math.hypot(pt[0] - last[0], pt[1] - last[1]) < 1.5) return   // jitter
+      s.pts.push(pt)
+      this._segment(this._ink, s, s.pts.length - 1, 1)
+    }
     this._paint()
+  }
+
+  /** The stroke's last stretch (midpoint to the pen), drawn when the pen lifts. */
+  endStroke() {
+    const s = this._strokes[this._strokes.length - 1]
+    if (!s || s.pts.length < 2) return
+    this._tail(this._ink, s, 1)
+    this._paint()
+  }
+
+  /** Lift what's in your hand on the tray: { pen: index } | { erase: true } | null. */
+  liftTool(tool) {
+    this._pens.forEach((p, i) => { p.position.y = -BH / 2 - 0.07 + (tool && !tool.erase && tool.pen === i ? 0.06 : 0) })
+    if (!this._wipe) { this._eraser.position.copy(this._rest); if (tool?.erase) this._eraser.position.y += 0.06 }
   }
 
   /** The drawing as a PNG data URL (transparent, 900 x 675, like the wall's). */
   drawingDataUrl() {
     const c = document.createElement('canvas')
     c.width = 900; c.height = 675
-    const x = c.getContext('2d'), k = 900 / FACE_W
-    this._inkOnto(x, k)
+    this._inkOnto(c.getContext('2d'), 900 / FACE_W)
     return c.toDataURL('image/png')
   }
 
+  // A stroke runs through the midpoints of its points, each point the control
+  // of a curve, so quick wobbly input still comes out as a smooth line.
+  _style(ctx, s, k) {
+    ctx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over'
+    ctx.strokeStyle = ctx.fillStyle = s.erase ? '#000' : s.color
+    ctx.lineWidth = s.size * k; ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+  }
+  _dot(ctx, s, k) {
+    this._style(ctx, s, k)
+    const [x, y] = s.pts[0]
+    ctx.beginPath(); ctx.arc(x * k, y * k, (s.size * k) / 2, 0, Math.PI * 2); ctx.fill()
+    ctx.globalCompositeOperation = 'source-over'
+  }
+  _segment(ctx, s, i, k) {          // the curve that point i finishes
+    const p = s.pts, b = p[i - 1], c = p[i]
+    const m0 = i >= 2 ? [(p[i - 2][0] + b[0]) / 2, (p[i - 2][1] + b[1]) / 2] : b
+    const m1 = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2]
+    this._style(ctx, s, k)
+    ctx.beginPath(); ctx.moveTo(m0[0] * k, m0[1] * k)
+    ctx.quadraticCurveTo(b[0] * k, b[1] * k, m1[0] * k, m1[1] * k)
+    ctx.stroke()
+    ctx.globalCompositeOperation = 'source-over'
+  }
+  _tail(ctx, s, k) {
+    const p = s.pts, b = p[p.length - 2], c = p[p.length - 1]
+    this._style(ctx, s, k)
+    ctx.beginPath(); ctx.moveTo(((b[0] + c[0]) / 2) * k, ((b[1] + c[1]) / 2) * k); ctx.lineTo(c[0] * k, c[1] * k); ctx.stroke()
+    ctx.globalCompositeOperation = 'source-over'
+  }
   _inkOnto(ctx, k = 1) {
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round'
     for (const s of this._strokes) {
-      ctx.strokeStyle = s.color; ctx.lineWidth = 7 * k
-      ctx.beginPath()
-      s.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * k, y * k) : ctx.moveTo(x * k, y * k)))
-      if (s.pts.length === 1) ctx.lineTo(s.pts[0][0] * k + 0.1, s.pts[0][1] * k)
-      ctx.stroke()
+      this._dot(ctx, s, k)
+      for (let i = 1; i < s.pts.length; i++) this._segment(ctx, s, i, k)
+      if (s.pts.length > 1) this._tail(ctx, s, k)
     }
+  }
+  _redrawInk() {
+    this._ink.clearRect(0, 0, FACE_W, FACE_H)
+    this._inkOnto(this._ink)
   }
 
   // ── painting ──────────────────────────────────────────────────────────────
   _bg() {
-    const c = this._ctx
+    if (this._bgReady) { this._ctx.drawImage(this._bgCv, 0, 0); return }
+    const c = this._bgCv.getContext('2d')
     c.fillStyle = '#f6f7f4'; c.fillRect(0, 0, FACE_W, FACE_H)
     // faint ghosts of old marker, so it reads as a used whiteboard
     c.strokeStyle = 'rgba(120,130,150,.07)'; c.lineWidth = 11; c.lineCap = 'round'
@@ -216,6 +291,8 @@ export class DoodleBoard {
     const sheen = c.createLinearGradient(0, 0, FACE_W, FACE_H)
     sheen.addColorStop(0, 'rgba(255,255,255,.5)'); sheen.addColorStop(0.4, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(200,210,225,.18)')
     c.fillStyle = sheen; c.fillRect(0, 0, FACE_W, FACE_H)
+    this._bgReady = true
+    this._ctx.drawImage(this._bgCv, 0, 0)
   }
 
   _pic(im) {
@@ -232,7 +309,7 @@ export class DoodleBoard {
     this._bg()
     const w = this._wipe
     if (this._drawing) {
-      this._inkOnto(c)
+      c.drawImage(this._inkCv, 0, 0)
     } else if (!w) {
       this._pic(this._shown)
     } else {
@@ -255,6 +332,12 @@ export class DoodleBoard {
    */
   update(dt, reducedMotion = false, inZone = false) {
     this.ring.update(dt, { lit: inZone, near: inZone, reducedMotion, bpm: 70 })
+    const glow = this._held ? GLOW_NEAR : GLOW_FAR
+    if (this._glow !== glow) {
+      this._glow += (glow - this._glow) * Math.min(1, dt * 4)
+      if (Math.abs(glow - this._glow) < 0.005) this._glow = glow
+      this._faceMat.emissiveIntensity = this._glow
+    }
     // the cycling, unless the close-up is holding the board
     if (!this._wipe && !this._held && this._imgs.length > 1) {
       this._wait -= dt

@@ -197,7 +197,7 @@ export class IntroOverlay {
 
     this._onKey = (e) => {
       // don't intercept tab/arrow navigation within the overlay
-      if (e.target.closest('#intro-overlay') && (e.key === 'Tab' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
+      if (e.target.closest?.('#intro-overlay') && (e.key === 'Tab' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
       this.close()
     }
     this._onClick = (e) => {
