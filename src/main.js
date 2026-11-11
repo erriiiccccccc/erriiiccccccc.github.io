@@ -32,6 +32,8 @@ import { sfx } from './audio/sfx.js'
 import { AsciiScreen } from './fx/AsciiScreen.js'
 import { QuestMarker } from './scene/QuestMarker.js'
 import { Jukebox } from './scene/Jukebox.js'
+import { DoodleBoard } from './scene/DoodleBoard.js'
+import { BOARD_DRAWINGS } from './data/doodleBoard.js'
 import { LoadDirector } from './loading/LoadDirector.js'
 import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
 import {
@@ -788,12 +790,35 @@ perfMark('world_download_start')
     {
       const scope = model.getObjectByName(TELESCOPE_NODE)
       if (scope) {
+        // The whiteboard takes over from the telescope. The telescope stays in
+        // the GLB (so the spot keeps coming from the world export) but is
+        // hidden. The easel is far bigger and the telescope sat where you
+        // spawn, so the board stands a couple of steps behind that spot,
+        // facing the camera you arrive with: the first thing you see.
+        const at = new THREE.Box3().setFromObject(scope).getCenter(new THREE.Vector3())
+        const skip = new Set(); scope.traverse(o => skip.add(o))
+        const toCam = new THREE.Vector3(0, 0, 1)
+          .applyQuaternion(planetGroup.getWorldQuaternion(new THREE.Quaternion()).invert())
+        let spot = surfaceAt(MEADOW_ISLAND, at, skip)
+        if (spot) {
+          const back = toCam.clone().addScaledVector(spot.normal, -toCam.dot(spot.normal)).normalize()
+          const behind = planetGroup.localToWorld(spot.position.clone().addScaledVector(back, -2.6))
+          spot = surfaceAt(MEADOW_ISLAND, behind, skip) || spot
+        }
+        if (spot) {
+          doodleBoard = new DoodleBoard()
+          doodleBoard.setDrawings(BOARD_DRAWINGS)
+          doodleBoard.group.position.copy(spot.position)
+          doodleBoard.group.quaternion.copy(faceTowards(spot, spot.position.clone().addScaledVector(toCam, 10)))
+          planetGroup.add(doodleBoard.group)
+          scope.visible = false
+        }
         addPoi({
           key:      'wall',
-          target:   scope,
+          target:   doodleBoard ? doodleBoard.group : scope,
           island:   MEADOW_ISLAND,
           color:    0xFBBF24,
-          iconKey:  'telescope',
+          iconKey:  'pencil',
           title:    'The Doodle Wall',
           sub:      'someone left drawings here',
           foundSub: 'look again',
@@ -839,6 +864,7 @@ perfMark('world_download_start')
       const noRaycast = (root) => root.traverse(o => { o.raycast = () => {} })
       const adopt = (obj) => { model.attach(obj); noRaycast(obj) }
       if (jukeboxProp) adopt(jukeboxProp.group)
+      if (doodleBoard) adopt(doodleBoard.group)
       for (const poi of POIS) {
         adopt(poi.marker.group)
         adopt(poi.marker.anchor)
@@ -946,6 +972,7 @@ let activePoi     = null   // the one you're closest to right now, or null
 let _subPromptPoi = null   // whose prompt is currently on screen
 /** @type {import('./scene/Jukebox.js').Jukebox | null} */
 let jukeboxProp   = null
+let doodleBoard   = null   // the Doodle Wall's whiteboard on Meadow
 let _prevActiveIslandForLerp = null
 let _islandLerpSettling = 0
 let _forceIslandLerp = true
@@ -1036,6 +1063,61 @@ function dropOntoIsland(islandName, awayFrom = null) {
     return { position: local, normal: local.clone().normalize() }
   }
   return null
+}
+
+/**
+ * The island's surface straight below a world point (towards the core),
+ * ignoring `skip` (e.g. the prop being replaced). planetGroup-local result.
+ */
+function surfaceAt(islandName, worldPoint, skip = null) {
+  const meshes = (islandMeshes[islandName] || []).filter(m => !skip?.has(m))
+  if (!meshes.length) return null
+  planetGroup.updateMatrixWorld(true)
+  const core = new THREE.Vector3().setFromMatrixPosition(planetGroup.matrixWorld)
+  const dir  = worldPoint.clone().sub(core).normalize()
+  _dropRay.set(core.clone().addScaledVector(dir, core.distanceTo(worldPoint) + 40), dir.clone().negate())
+  _dropRay.layers.enableAll()
+  const hit = _dropRay.intersectObjects(meshes, true)[0]
+  if (!hit) return null
+  const local = planetGroup.worldToLocal(hit.point.clone())
+  return { position: local, normal: local.clone().normalize() }
+}
+
+const _bp = new THREE.Vector3(), _bn = new THREE.Vector3(), _bf = new THREE.Vector3(), _bw = new THREE.Vector3(), _bq = new THREE.Quaternion()
+/** Spin the whiteboard about its own up axis so its face points at the camera. */
+function faceBoardToCamera() {
+  const g = doodleBoard.group
+  g.updateMatrixWorld(true)
+  g.getWorldPosition(_bp)
+  _bn.setFromMatrixPosition(planetGroup.matrixWorld)
+  _bn.subVectors(_bp, _bn).normalize()
+  _bw.subVectors(camSystem.camera.position, _bp).addScaledVector(_bn, -0)
+  _bw.addScaledVector(_bn, -_bw.dot(_bn)).normalize()
+  _bf.set(0, 0, 1).applyQuaternion(g.getWorldQuaternion(_bq))
+  _bf.addScaledVector(_bn, -_bf.dot(_bn)).normalize()
+  const angle = Math.atan2(_bn.dot(new THREE.Vector3().crossVectors(_bf, _bw)), _bf.dot(_bw))
+  g.rotateY(angle)
+  doodleBoard.faced = true
+}
+
+/** The middle of an island, planetGroup-local. */
+function islandCentreLocal(islandName) {
+  const box = new THREE.Box3()
+  for (const m of islandMeshes[islandName] || []) box.expandByObject(m)
+  return box.isEmpty() ? null : planetGroup.worldToLocal(box.getCenter(new THREE.Vector3()))
+}
+
+/** Stand a prop on `spot` (+Y up the normal) with its front (+Z) towards `target`. */
+function faceTowards(spot, target) {
+  const q = new THREE.Quaternion().setFromUnitVectors(WORLD_UP, spot.normal)
+  if (!target) return q
+  const want = target.clone().sub(spot.position)
+  want.addScaledVector(spot.normal, -want.dot(spot.normal))
+  if (want.lengthSq() < 1e-4) return q
+  want.normalize()
+  const front = new THREE.Vector3(0, 0, 1).applyQuaternion(q)
+  const angle = Math.atan2(spot.normal.dot(new THREE.Vector3().crossVectors(front, want)), front.dot(want))
+  return new THREE.Quaternion().setFromAxisAngle(spot.normal, angle).multiply(q)
 }
 
 // --- Starfield ---
@@ -2262,6 +2344,10 @@ function animate() {
     }
     activePoi = nearest
     jukeboxProp?.update(dt, reducedMotion)
+    doodleBoard?.update(dt, reducedMotion)
+    // Once you're standing on Meadow, turn the board to face the camera.
+    // Done here rather than at load because the planet turns after loading.
+    if (doodleBoard && !doodleBoard.faced && activeIslandName === MEADOW_ISLAND && !isTeleporting) faceBoardToCamera()
 
     const wantSub = (activePoi && islandUIState === 'near' && !isInputLocked())
       ? activePoi
