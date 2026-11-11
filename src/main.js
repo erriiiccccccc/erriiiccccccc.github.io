@@ -791,11 +791,10 @@ perfMark('world_download_start')
     {
       const scope = model.getObjectByName(TELESCOPE_NODE)
       if (scope) {
-        // The whiteboard takes over from the telescope. The telescope stays in
-        // the GLB (so the spot keeps coming from the world export) but is
-        // hidden. The easel is far bigger and the telescope sat where you
-        // spawn, so the board stands a couple of steps behind that spot,
-        // facing the camera you arrive with: the first thing you see.
+        // The whiteboard stands beside the telescope (which stays: it's part
+        // of the meadow's decoration). The telescope sits where you spawn,
+        // so the board stands a couple of steps away from it, and turns to
+        // face the camera once you're on Meadow.
         const at = new THREE.Box3().setFromObject(scope).getCenter(new THREE.Vector3())
         const skip = new Set(); scope.traverse(o => skip.add(o))
         const toCam = new THREE.Vector3(0, 0, 1)
@@ -807,16 +806,21 @@ perfMark('world_download_start')
           spot = surfaceAt(MEADOW_ISLAND, behind, skip) || spot
         }
         if (spot) {
-          doodleBoard = new DoodleBoard()
+          doodleBoard = new DoodleBoard(BOARD_ZONE)
           doodleBoard.setDrawings(BOARD_DRAWINGS)
           doodleBoard.group.position.copy(spot.position)
           doodleBoard.group.quaternion.copy(faceTowards(spot, spot.position.clone().addScaledVector(toCam, 10)))
           planetGroup.add(doodleBoard.group)
-          scope.visible = false
         }
         addPoi({
           key:      'wall',
           target:   doodleBoard ? doodleBoard.group : scope,
+          // no arrow overhead: the circle on the ground shows where to stand
+          arrow:    false,
+          ...(doodleBoard && {
+            range:   BOARD_ZONE,
+            measure: () => doodleBoard.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position),
+          }),
           island:   MEADOW_ISLAND,
           color:    0xFBBF24,
           iconKey:  'pencil',
@@ -835,7 +839,7 @@ perfMark('world_download_start')
       // Somewhere near the old telescope where its whole music circle lands
       // on the meadow, clear of the whiteboard.
       const scopeAt = scope ? new THREE.Box3().setFromObject(scope).getCenter(new THREE.Vector3()) : null
-      const spot = (scopeAt && ringSpot(MEADOW_ISLAND, scopeAt, JUKEBOX_ZONE, doodleBoard?.group))
+      const spot = (scopeAt && ringSpot(MEADOW_ISLAND, scopeAt, JUKEBOX_ZONE, doodleBoard?.group, BOARD_ZONE))
         || dropOntoIsland(MEADOW_ISLAND, scopeAt, [0.36, 0.28, 0.2, 0])
       if (spot) {
         jukeboxProp = new Gramophone(JUKEBOX_ZONE)
@@ -852,7 +856,8 @@ perfMark('world_download_start')
           sub:      'someone left loops here',
           foundSub: 'have another listen',
           open:     () => jukeboxOverlay.open(),
-          // F works anywhere inside the music circle
+          // F works anywhere inside the music circle; no arrow overhead
+          arrow:    false,
           range:    JUKEBOX_ZONE,
           measure:  () => jukeboxProp.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position),
         })
@@ -980,7 +985,8 @@ let activePoi     = null   // the one you're closest to right now, or null
 let _subPromptPoi = null   // whose prompt is currently on screen
 /** @type {import('./scene/Gramophone.js').Gramophone | null} */
 let jukeboxProp   = null
-const JUKEBOX_ZONE = 2.5      // radius of the gramophone's music circle
+const JUKEBOX_ZONE = 2.2      // radius of the gramophone's music circle
+const BOARD_ZONE   = 1.5      // radius of the whiteboard's circle (smaller than the jukebox's)
 const worldJukebox = new WorldJukebox()
 let doodleBoard   = null   // the Doodle Wall's whiteboard on Meadow
 let _prevActiveIslandForLerp = null
@@ -1003,10 +1009,12 @@ let _forceIslandLerp = true
  * @param {Function}       o.open      what F actually does
  * @param {number}         [o.range]   trigger radius, overriding the size-based one
  * @param {Function}       [o.measure] () => distance from you, instead of from the marker
+ * @param {boolean}        [o.arrow]   false hides the floating arrow
  */
-function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, open, range, measure }) {
+function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, open, range, measure, arrow = true }) {
   const marker = new QuestMarker({ color })
   const r = marker.attachTo(target, planetGroup)
+  if (!arrow) marker.group.visible = false   // the anchor still drives distance checks
   const poi = {
     key, island, marker, iconKey, title, sub, foundSub, open,
     color: `#${color.toString(16).padStart(6, '0').toUpperCase()}`,
@@ -1136,7 +1144,7 @@ function faceToCamera(g) {
  * most completely, keeping clear of `avoid` and of `aroundWorld` itself
  * (where you spawn), so the music starts when you walk in.
  */
-function ringSpot(islandName, aroundWorld, radius, avoid = null) {
+function ringSpot(islandName, aroundWorld, radius, avoid = null, avoidRadius = 0) {
   const meshes = islandMeshes[islandName] || []
   if (!meshes.length) return null
   planetGroup.updateMatrixWorld(true)
@@ -1162,7 +1170,7 @@ function ringSpot(islandName, aroundWorld, radius, avoid = null) {
       const guess = aroundWorld.clone().addScaledVector(a1, Math.cos(ang) * rr).addScaledVector(a2, Math.sin(ang) * rr)
       const at = onIsland(guess)
       if (!at) continue
-      if (avoidAt && at.distanceTo(avoidAt) < radius * 0.9) continue
+      if (avoidAt && at.distanceTo(avoidAt) < radius + avoidRadius + 0.3) continue   // the two circles never touch
       if (at.distanceTo(aroundWorld) < radius + 0.5) continue   // you arrive outside the circle
       const n = at.clone().sub(core).normalize()
       const [t1, t2] = basis(n)
@@ -2438,11 +2446,19 @@ function animate() {
         reducedMotion, bpm: audio._pattern?.bpm,
       })
     }
-    doodleBoard?.update(dt, reducedMotion)
+    if (doodleBoard) {
+      const db = activeIslandName === MEADOW_ISLAND
+        ? doodleBoard.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position) : Infinity
+      doodleBoard.update(dt, reducedMotion, db < BOARD_ZONE)
+    }
     // Once you're standing on Meadow, turn the props to face the camera.
     // Done here rather than at load because the planet turns after loading.
     if (activeIslandName === MEADOW_ISLAND && !isTeleporting) {
-      if (doodleBoard && !doodleBoard.faced) { faceToCamera(doodleBoard.group); doodleBoard.faced = true }
+      if (doodleBoard && !doodleBoard.faced) {
+        faceToCamera(doodleBoard.group)
+        doodleBoard.conformRing(groundUnder(doodleBoard.group))
+        doodleBoard.faced = true
+      }
       if (jukeboxProp && !jukeboxProp.faced) {
         faceToCamera(jukeboxProp.group)
         jukeboxProp.conformRing(groundUnder(jukeboxProp.group))

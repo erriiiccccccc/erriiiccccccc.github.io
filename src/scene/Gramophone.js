@@ -11,8 +11,8 @@
 // Units: the character stands about 2.2 tall. The group's origin is the point
 // it stands on; +Y is up, +Z is the front.
 import * as THREE from 'three'
+import { GroundRing } from './GroundRing.js'
 
-const DASHES = 44
 const NOTE_POOL = 18
 
 function mat(color, { emissive = null, intensity = 0, rough = 0.75, metal = 0, side = THREE.FrontSide } = {}) {
@@ -83,31 +83,9 @@ export class Gramophone {
     this._source.position.set(0, 1.15, 0)
     this._bell.add(this._source)
 
-    // the music circle: dashes lying on the grass, each with a soft glow
-    this._dashGeo = new THREE.PlaneGeometry(0.3, 0.09)
-    this._geos.push(this._dashGeo)
-    const gc = document.createElement('canvas')
-    gc.width = gc.height = 64
-    const gx = gc.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32)
-    gr.addColorStop(0, 'rgba(255,214,140,1)'); gr.addColorStop(0.4, 'rgba(251,191,36,.45)'); gr.addColorStop(1, 'rgba(167,139,250,0)')
-    gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64)
-    this._glowTex = new THREE.CanvasTexture(gc)
-    this._dashes = []
-    for (let i = 0; i < DASHES; i++) {
-      const a = (i / DASHES) * Math.PI * 2
-      const m = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false })
-      const d = new THREE.Mesh(this._dashGeo, m)
-      d.rotation.set(-Math.PI / 2, 0, -a)
-      d.position.set(Math.cos(a) * zoneRadius, 0.06, Math.sin(a) * zoneRadius)
-      d.renderOrder = 2
-      const gm = new THREE.SpriteMaterial({ map: this._glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })
-      const g = new THREE.Sprite(gm)
-      g.position.copy(d.position)
-      g.scale.setScalar(0.9)
-      this._mats.push(m, gm)
-      this.group.add(d, g)
-      this._dashes.push({ d, g, a })
-    }
+    // the music circle
+    this.ring = new GroundRing(zoneRadius)
+    this.group.add(this.ring.group)
 
     // notes in the air
     this._noteTex = [noteTexture('♪', '#FBBF24'), noteTexture('♫', '#A78BFA'), noteTexture('♩', '#FBBF24'), noteTexture('♬', '#C4B5FD')]
@@ -133,20 +111,7 @@ export class Gramophone {
     const k = Math.min(1, dt * 4)
     this._lit += ((lit ? 1 : 0) - this._lit) * k
 
-    // circle: brighter and gold while lit, with a light running round it,
-    // one lap every two beats, and the dashes breathing on the beat
-    const base = lit ? 0.75 : near ? 0.85 : 0.6
-    const lap = reducedMotion ? 0 : this._t * (bpm / 60) / 2
-    const breathe = reducedMotion ? 1 : 1 + this._lit * 0.25 * Math.max(0, Math.sin(this._t * Math.PI * (bpm / 60)))
-    for (const { d, g, a } of this._dashes) {
-      const pos = a / (Math.PI * 2)
-      const chase = Math.pow(Math.max(0, Math.cos(((pos - lap) % 1) * Math.PI * 2)), 6)
-      const m = d.material
-      m.opacity += (Math.min(1, base + this._lit * chase * 0.5) - m.opacity) * Math.min(1, dt * 8)
-      m.color.setRGB(1, 1 - this._lit * 0.17, 1 - this._lit * 0.45)
-      d.scale.set(breathe, breathe, 1)
-      g.material.opacity = this._lit * (0.25 + chase * 0.75)
-    }
+    this.ring.update(dt, { lit, near, reducedMotion, bpm })
 
     // the gramophone itself: the record turns, the horn glows and pulses
     if (!reducedMotion) this._record.rotation.y += dt * (playing ? 3.0 : 0.25)
@@ -176,14 +141,7 @@ export class Gramophone {
    * Sit every dash on the real ground. `heightAt(x, z)` gets a point in this
    * group's space and returns the ground's height there (same space), or null.
    */
-  conformRing(heightAt) {
-    for (const { d, g } of this._dashes) {
-      const h = heightAt(d.position.x, d.position.z)
-      if (h == null) { d.visible = g.visible = false; continue }
-      d.position.y = h + 0.06
-      g.position.y = h + 0.12
-    }
-  }
+  conformRing(heightAt) { this.ring.conform(heightAt) }
 
   _spawnNote() {
     const n = this._notes.find(x => x.life <= 0)
@@ -206,7 +164,7 @@ export class Gramophone {
     for (const g of this._geos) g.dispose()
     for (const m of this._mats) m.dispose()
     for (const t of this._noteTex) t.dispose()
-    this._glowTex.dispose()
+    this.ring.dispose()
     this.group.removeFromParent()
   }
 }

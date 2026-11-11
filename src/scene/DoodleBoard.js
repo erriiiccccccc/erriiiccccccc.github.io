@@ -13,6 +13,7 @@
 // it stands on and the board faces +Z, so a caller drops it onto a surface
 // point, turns +Y to the surface normal and then +Z towards the viewer.
 import * as THREE from 'three'
+import { GroundRing } from './GroundRing.js'
 
 const BW = 2.0, BH = 1.5          // drawing surface, 4:3 like the drawings
 const FACE_W = 768, FACE_H = 576
@@ -24,7 +25,8 @@ function mat(color, { rough = 0.75, metal = 0, map = null } = {}) {
 }
 
 export class DoodleBoard {
-  constructor() {
+  /** @param {number} zoneRadius  radius of the circle you stand in to use it */
+  constructor(zoneRadius = 1.5) {
     this.group = new THREE.Group()
     this.group.name = 'doodle-board'
 
@@ -56,11 +58,29 @@ export class DoodleBoard {
       return o
     }
 
-    // the easel: two front legs leaning in, one back leg, a cross bar, a ledge
-    add(this.group, new THREE.BoxGeometry(0.1, 2.9, 0.1), wood, -0.78, 1.38, -0.06, 0.05, 0, -0.13)
-    add(this.group, new THREE.BoxGeometry(0.1, 2.9, 0.1), wood,  0.78, 1.38, -0.06, 0.05, 0,  0.13)
-    add(this.group, new THREE.BoxGeometry(0.09, 2.7, 0.09), woodDark, 0, 1.25, -0.7, -0.42, 0, 0)
-    add(this.group, new THREE.BoxGeometry(1.9, 0.08, 0.08), woodDark, 0, 0.55, 0.02)
+    // The easel, every piece running between two real joints so it stands up:
+    // two front legs splayed at the floor and leaning in towards the top,
+    // a back leg hinged just behind their tops and angled down to the ground
+    // behind, a cross bar between the front legs and a stay from that bar
+    // back to the rear leg. All of it sits behind the board.
+    const stick = (a, b, th, m) => {
+      const dir = b.clone().sub(a), len = dir.length()
+      const o = new THREE.Mesh(new THREE.BoxGeometry(th, len, th), m)
+      o.position.copy(a).add(b).multiplyScalar(0.5)
+      o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize())
+      o.castShadow = true; o.receiveShadow = true
+      this.group.add(o)
+      return o
+    }
+    const V = (x, y, z) => new THREE.Vector3(x, y, z)
+    const legAt = (side, y) => V(side * (1.0 - (y / 2.95) * 0.82), y, 0.1 - (y / 2.95) * 0.24)   // on a front leg at height y
+    for (const side of [-1, 1]) stick(legAt(side, 0), legAt(side, 2.95), 0.1, wood)
+    const hinge = V(0, 2.8, -0.16), foot = V(0, 0, -1.15)
+    stick(hinge, foot, 0.09, woodDark)
+    stick(legAt(-1, 2.8), legAt(1, 2.8), 0.07, woodDark)                         // top bar the back leg hangs from
+    stick(legAt(-1, 0.55), legAt(1, 0.55), 0.08, woodDark)                       // cross bar
+    const rearAt = (y) => hinge.clone().lerp(foot, (2.8 - y) / 2.8)
+    stick(V(0, 0.55, legAt(1, 0.55).z), rearAt(0.55), 0.06, woodDark)            // stay to the back leg
     const cy = 1.78, tilt = -0.09
     add(this.group, new THREE.BoxGeometry(2.3, 0.1, 0.24), wood, 0, cy - BH / 2 - 0.1, 0.2, tilt)
 
@@ -97,7 +117,13 @@ export class DoodleBoard {
     this._rest = new THREE.Vector3(0.55, -BH / 2 - 0.04, 0.1)
     this._eraser.position.copy(this._rest)
     panel.add(this._eraser)
+
+    // the circle you stand in to open the Doodle Wall
+    this.ring = new GroundRing(zoneRadius)
+    this.group.add(this.ring.group)
   }
+
+  conformRing(heightAt) { this.ring.conform(heightAt) }
 
   /** The drawings to show, as image URLs (CORS-enabled). */
   setDrawings(urls) {
@@ -161,7 +187,8 @@ export class DoodleBoard {
    * @param {number}  dt
    * @param {boolean} reducedMotion  swaps instead of wiping
    */
-  update(dt, reducedMotion = false) {
+  update(dt, reducedMotion = false, inZone = false) {
+    this.ring.update(dt, { lit: inZone, near: inZone, reducedMotion, bpm: 70 })
     if (this._imgs.length < 2) return
     if (!this._wipe) {
       this._wait -= dt
@@ -191,6 +218,7 @@ export class DoodleBoard {
     for (const m of this._mats) m.dispose()
     this._faceMat.dispose()
     this._tex.dispose()
+    this.ring.dispose()
     this.group.removeFromParent()
   }
 }
