@@ -27,6 +27,9 @@ const INTRO_K_BLEND_SEC  = 0.9   // seconds to ramp k from intro → play (avoid
 const INTRO_LAUNCH_SEC   = 0.55  // seconds to ramp the intro k from launch floor → full
 const INTRO_LAUNCH_K0    = 0.4   // fraction of intro k at the very first frame
 
+const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+const ORBIT_FOV = 65
+
 function smoothUnit(t) {
   const x = Math.min(1, Math.max(0, t))
   return x * x * (3 - 2 * x)
@@ -34,7 +37,10 @@ function smoothUnit(t) {
 
 export class Camera {
   constructor(aspect) {
-    this.camera = new THREE.PerspectiveCamera(65, aspect, 0.1, 2000)
+    this.camera = new THREE.PerspectiveCamera(ORBIT_FOV, aspect, 0.1, 2000)
+    /** A close-up in progress: { getShot, phase: 'in' | 'hold' | 'out', t, dur, fromP, fromL, fromF } */
+    this._shot = null
+    this._lookNow = new THREE.Vector3()
 
     this._camPos      = new THREE.Vector3()
     this._pivot       = new THREE.Vector3()
@@ -128,6 +134,34 @@ export class Camera {
     this._snapTimer    = 0
   }
 
+  // ── Close-ups ────────────────────────────────────────────────────────────
+  // The camera leaves its orbit and glides to a fixed shot of something the
+  // character is using (the Jukebox, the whiteboard). `getShot` is asked every
+  // frame for { pos, look, fov } in world space, so a shot pinned to the
+  // planet holds still while the planet turns under a walking character.
+
+  get inShot() { return !!this._shot }
+
+  /** Glide from wherever the camera is to the shot. */
+  setShot(getShot, dur = 0.9) {
+    this._shot = {
+      getShot, phase: 'in', t: 0, dur: Math.max(0.01, dur),
+      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov,
+    }
+  }
+
+  /** Swap to another shot (e.g. the studio), gliding from the current view. */
+  changeShot(getShot, dur = 0.6) { this.setShot(getShot, dur) }
+
+  /** Glide back to the orbit behind the character. */
+  clearShot(dur = 0.7) {
+    if (!this._shot) return
+    this._shot = {
+      getShot: null, phase: 'out', t: 0, dur: Math.max(0.01, dur),
+      fromP: this.camera.position.clone(), fromL: this._lookNow.clone(), fromF: this.camera.fov,
+    }
+  }
+
   // Call once after construction to centre the planet on screen during loading.
   // When update() starts running (sceneStarted) it will smoothly lerp away from here.
   setLoadingView() {
@@ -206,6 +240,33 @@ export class Camera {
       smoothUnit(this._introKBlend)
     ) * launch
 
+    // ── Close-up shot: glide in, hold, or glide back out to the orbit ──
+    if (this._shot) {
+      const sh = this._shot
+      sh.t = Math.min(1, sh.t + dt / sh.dur)
+      const k = easeInOutCubic(sh.t)
+      let toP, toL, toF
+      if (sh.phase === 'out') {
+        toP = this._camPos; toL = this._pivot; toF = ORBIT_FOV
+      } else {
+        const s = sh.getShot()
+        toP = s.pos; toL = s.look; toF = s.fov ?? 40
+      }
+      this.camera.position.lerpVectors(sh.fromP, toP, k)
+      this._lookNow.lerpVectors(sh.fromL, toL, k)
+      const fov = sh.fromF + (toF - sh.fromF) * k
+      if (Math.abs(fov - this.camera.fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
+      this.camera.lookAt(this._lookNow)
+      if (sh.t >= 1) {
+        if (sh.phase === 'in') sh.phase = 'hold'
+        else if (sh.phase === 'out') { this._shot = null; this._pivotSmooth.copy(this._pivot) }
+      }
+      // keep the orbit's own smoothing settled so the hand-back is seamless
+      this._pivotSmooth.copy(this._pivot)
+      this.characterRevealReady = this._introKBlend > 0
+      return
+    }
+
     // ── Smooth pivot follow ─
     const pf = 1 - Math.exp(-kOrbit * dt)
     this._pivotSmooth.lerp(this._pivot, pf)
@@ -214,6 +275,7 @@ export class Camera {
     const cf = 1 - Math.exp(-kOrbit * dt)
     this.camera.position.lerp(this._camPos, cf)
     this.camera.lookAt(this._pivotSmooth)
+    this._lookNow.copy(this._pivotSmooth)
 
     this.characterRevealReady = this._introKBlend > 0
   }

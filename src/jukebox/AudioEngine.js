@@ -212,6 +212,9 @@ class AudioEngine {
     if (moodChanged || bpmChanged) this._voice = this._setMood(clean.mood, clean.bpm)
   }
 
+  /** Pass the running loop to a new owner without restarting it. */
+  handOver(owner) { if (this._timer) this.owner = owner }
+
   /** @param {string} [owner] only stop if this owner is the one playing */
   stop(owner) {
     if (owner != null && this.owner !== owner) return

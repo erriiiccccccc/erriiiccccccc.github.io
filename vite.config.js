@@ -164,8 +164,8 @@ export default defineConfig({
 
             return send(200, {
               items: items
-                .map(({ id, name, at, bpm, pattern, pinned }) =>
-                  ({ id, name, at, bpm, pinned, url: patternUrl(pattern) }))
+                .map(({ id, name, title, cover, at, bpm, pattern, pinned }) =>
+                  ({ id, name, title: title || '', cover: cover || 'sunset', at, bpm, pinned, url: patternUrl(pattern) }))
                 .sort((a, b) => b.at - a.at),
             })
           }
@@ -186,16 +186,20 @@ export default defineConfig({
             if (!pattern || typeof pattern !== 'object' || !pattern.lanes) {
               return send(400, { error: 'expected a pattern with at least one note' })
             }
+            const title = String(body.title || '').trim().slice(0, 24)
+            if (!title) return send(400, { error: 'a record needs a name' })
             const item = {
               id:   `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
               name: String(body.name || '').slice(0, 24),
+              title,
+              cover: ['sunset', 'ocean', 'meadow', 'night', 'plum'].includes(body.cover) ? body.cover : 'sunset',
               at:   Date.now(),
               bpm:  pattern.bpm,
               pattern,
             }
             writeDevJukebox([item, ...items])
             return send(201, {
-              item: { id: item.id, name: item.name, at: item.at, bpm: item.bpm, url: patternUrl(pattern) },
+              item: { id: item.id, name: item.name, title: item.title, cover: item.cover, at: item.at, bpm: item.bpm, url: patternUrl(pattern) },
             })
           }
 

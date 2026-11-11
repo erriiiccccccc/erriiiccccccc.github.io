@@ -95,6 +95,12 @@ export class WorldJukebox {
     }
   }
 
+  /** Take over a loop already playing (a record left on from the close-up). */
+  adopt() {
+    this._want = true
+    this._swap = SWAP_S
+  }
+
   stop() {
     this._want = false
     if (this.playing) audio.stop(OWNER)

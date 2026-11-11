@@ -12,6 +12,7 @@
 // it stands on; +Y is up, +Z is the front.
 import * as THREE from 'three'
 import { GroundRing } from './GroundRing.js'
+import { coverCanvas, cleanCover } from '../jukebox/covers.js'
 
 const NOTE_POOL = 18
 
@@ -55,7 +56,7 @@ export class Gramophone {
     }
     const M = (...a) => { const m = mat(...a); this._mats.push(m); return m }
 
-    const wood = M(0x8a5a3a), woodD = M(0x5e3b26), dark = M(0x1f1a26), label = M(0xf3e8d8)
+    const wood = M(0x8a5a3a), woodD = M(0x5e3b26), dark = M(0x1f1a26)
     const brass = M(0xd8a64a, { rough: 0.35, metal: 0.5 })
     this._inner = M(0xffd27a, { emissive: 0xffb347, intensity: 0.2, side: THREE.DoubleSide, rough: 0.5 })
 
@@ -65,8 +66,13 @@ export class Gramophone {
     add(this.group, new THREE.BoxGeometry(1.38, 0.1, 1.18), woodD, 0, 0.05, 0)
     add(this.group, new THREE.BoxGeometry(0.5, 0.32, 0.04), woodD, 0, 0.45, 0.56)
     // record and tone arm
-    this._record = add(this.group, new THREE.CylinderGeometry(0.5, 0.5, 0.04, 18), dark, 0, 0.98, 0.05)
-    add(this._record, new THREE.CylinderGeometry(0.16, 0.16, 0.012, 12), label, 0, 0.026, 0)
+    this._record = add(this.group, new THREE.CylinderGeometry(0.5, 0.5, 0.04, 24), dark, 0, 0.98, 0.05)
+    // the label carries the playing record's sleeve
+    this._labelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 })
+    this._mats.push(this._labelMat)
+    this._labelTex = new Map()
+    add(this._record, new THREE.CylinderGeometry(0.17, 0.17, 0.012, 24), this._labelMat, 0, 0.026, 0)
+    this.setCover('meadow')
     add(this.group, new THREE.BoxGeometry(0.5, 0.05, 0.05), brass, 0.3, 1.06, -0.25, 0, 0.6, 0)
     // the horn: a post, a curved neck, then a big flared bell facing forward
     add(this.group, new THREE.CylinderGeometry(0.07, 0.07, 0.7, 8), brass, -0.38, 1.3, -0.35)
@@ -99,6 +105,29 @@ export class Gramophone {
       this._notes.push({ s, life: 0, vx: 0, vz: 0, ph: 0, dur: 2.4 })
     }
     this._v = new THREE.Vector3()
+  }
+
+  /** A sleeve's texture, shared by the label and anything carrying a record. */
+  coverTexture(key) {
+    const k = cleanCover(key)
+    if (!this._labelTex.has(k)) {
+      const t = new THREE.CanvasTexture(coverCanvas(k, 256))
+      t.colorSpace = THREE.SRGBColorSpace
+      this._labelTex.set(k, t)
+    }
+    return this._labelTex.get(k)
+  }
+
+  /** Put a sleeve on the platter record's label. */
+  setCover(key) { this._labelMat.map = this.coverTexture(key); this._labelMat.needsUpdate = true }
+
+  /** Hide the platter record (while a new one is carried over), or show it. */
+  showRecord(on) { this._record.visible = !!on }
+
+  /** Where a record lands on the platter, in world space. */
+  platterWorld(target = new THREE.Vector3()) {
+    this._record.updateWorldMatrix(true, false)
+    return target.setFromMatrixPosition(this._record.matrixWorld).add(new THREE.Vector3(0, 0, 0))
   }
 
   /**
@@ -164,6 +193,7 @@ export class Gramophone {
     for (const g of this._geos) g.dispose()
     for (const m of this._mats) m.dispose()
     for (const t of this._noteTex) t.dispose()
+    for (const t of this._labelTex.values()) t.dispose()
     this.ring.dispose()
     this.group.removeFromParent()
   }

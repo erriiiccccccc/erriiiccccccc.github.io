@@ -9,6 +9,10 @@
 // the eraser is moving (about a second in every five), so it costs nothing
 // the rest of the time.
 //
+// Up close (the Doodle Wall's close-up), the cycling pauses: show() wipes any
+// drawing onto it, and startDrawing() turns the face into a canvas you draw
+// on directly (strokes come in as face UVs from a raycast).
+//
 // Units: the character stands about 2.2 tall. The group's origin is the point
 // it stands on and the board faces +Z, so a caller drops it onto a surface
 // point, turns +Y to the surface normal and then +Z towards the viewer.
@@ -32,8 +36,13 @@ export class DoodleBoard {
 
     this._imgs = []
     this._cur = 0
-    this._wipe = null
+    this._shown = null        // the image on the board right now
+    this._wipe = null         // { from: Image, to: Image, p }
     this._wait = 2.5
+    this._held = false        // close-up: no cycling
+    this._drawing = false
+    this._strokes = []
+    this._cache = new Map()
     this._ghosts = Array.from({ length: 8 }, (_, i) => ({
       x: ((i * 197) % 100) / 100 * FACE_W, y: ((i * 61) % 100) / 100 * FACE_H, r: 30 + (i * 37) % 70, a: i * 0.8,
     }))
@@ -94,6 +103,8 @@ export class DoodleBoard {
     const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), this._faceMat)
     face.position.z = 0.012; face.receiveShadow = true
     panel.add(face)
+    /** The drawing surface, for raycasts and for framing a close-up. */
+    this.face = face
     const fw = 0.07
     add(panel, new THREE.BoxGeometry(BW + fw * 2, fw, 0.08), frame, 0,  BH / 2 + fw / 2, 0)
     add(panel, new THREE.BoxGeometry(BW + fw * 2, fw, 0.08), frame, 0, -BH / 2 - fw / 2, 0)
@@ -125,21 +136,74 @@ export class DoodleBoard {
 
   conformRing(heightAt) { this.ring.conform(heightAt) }
 
-  /** The drawings to show, as image URLs (CORS-enabled). */
+  _load(src) {
+    if (this._cache.has(src)) return this._cache.get(src)
+    const im = new Image()
+    im.crossOrigin = 'anonymous'
+    im.decoding = 'async'
+    im.src = src
+    const p = im.decode().then(() => im, () => null)
+    this._cache.set(src, p)
+    return p
+  }
+
+  /** The drawings to cycle through, as image URLs (CORS-enabled). */
   setDrawings(urls) {
-    const list = urls.map(src => {
-      const im = new Image()
-      im.crossOrigin = 'anonymous'
-      im.decoding = 'async'
-      im.src = src
-      return im
-    })
-    Promise.all(list.map(im => im.decode().then(() => im, () => null))).then(ok => {
+    Promise.all(urls.map(u => this._load(u))).then(ok => {
       this._imgs = ok.filter(Boolean)
       this._cur = 0
-      this._wipe = null
-      this._paint()
+      if (!this._held) { this._shown = this._imgs[0] || null; this._wipe = null; this._paint() }
     })
+  }
+
+  // ── Close-up ──────────────────────────────────────────────────────────────
+  /** Pause (true) or resume (false) the cycling, for the close-up. */
+  hold(on) {
+    this._held = !!on
+    if (!on) { this.stopDrawing(); this._wait = HOLD }
+  }
+
+  /** Wipe a drawing onto the board. */
+  async show(src) {
+    const im = await this._load(src)
+    if (!im || im === this._shown || this._drawing) return
+    this._wipe = { from: this._shown, to: im, p: 0 }
+  }
+
+  get isDrawing() { return this._drawing }
+  get hasInk() { return this._strokes.some(s => s.pts.length > 1) }
+
+  startDrawing() { this._drawing = true; this._strokes = []; this._wipe = null; this._paint() }
+  stopDrawing() { if (!this._drawing) return; this._drawing = false; this._strokes = []; this._paint() }
+  clearDrawing() { this._strokes = []; this._paint() }
+
+  /** Add a point at face UV (u, v), starting a new stroke when `fresh`. */
+  ink(u, v, fresh, color) {
+    if (!this._drawing) return
+    const pt = [u * FACE_W, (1 - v) * FACE_H]
+    if (fresh || !this._strokes.length) this._strokes.push({ color, pts: [pt] })
+    else this._strokes[this._strokes.length - 1].pts.push(pt)
+    this._paint()
+  }
+
+  /** The drawing as a PNG data URL (transparent, 900 x 675, like the wall's). */
+  drawingDataUrl() {
+    const c = document.createElement('canvas')
+    c.width = 900; c.height = 675
+    const x = c.getContext('2d'), k = 900 / FACE_W
+    this._inkOnto(x, k)
+    return c.toDataURL('image/png')
+  }
+
+  _inkOnto(ctx, k = 1) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+    for (const s of this._strokes) {
+      ctx.strokeStyle = s.color; ctx.lineWidth = 7 * k
+      ctx.beginPath()
+      s.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * k, y * k) : ctx.moveTo(x * k, y * k)))
+      if (s.pts.length === 1) ctx.lineTo(s.pts[0][0] * k + 0.1, s.pts[0][1] * k)
+      ctx.stroke()
+    }
   }
 
   // ── painting ──────────────────────────────────────────────────────────────
@@ -154,7 +218,7 @@ export class DoodleBoard {
     c.fillStyle = sheen; c.fillRect(0, 0, FACE_W, FACE_H)
   }
 
-  _drawing(im) {
+  _pic(im) {
     if (!im) return
     const pad = 34, w = FACE_W - pad * 2, h = FACE_H - pad * 2
     const s = Math.min(w / im.naturalWidth, h / im.naturalHeight)
@@ -167,17 +231,19 @@ export class DoodleBoard {
     const c = this._ctx
     this._bg()
     const w = this._wipe
-    if (!w) {
-      this._drawing(this._imgs[this._cur])
+    if (this._drawing) {
+      this._inkOnto(c)
+    } else if (!w) {
+      this._pic(this._shown)
     } else {
       // the eraser has cleared everything left of it; the next drawing comes up behind it
       const ex = w.p * FACE_W
       c.save(); c.beginPath(); c.rect(ex, 0, FACE_W - ex, FACE_H); c.clip()
-      this._drawing(this._imgs[w.from]); c.restore()
+      this._pic(w.from); c.restore()
       if (w.p > 0.5) {
         c.save(); c.globalAlpha = (w.p - 0.5) * 2
         c.beginPath(); c.rect(0, 0, ex, FACE_H); c.clip()
-        this._drawing(this._imgs[w.to]); c.restore()
+        this._pic(w.to); c.restore()
       }
     }
     this._tex.needsUpdate = true
@@ -189,23 +255,21 @@ export class DoodleBoard {
    */
   update(dt, reducedMotion = false, inZone = false) {
     this.ring.update(dt, { lit: inZone, near: inZone, reducedMotion, bpm: 70 })
-    if (this._imgs.length < 2) return
-    if (!this._wipe) {
+    // the cycling, unless the close-up is holding the board
+    if (!this._wipe && !this._held && this._imgs.length > 1) {
       this._wait -= dt
-      if (this._wait > 0) return
-      if (reducedMotion) {
+      if (this._wait <= 0) {
         this._cur = (this._cur + 1) % this._imgs.length
-        this._wait = HOLD
-        this._paint()
-        return
+        this._wipe = { from: this._shown, to: this._imgs[this._cur], p: 0 }
       }
-      this._wipe = { from: this._cur, to: (this._cur + 1) % this._imgs.length, p: 0 }
     }
     const w = this._wipe
+    if (!w) return
+    if (reducedMotion) w.p = 1
     w.p = Math.min(1, w.p + dt / WIPE)
     this._eraser.position.set(-BW / 2 + 0.16 + w.p * (BW - 0.32), Math.sin(w.p * 40) * 0.2, 0.045)
     if (w.p >= 1) {
-      this._cur = w.to
+      this._shown = w.to
       this._wipe = null
       this._wait = HOLD
       this._eraser.position.copy(this._rest)

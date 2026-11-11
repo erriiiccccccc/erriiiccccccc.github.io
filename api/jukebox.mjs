@@ -2,7 +2,7 @@
 //
 // GET  /api/jukebox                    list every track still on the shelf
 // GET  /api/jukebox?action=track&id=   one track's pattern JSON (CORS fallback)
-// POST /api/jukebox                    put a new one up  { name, bpm, pattern }
+// POST /api/jukebox                    put a new one up  { title, name, cover, pattern }
 // POST /api/jukebox?action=report      flag one          { id }
 //
 // The doodle wall's twin, and deliberately the same shape as api/gallery.mjs.
@@ -10,7 +10,8 @@
 // draw a card is encoded in the pathname, so listing is a single list() call
 // and nobody downloads a pattern they never press play on.
 //
-//   tunes/track/<id>__<base64url name>__<bpm>.json
+//   tunes/track/<id>__<base64url name>__<bpm>__<base64url title>__<cover>.json
+//   (older tracks stop after <bpm>: they read as untitled, sunset sleeve)
 //   tunes/flags/<id>__<nonce>.json
 //   tunes/pinned/<id>__<base64url name>__<bpm>.json
 //
@@ -93,13 +94,16 @@ async function readBody(req) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
-/** `tunes/track/<id>__<b64>__<bpm>.json` → { id, name, bpm } */
+const COVERS = ['sunset', 'ocean', 'meadow', 'night', 'plum']
+const cleanCover = (k) => (COVERS.includes(k) ? k : 'sunset')
+
+/** `tunes/track/<id>__<b64 name>__<bpm>__<b64 title>__<cover>.json` → { id, name, bpm, title, cover } */
 function parsePathname(pathname, prefix) {
   const rest = pathname.slice(prefix.length)
   const cut  = rest.lastIndexOf('.')
   const stem = cut > 0 ? rest.slice(0, cut) : rest
-  const [id, encoded = '', bpm = ''] = stem.split('__')
-  return { id, name: cleanName(decName(encoded)), bpm: clampBpm(bpm) }
+  const [id, encoded = '', bpm = '', title = '', cover = ''] = stem.split('__')
+  return { id, name: cleanName(decName(encoded)), bpm: clampBpm(bpm), title: cleanName(decName(title)), cover: cleanCover(cover) }
 }
 
 function newId() {
@@ -180,8 +184,8 @@ async function listShelf() {
 
   const shelf = tracks.blobs
     .map(b => {
-      const { id, name, bpm } = parsePathname(b.pathname, TRACK_PREFIX)
-      return { id, name, bpm, url: b.url, at: idToTimestamp(id) }
+      const { id, name, bpm, title, cover } = parsePathname(b.pathname, TRACK_PREFIX)
+      return { id, name, title, cover, bpm, url: b.url, at: idToTimestamp(id) }
     })
     .filter(t => t.id && (flagged.get(t.id) || 0) < HIDE_AT)
     .sort((a, b) => b.at - a.at)
@@ -190,8 +194,8 @@ async function listShelf() {
   // flagged away either — only he can write to that prefix.
   const top = pinned.blobs
     .map(b => {
-      const { id, name, bpm } = parsePathname(b.pathname, PINNED_PREFIX)
-      return { id, name, bpm, url: b.url, at: idToTimestamp(id), pinned: true }
+      const { id, name, bpm, title, cover } = parsePathname(b.pathname, PINNED_PREFIX)
+      return { id, name, title, cover, bpm, url: b.url, at: idToTimestamp(id), pinned: true }
     })
     .filter(t => t.id)
     .sort((a, b) => b.at - a.at)
@@ -201,7 +205,10 @@ async function listShelf() {
 
 async function createTune(body) {
   const name    = cleanName(body.name)
+  const title   = cleanName(body.title)
+  const cover   = cleanCover(body.cover)
   const pattern = cleanPattern(body.pattern)
+  if (!title)   return { status: 400, json: { error: 'a record needs a name' } }
   if (!pattern) return { status: 400, json: { error: 'expected a pattern with at least one note' } }
 
   const json  = JSON.stringify(pattern)
@@ -209,7 +216,7 @@ async function createTune(body) {
   if (bytes > MAX_BYTES) return { status: 413, json: { error: 'pattern too large' } }
 
   const id       = newId()
-  const pathname = `${TRACK_PREFIX}${id}__${encName(name)}__${pattern.bpm}.json`
+  const pathname = `${TRACK_PREFIX}${id}__${encName(name)}__${pattern.bpm}__${encName(title)}__${cover}.json`
 
   const blob = await put(pathname, json, {
     access:             'public',
@@ -220,7 +227,7 @@ async function createTune(body) {
 
   return {
     status: 201,
-    json: { item: { id, name, bpm: pattern.bpm, url: blob.url, at: idToTimestamp(id) } },
+    json: { item: { id, name, title, cover, bpm: pattern.bpm, url: blob.url, at: idToTimestamp(id) } },
   }
 }
 

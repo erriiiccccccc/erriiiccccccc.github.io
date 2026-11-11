@@ -10,6 +10,7 @@
 // downloads a pattern until someone actually presses play, then caches it for
 // the session. A shelf of fifty tracks costs one listing request to draw.
 import { normalizePattern } from './pattern.js'
+import { cleanCover } from './covers.js'
 
 const VERCEL_ORIGIN = 'https://ericng.my'
 const LOCAL_KEY     = 'ew_tunes_v1'
@@ -144,12 +145,15 @@ export async function fetchPattern(item) {
 }
 
 /**
- * @param {{ name: string, pattern: object }} tune
+ * @param {{ title: string, name?: string, cover?: string, pattern: object }} tune  title is required; name (who made it) may be blank
  * @returns {Promise<{ item: object, offline: boolean }>}
  */
-export async function postTune({ name, pattern }) {
+export async function postTune({ title, name, cover, pattern }) {
   const clean = cleanName(name)
+  const head  = cleanName(title)
+  const sleeve = cleanCover(cover)
   const body  = normalizePattern(pattern)
+  if (!head) throw new Error('untitled')
   if (!body) throw new Error('empty')
 
   const json = JSON.stringify(body)
@@ -159,7 +163,7 @@ export async function postTune({ name, pattern }) {
     const res = await fetch(endpoint(), {
       method:  'POST',
       headers: { 'content-type': 'application/json' },
-      body:    JSON.stringify({ name: clean, pattern: body }),
+      body:    JSON.stringify({ title: head, name: clean, cover: sleeve, pattern: body }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
@@ -170,12 +174,14 @@ export async function postTune({ name, pattern }) {
     _cache.set(data.item.id, body)
     return { item: data.item, offline: false }
   } catch (err) {
-    if (err.message === 'too-big' || err.message === 'empty') throw err
+    if (err.message === 'too-big' || err.message === 'empty' || err.message === 'untitled') throw err
     // No API reachable: keep the whole track locally, pattern and all, so the
     // shelf still has something to play back.
     const item = {
       id:      `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name:    clean,
+      title:   head,
+      cover:   sleeve,
       bpm:     body.bpm,
       at:      Date.now(),
       pattern: body,
