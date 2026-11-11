@@ -5,27 +5,41 @@ import { ShellDirector } from './panelShells.js'
 
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
+// Which keycap and which arrival each island's title card gets
+const PROMPT_LOOK = {
+  meadow_island: 'meadow', lava_island: 'lava', desert_island: 'desert',
+  arctic_island: 'arctic', mountain_island: 'mountain', pirate_ship: 'pirate',
+}
+const pad2 = n => String(n).padStart(2, '0')
+const escHtml = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+/** One span per letter: --i its order, --o its distance from the middle. */
+function letterSpans(text) {
+  const chars = [...text], mid = (chars.length - 1) / 2
+  return chars.map((ch, i) => `<span class="tc-ch" style="--i:${i};--o:${(i - mid).toFixed(1)}">${escHtml(ch)}</span>`).join('')
+}
+/** Restart a CSS arrival by toggling its class across a reflow. */
+function replay(el, cls) {
+  el.classList.remove(cls)
+  void el.offsetWidth
+  el.classList.add(cls)
+}
+
 export class UI {
   constructor() {
-    // ── Approach prompt (bottom-center capsule) ─────────────────────────────────
+    // ── Island prompt: the title card across the lower third ────────────────
     this._popup = document.createElement('div')
     this._popup.id = 'island-popup'
     this._popup.className = 'hidden'
+    this._popup.setAttribute('role', 'button')
     this._popup.innerHTML = `
-      <div class="pu-halo" aria-hidden="true"></div>
-      <div class="pu-inner">
-        <span class="pu-icon"></span>
-        <div class="pu-names">
-          <div class="pu-island"></div>
-          <div class="pu-section"></div>
-        </div>
-        <div class="pu-key">
-          <span class="pu-pulse" aria-hidden="true"></span>
-          <span class="pu-keycap"></span>
-          <span class="pu-key-label"></span>
-        </div>
+      <div class="tc-wash" aria-hidden="true"></div>
+      <div class="tc-in">
+        <div class="tc-eb"></div>
+        <div class="tc-ti"><span class="tc-rule l" aria-hidden="true"></span><span class="tc-word"></span><span class="tc-rule r" aria-hidden="true"></span></div>
+        <div class="tc-key"><span class="tc-cap"></span><span class="tc-lab"></span></div>
       </div>
     `
+    this._popKey = null
     document.body.appendChild(this._popup)
 
     this._popup.addEventListener('click', () => { this.onPopupTap?.() })
@@ -34,25 +48,20 @@ export class UI {
       this.onPopupTap?.()
     }, { passive: false })
 
-    // ── Secondary prompt (stacks above the island capsule) ─────────────────────
-    // For things worth finding *on* an island, so the island's own prompt keeps
-    // its meaning and this one reads as the extra.
+    // ── Secondary prompt: one quieter line above, for things found *on* an
+    // island, so the island's own card keeps its weight.
     this._sub = document.createElement('div')
     this._sub.id = 'sub-popup'
     this._sub.className = 'hidden'
+    this._sub.setAttribute('role', 'button')
     this._sub.innerHTML = `
-      <div class="sp-inner">
-        <span class="sp-spark" aria-hidden="true"></span>
-        <span class="sp-icon"></span>
-        <div class="sp-names">
-          <div class="sp-title"></div>
-          <div class="sp-sub"></div>
-        </div>
-        <div class="sp-key">
-          <span class="sp-keycap"></span>
-        </div>
+      <div class="tc-wash" aria-hidden="true"></div>
+      <div class="tc-in">
+        <div class="tc-ti"><span class="tc-rule l" aria-hidden="true"></span><span class="tc-word"></span><span class="tc-rule r" aria-hidden="true"></span></div>
+        <div class="tc-key"><span class="tc-cap"></span></div>
       </div>
     `
+    this._subTitle = null
     document.body.appendChild(this._sub)
     this._sub.addEventListener('click', () => { this.onSubPopupTap?.() })
     this._sub.addEventListener('touchend', e => {
@@ -105,25 +114,37 @@ export class UI {
     if (hint)  hint.style.display  = 'none'
   }
 
-  showPopup(island) {
-    this._popup.querySelector('.pu-icon').innerHTML      = svgIcon(island.iconKey, 22)
-    this._popup.querySelector('.pu-island').textContent  = island.name
-    this._popup.querySelector('.pu-section').textContent = island.section
-    this._popup.style.setProperty('--ic', island.color)
-
-    const keycap = this._popup.querySelector('.pu-keycap')
-    const label  = this._popup.querySelector('.pu-key-label')
-    if (IS_TOUCH) {
-      keycap.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>`
-      keycap.classList.add('pu-keycap--tap')
-      label.textContent = 'Tap'
-    } else {
-      keycap.textContent = 'E'
-      keycap.classList.remove('pu-keycap--tap')
-      label.textContent = 'Dive in'
+  /**
+   * Show the island's title card. Arriving at a different island plays its
+   * full arrival; coming back to the same one (closing its panel) just fades in.
+   * @param {object} island  ISLANDS entry
+   * @param {string} key     ISLANDS registry key (e.g. lava_island)
+   */
+  showPopup(island, key) {
+    const p = this._popup
+    const pos = this._order.indexOf(key), total = this._order.length
+    const fresh = key !== this._popKey
+    if (fresh) {
+      p.dataset.look = PROMPT_LOOK[key] || 'meadow'
+      p.style.setProperty('--ic', island.color)
+      p.style.setProperty('--n', [...island.section].length)
+      p.querySelector('.tc-eb').textContent = pos >= 0 ? `${pad2(pos + 1)} / ${pad2(total)} · ${island.name}` : island.name
+      p.querySelector('.tc-word').innerHTML = letterSpans(island.section)
+      p.querySelector('.tc-cap').textContent = IS_TOUCH ? 'Tap' : 'E'
+      p.querySelector('.tc-lab').textContent = 'Dive in'
+      p.setAttribute('aria-label', `${island.name}: ${IS_TOUCH ? 'tap' : 'press E'} to dive into ${island.section}`)
     }
+    this._popKey = key
+    p.classList.remove('hidden', 'is-pressed')
+    if (fresh) replay(p, 'tc-spawn')
+  }
 
-    this._popup.classList.remove('hidden')
+  /** The key sinks the moment E is pressed, then the card fades with it held down. */
+  pressPopup() {
+    if (this._popup.classList.contains('hidden')) return
+    this._popup.classList.add('is-pressed')
+    clearTimeout(this._pressT)
+    this._pressT = setTimeout(() => this._popup.classList.remove('is-pressed'), 260)
   }
 
   hidePopup() {
@@ -134,22 +155,26 @@ export class UI {
    * Secondary prompt for a point of interest sitting on the active island.
    * @param {{ iconKey: string, title: string, sub: string, color: string, keycap: string }} cfg
    */
-  showSubPopup({ iconKey, title, sub, color, keycap }) {
-    this._sub.querySelector('.sp-icon').innerHTML   = svgIcon(iconKey, 18)
-    this._sub.querySelector('.sp-title').textContent = title
-    this._sub.querySelector('.sp-sub').textContent   = sub
-    this._sub.style.setProperty('--ic', color)
-
-    const cap = this._sub.querySelector('.sp-keycap')
-    if (IS_TOUCH) {
-      cap.textContent = 'Tap'
-      cap.classList.add('sp-keycap--tap')
-    } else {
-      cap.textContent = keycap
-      cap.classList.remove('sp-keycap--tap')
+  showSubPopup({ title, sub, color, keycap }) {
+    const p = this._sub
+    const fresh = title !== this._subTitle || p.classList.contains('hidden')
+    if (title !== this._subTitle) {
+      p.style.setProperty('--ic', color)
+      p.querySelector('.tc-word').innerHTML = letterSpans(title)
+      p.querySelector('.tc-cap').textContent = IS_TOUCH ? 'Tap' : keycap
+      p.setAttribute('aria-label', `${title}, ${sub}: ${IS_TOUCH ? 'tap' : 'press ' + keycap}`)
+      this._subTitle = title
     }
+    p.classList.remove('hidden')
+    if (fresh) replay(p, 'tc-spawn')
+  }
 
-    this._sub.classList.remove('hidden')
+  /** F pressed: its key sinks too. */
+  pressSubPopup() {
+    if (this._sub.classList.contains('hidden')) return
+    this._sub.classList.add('is-pressed')
+    clearTimeout(this._subPressT)
+    this._subPressT = setTimeout(() => this._sub.classList.remove('is-pressed'), 260)
   }
 
   hideSubPopup() {

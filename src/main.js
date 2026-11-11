@@ -229,7 +229,7 @@ aboutOverlay.onClose = () => {
   // tween above, not by the overlay's fixed close timer.
   if (islandUIState === 'detail') {
     islandUIState = 'near'
-    if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName])
+    if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName], activeIslandName)
   }
 }
 // Clicking Eric (drawn in the canvas behind the overlay) shouldn't dismiss — only
@@ -1395,7 +1395,7 @@ function closeIslandPanel() {
   if (islandUIState !== 'detail') return
   islandUIState = 'near'
   ui.closePanel()
-  if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName])
+  if (activeIslandName) ui.showPopup(ISLANDS[activeIslandName], activeIslandName)
 }
 
 // ─── Hopping between islands from inside a panel (‹ › and arrow keys) ───────
@@ -1462,7 +1462,7 @@ function tickHop() {
     openIslandPanel()
   } else if (performance.now() - _hopLandedAt > 1500) {
     _hopTarget = null   // landed somewhere unexpected; just leave the player there
-    if (activeIslandName && islandUIState === 'near') ui.showPopup(ISLANDS[activeIslandName])
+    if (activeIslandName && islandUIState === 'near') ui.showPopup(ISLANDS[activeIslandName], activeIslandName)
   }
 }
 
@@ -1614,10 +1614,10 @@ document.addEventListener('keydown', e => {
 
   if (key === 'e') {
     if (islandUIState === 'detail') closeIslandPanel()
-    else openIslandPanel()
+    else { ui.pressPopup(); openIslandPanel() }
   }
   // F opens whatever point of interest you're standing next to
-  if (key === 'f') openPoi()
+  if (key === 'f') { ui.pressSubPopup(); openPoi() }
   // While a detail panel is open, only Esc / E / X act — ignore the map key
   if (key === 'm' && !ui.isPanelOpen()) mapOverlay.toggle()
 })
@@ -2210,7 +2210,7 @@ function animate() {
         ui._lastIsland   = activeIslandName
         // Mid-hop the planet spins past other islands; keep their prompts quiet
         if (!_hopTarget) {
-          ui.showPopup(ISLANDS[activeIslandName])
+          ui.showPopup(ISLANDS[activeIslandName], activeIslandName)
           if (!isNewFind) sfx.arrive(activeIslandName)
         }
       }

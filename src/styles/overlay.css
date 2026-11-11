@@ -367,192 +367,170 @@ body {
 .hidden { opacity: 0; pointer-events: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ISLAND POPUP — tappable / clickable interaction prompt
+   ISLAND PROMPT: the title card (press E)
+   No box. The section's name across the lower third with a rule either
+   side, where you are above it, the key below. Readable on any ground: a
+   feathered dark wash behind the words (no edge you can see), a tight
+   shadow round every letter, and the small line in a light tint of the
+   island colour. Each island arrives its own way and has its own keycap.
+   Transform and opacity only.
    ═══════════════════════════════════════════════════════════════════════════ */
-#island-popup {
+#island-popup, #sub-popup {
   --ic: #ffffff;
+  --cap-bg: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.08));
+  --cap-edge: rgba(255,255,255,.34); --cap-base: rgba(0,0,0,.5); --cap-ink: #fff;
   position: fixed;
-  bottom: 92px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  width: min(360px, 90vw);
+  color: #fff;
+  text-align: center;
   pointer-events: all;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  /* Only position + opacity animate here. The glass crossfade is handled by an
-     opacity overlay (.pu-inner::before) because gradients can't be transitioned. */
-  transition: opacity 0.3s ease, transform 0.34s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-#island-popup.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(16px) scale(0.96);
-}
-#island-popup:hover  { transform: translateX(-50%) translateY(-4px); }
-#island-popup:active { transform: translateX(-50%) translateY(-1px) scale(0.985); }
-
-/* Breathing accent halo bleeding out behind the capsule */
-.pu-halo {
-  position: absolute;
-  inset: -34% -12%;
-  background: radial-gradient(ellipse 60% 80% at 50% 62%, var(--ic) 0%, transparent 70%);
-  opacity: 0.2;
-  filter: blur(14px);
-  pointer-events: none;
-  animation: pu-breathe 3.6s ease-in-out infinite;
-}
-@keyframes pu-breathe {
-  0%, 100% { opacity: 0.14; transform: scale(0.96); }
-  50%      { opacity: 0.30; transform: scale(1.05); }
-}
-
-/* The glass capsule — gently floats so it feels alive */
-.pu-inner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.65rem 0.75rem 0.65rem 0.9rem;
-  border-radius: var(--r-md);
-  background: linear-gradient(180deg, var(--glass-base), var(--glass-deep));
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  border: 1px solid var(--glass-stroke);
-  box-shadow: var(--glass-shadow), var(--glass-specular);
-  overflow: hidden;
-  animation: pu-float 4s ease-in-out infinite;
-}
-@keyframes pu-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
-}
-/* Hover glass — fades in via opacity (animatable, unlike a gradient swap) */
-.pu-inner::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--ic) 14%, var(--glass-raise-2)),
-    var(--glass-deep));
-  opacity: 0;
   transition: opacity 0.3s ease;
-  pointer-events: none;
 }
-#island-popup:hover .pu-inner::before { opacity: 1; }
-/* Left accent spine */
-.pu-inner::after {
-  content: '';
-  position: absolute;
-  left: 0; top: 10px; bottom: 10px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--ic);
-  box-shadow: 0 0 10px var(--ic);
-  opacity: 0.85;
-}
+#island-popup { bottom: 74px; width: min(680px, 94vw); }
+#sub-popup    { bottom: calc(74px + clamp(112px, 12vw, 150px)); z-index: 11; }
+#island-popup.hidden, #sub-popup.hidden { opacity: 0; pointer-events: none; }
 
-.pu-icon {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: var(--r-sm);
-  color: var(--ic);
-  background: color-mix(in srgb, var(--ic) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ic) 32%, transparent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--ic) 20%, transparent);
+.tc-wash {
+  position: absolute;
+  inset: -80% -26% -70%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 50% 50% at 50% 52%,
+    rgba(8,6,20,.7) 0%, rgba(8,6,20,.55) 26%, rgba(8,6,20,.3) 48%, rgba(8,6,20,.12) 66%, rgba(8,6,20,0) 84%);
 }
-.pu-names { position: relative; z-index: 1; flex: 1; min-width: 0; }
-.pu-island {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+#sub-popup .tc-wash { inset: -70% -30%; }
+.tc-in { position: relative; display: grid; justify-items: center; gap: 6px; }
+#sub-popup .tc-in { grid-auto-flow: column; align-items: center; gap: 10px; }
+
+.tc-eb {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ic) 42%, #fff);
+  text-shadow: 0 0 1px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9), 0 0 14px rgba(0,0,0,.6);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.pu-section {
-  font-size: 0.71rem;
-  color: var(--ic);
-  margin-top: 2px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* Press-to-explore key — keycap + label + pulse ring */
-.pu-key {
-  position: relative;
-  z-index: 1;
+.tc-ti {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  padding: 0 0.25rem 0 0.4rem;
+  gap: 18px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: .04em;
+  font-size: clamp(26px, 3.4vw, 50px);
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 0 1px rgba(0,0,0,.95), 0 1px 2px rgba(0,0,0,.9), 0 2px 18px rgba(0,0,0,.7),
+               0 0 34px color-mix(in srgb, var(--ic) 35%, transparent);
 }
-.pu-pulse {
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  width: 44px;
-  height: 40px;
-  margin-left: -22px;
-  border-radius: 11px;
-  border: 1.5px solid var(--ic);
-  opacity: 0;
-  pointer-events: none;
-  animation: pu-keypulse 2s ease-out infinite;
-}
-@keyframes pu-keypulse {
-  0%   { transform: scale(0.82); opacity: 0.55; }
-  100% { transform: scale(1.28); opacity: 0; }
-}
-.pu-keycap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 34px;
-  height: 32px;
+#sub-popup .tc-ti { font-family: var(--font-body); font-weight: 600; font-size: 15px; letter-spacing: 0; gap: 10px; }
+.tc-rule { width: clamp(26px, 5vw, 76px); height: 1.5px; background: linear-gradient(90deg, transparent, var(--ic)); box-shadow: 0 0 6px rgba(0,0,0,.6); }
+.tc-rule.r { background: linear-gradient(270deg, transparent, var(--ic)); }
+#sub-popup .tc-rule { width: 18px; }
+.tc-word { display: inline-flex; position: relative; }
+.tc-ch { display: inline-block; white-space: pre; }
+
+.tc-key { display: flex; align-items: center; gap: 9px; margin-top: 4px; }
+#sub-popup .tc-key { margin: 0; }
+.tc-cap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 30px;
   padding: 0 9px;
-  border-radius: 9px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05));
-  border: 1px solid rgba(255,255,255,0.28);
-  border-bottom: 3px solid rgba(0,0,0,0.45);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 6px rgba(0,0,0,0.3);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
+  border-radius: 8px;
   font-family: var(--font-body);
-  letter-spacing: 0.02em;
-  transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.2s ease;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--cap-ink);
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-edge);
+  border-bottom: 4px solid var(--cap-base);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 10px rgba(0,0,0,.45);
+  transition: transform .09s ease, border-bottom-width .09s ease, box-shadow .2s ease;
 }
-.pu-keycap--tap { color: var(--ic); }
-#island-popup:hover .pu-keycap {
-  border-color: color-mix(in srgb, var(--ic) 60%, rgba(255,255,255,0.28));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 12px color-mix(in srgb, var(--ic) 38%, transparent);
+#sub-popup .tc-cap { min-width: 27px; height: 26px; font-size: 12px; }
+.tc-lab {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #fff;
+  text-shadow: 0 0 1px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9);
 }
-/* The keycap physically presses down when the capsule is activated */
-#island-popup:active .pu-keycap {
-  transform: translateY(2px);
-  border-bottom-width: 1px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 3px rgba(0,0,0,0.3);
+#island-popup:hover .tc-cap, #sub-popup:hover .tc-cap {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 3px 16px color-mix(in srgb, var(--ic) 55%, transparent);
 }
-.pu-key-label {
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--txt-mute);
-  font-weight: 600;
+/* the physical press: the key sinks the instant you press it */
+#island-popup.is-pressed .tc-cap, #island-popup:active .tc-cap,
+#sub-popup.is-pressed .tc-cap, #sub-popup:active .tc-cap { transform: translateY(3px); border-bottom-width: 1px; }
+
+/* each island's keycap */
+#island-popup[data-look="meadow"]   { --cap-bg: linear-gradient(180deg, #fbf1dc, #e6d0a6); --cap-edge: #f6e6c6; --cap-base: #8f6c3e; --cap-ink: #4b3a22; }
+#island-popup[data-look="lava"]     { --cap-bg: linear-gradient(180deg, #3d2b27, #1b1311); --cap-edge: #54403a; --cap-base: #ff6a1f; --cap-ink: #ffd8b8; }
+#island-popup[data-look="lava"] .tc-cap { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 12px rgba(255,106,31,.35); }
+#island-popup[data-look="desert"]   { --cap-bg: linear-gradient(180deg, #f8dcaa, #ddb273); --cap-edge: #fae4bd; --cap-base: #9f6a33; --cap-ink: #5a3410; }
+#island-popup[data-look="arctic"]   { --cap-bg: linear-gradient(180deg, rgba(240,250,255,.9), rgba(170,215,255,.6)); --cap-edge: #fff; --cap-base: #5d97cf; --cap-ink: #0e3a66; }
+#island-popup[data-look="mountain"] { --cap-bg: linear-gradient(180deg, #2b2830, #141217); --cap-edge: #403b47; --cap-base: #000; --cap-ink: #fff; }
+#island-popup[data-look="mountain"] .tc-cap { outline: 1px solid rgba(255,77,77,.5); outline-offset: 2px; }
+#island-popup[data-look="pirate"]   { --cap-bg: linear-gradient(180deg, #f2d78f, #c79f45); --cap-edge: #f7e2a6; --cap-base: #775917; --cap-ink: #3a2a08; }
+#sub-popup { --cap-bg: linear-gradient(180deg, #fbf1dc, #e6d0a6); --cap-edge: #f6e6c6; --cap-base: #8f6c3e; --cap-ink: #4b3a22; }
+
+/* ── Arrival: the wash fades up, the rules grow from the middle, the name
+   comes letter by letter (each island its own way), then the small line
+   and the key settle. --i is a letter's order, --o its distance from the
+   middle, --n the name's length. */
+.tc-spawn .tc-wash { animation: tc-fade .5s ease-out both; }
+.tc-spawn .tc-rule.l { transform-origin: 100% 50%; animation: tc-grow .7s cubic-bezier(.2,.8,.2,1) .25s both; }
+.tc-spawn .tc-rule.r { transform-origin: 0 50%;    animation: tc-grow .7s cubic-bezier(.2,.8,.2,1) .25s both; }
+.tc-spawn .tc-eb  { animation: tc-rise .5s ease-out calc(.35s + var(--n) * 38ms) both; }
+.tc-spawn .tc-key { animation: tc-rise .45s ease-out calc(.5s + var(--n) * 38ms) both; }
+.tc-spawn .tc-ch  { animation: tc-in .6s cubic-bezier(.2,.8,.2,1) calc(.12s + var(--i) * 38ms) both; }
+#sub-popup.tc-spawn .tc-ch  { animation-duration: .45s; animation-delay: calc(var(--i) * 18ms); }
+#sub-popup.tc-spawn .tc-key { animation-delay: .25s; }
+@keyframes tc-fade { from { opacity: 0; } }
+@keyframes tc-grow { from { transform: scaleX(0); opacity: 0; } }
+@keyframes tc-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes tc-in   { from { opacity: 0; transform: translateY(8px); } }
+
+/* Meadow: carried up on a breeze */
+#island-popup.tc-spawn[data-look="meadow"] .tc-ch { animation-name: tc-breeze; animation-duration: .8s; }
+@keyframes tc-breeze { 0% { opacity: 0; transform: translate(-6px, 14px) rotate(-8deg); } 60% { opacity: 1; transform: translate(1px, -2px) rotate(2deg); } 100% { transform: none; } }
+/* Lava: rise glowing ember orange, cool to white */
+#island-popup.tc-spawn[data-look="lava"] .tc-ch { animation-name: tc-magma; animation-duration: 1.1s; }
+@keyframes tc-magma { 0% { opacity: 0; transform: translateY(16px) scale(.9); color: #ff6a1f; } 35% { opacity: 1; transform: translateY(-2px); color: #ffb070; } 100% { transform: none; color: #fff; } }
+/* Desert: shimmer in like a mirage */
+#island-popup.tc-spawn[data-look="desert"] .tc-ch { animation-name: tc-mirage; animation-duration: .95s; }
+@keyframes tc-mirage { 0% { opacity: 0; transform: skewX(18deg) scaleY(1.25); } 40% { opacity: .9; transform: skewX(-8deg) scaleY(.92); } 70% { transform: skewX(3deg) scaleY(1.03); } 100% { opacity: 1; transform: none; } }
+/* Arctic: crystallise from big and bright, then a glint runs across */
+#island-popup.tc-spawn[data-look="arctic"] .tc-ch { animation-name: tc-crystal; animation-duration: .7s; }
+@keyframes tc-crystal { 0% { opacity: 0; transform: scale(1.6); } 60% { opacity: 1; transform: scale(.96); } 100% { transform: none; } }
+#island-popup[data-look="arctic"] .tc-word { overflow: hidden; }
+#island-popup.tc-spawn[data-look="arctic"] .tc-word::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent);
+  animation: tc-glint .9s ease-in-out 1.05s both;
+}
+@keyframes tc-glint { 0% { transform: translateX(-120%); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateX(360%); opacity: 0; } }
+/* Mountain: flicker on like a film projector warming up */
+#island-popup.tc-spawn[data-look="mountain"] .tc-ch { animation: none; }
+#island-popup.tc-spawn[data-look="mountain"] .tc-word { animation: tc-projector .9s steps(1) .15s both; }
+@keyframes tc-projector { 0% { opacity: 0; } 12% { opacity: .8; } 20% { opacity: .1; } 34% { opacity: 1; } 42% { opacity: .35; } 56% { opacity: 1; } 64% { opacity: .7; } 72%, 100% { opacity: 1; } }
+/* Pirate: letters fly in from wide apart and snap together */
+#island-popup.tc-spawn[data-look="pirate"] .tc-ch { animation: tc-converge .75s cubic-bezier(.16,.9,.2,1) .12s both; }
+@keyframes tc-converge { 0% { opacity: 0; transform: translateX(calc(var(--o) * 26px)); } 50% { opacity: 1; } 100% { transform: none; } }
+
+/* Reduced motion: everything simply fades in */
+@media (prefers-reduced-motion: reduce) {
+  .tc-spawn *, .tc-spawn .tc-word::after { animation: tc-fade .4s ease-out both !important; }
+}
+body.reduced-motion .tc-spawn *, body.reduced-motion .tc-spawn .tc-word::after { animation: tc-fade .4s ease-out both !important; }
+
+@media (max-width: 640px) {
+  #island-popup { bottom: 96px; }
+  #sub-popup { bottom: calc(96px + 104px); }
+  .tc-eb { font-size: 10px; letter-spacing: .16em; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3463,154 +3441,6 @@ body:has(#about-overlay.is-open) #hud-buttons { opacity: 0; pointer-events: none
   .about-brand-img { height: 28px; }
   .about-hint { font-size: 0.62rem; top: clamp(74px, 12vh, 104px); }
   .about-meta { font-size: 0.66rem; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   SUB-PROMPT — a point of interest sitting ON the active island.
-   Stacks above #island-popup and reads one step quieter than it, so the
-   island's own prompt keeps its weight and this one is clearly the extra.
-   ═══════════════════════════════════════════════════════════════════════════ */
-#sub-popup {
-  --ic: #FBBF24;
-  position: fixed;
-  bottom: 162px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 11;
-  width: min(310px, 84vw);
-  pointer-events: all;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-#sub-popup.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(10px) scale(0.94);
-}
-#sub-popup:hover  { transform: translateX(-50%) translateY(-3px); }
-#sub-popup:active { transform: translateX(-50%) translateY(-1px) scale(0.985); }
-
-.sp-inner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.5rem 0.55rem 0.5rem 0.7rem;
-  border-radius: var(--r-sm);
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--ic) 10%, var(--glass-base)),
-    var(--glass-deep));
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
-  border: 1px solid color-mix(in srgb, var(--ic) 26%, var(--glass-stroke));
-  box-shadow: 0 14px 40px rgba(0,0,0,0.45),
-              0 0 26px color-mix(in srgb, var(--ic) 14%, transparent),
-              var(--glass-specular);
-  animation: sp-float 4.4s ease-in-out infinite;
-}
-@keyframes sp-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2px); }
-}
-/* Hairline tether down to the island capsule below */
-.sp-inner::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -13px;
-  width: 1px;
-  height: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ic) 55%, transparent), transparent);
-  pointer-events: none;
-}
-
-/* Pulsing dot — the "there is something here" tell */
-.sp-spark {
-  position: relative;
-  z-index: 1;
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--ic);
-  box-shadow: 0 0 10px var(--ic);
-  animation: sp-spark 1.8s ease-in-out infinite;
-}
-@keyframes sp-spark {
-  0%, 100% { opacity: 0.45; transform: scale(0.82); }
-  50%      { opacity: 1;    transform: scale(1.15); }
-}
-
-.sp-icon {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  border-radius: 9px;
-  color: var(--ic);
-  background: color-mix(in srgb, var(--ic) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ic) 28%, transparent);
-}
-.sp-names { position: relative; z-index: 1; flex: 1; min-width: 0; }
-.sp-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sp-sub {
-  font-size: 0.62rem;
-  color: color-mix(in srgb, var(--ic) 70%, #fff);
-  margin-top: 2px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sp-key { position: relative; z-index: 1; flex-shrink: 0; padding-right: 0.15rem; }
-.sp-keycap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 7px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04));
-  border: 1px solid rgba(255,255,255,0.24);
-  border-bottom: 2px solid rgba(0,0,0,0.42);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.8rem;
-  transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.sp-keycap--tap { color: var(--ic); font-size: 0.68rem; letter-spacing: 0.04em; }
-#sub-popup:hover .sp-keycap {
-  border-color: color-mix(in srgb, var(--ic) 60%, rgba(255,255,255,0.24));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.36), 0 2px 10px color-mix(in srgb, var(--ic) 34%, transparent);
-}
-#sub-popup:active .sp-keycap { transform: translateY(2px); border-bottom-width: 1px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .sp-inner, .sp-spark { animation: none; }
-}
-body.reduced-motion .sp-inner,
-body.reduced-motion .sp-spark { animation: none; }
-
-@media (max-width: 640px) {
-  #sub-popup { bottom: 152px; width: min(300px, 88vw); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
