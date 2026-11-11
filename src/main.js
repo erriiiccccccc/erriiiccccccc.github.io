@@ -31,7 +31,8 @@ import { audio } from './jukebox/AudioEngine.js'
 import { sfx } from './audio/sfx.js'
 import { AsciiScreen } from './fx/AsciiScreen.js'
 import { QuestMarker } from './scene/QuestMarker.js'
-import { Jukebox } from './scene/Jukebox.js'
+import { Gramophone } from './scene/Gramophone.js'
+import { WorldJukebox } from './jukebox/worldPlayer.js'
 import { DoodleBoard } from './scene/DoodleBoard.js'
 import { BOARD_DRAWINGS } from './data/doodleBoard.js'
 import { LoadDirector } from './loading/LoadDirector.js'
@@ -831,9 +832,13 @@ perfMark('world_download_start')
       // The jukebox is not in the GLB at all, it is assembled from primitives
       // and dropped onto the meadow's surface, opposite the telescope so the
       // two prompts never overlap and the island has something at either end.
-      const spot = dropOntoIsland(MEADOW_ISLAND, scope ? new THREE.Vector3().setFromMatrixPosition(scope.matrixWorld) : null)
+      // Somewhere near the old telescope where its whole music circle lands
+      // on the meadow, clear of the whiteboard.
+      const scopeAt = scope ? new THREE.Box3().setFromObject(scope).getCenter(new THREE.Vector3()) : null
+      const spot = (scopeAt && ringSpot(MEADOW_ISLAND, scopeAt, JUKEBOX_ZONE, doodleBoard?.group))
+        || dropOntoIsland(MEADOW_ISLAND, scopeAt, [0.36, 0.28, 0.2, 0])
       if (spot) {
-        jukeboxProp = new Jukebox()
+        jukeboxProp = new Gramophone(JUKEBOX_ZONE)
         jukeboxProp.group.position.copy(spot.position)
         jukeboxProp.group.quaternion.setFromUnitVectors(WORLD_UP, spot.normal)
         planetGroup.add(jukeboxProp.group)
@@ -847,6 +852,9 @@ perfMark('world_download_start')
           sub:      'someone left loops here',
           foundSub: 'have another listen',
           open:     () => jukeboxOverlay.open(),
+          // F works anywhere inside the music circle
+          range:    JUKEBOX_ZONE,
+          measure:  () => jukeboxProp.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position),
         })
       } else if (import.meta.env.DEV) {
         console.warn(`[world] could not find a spot on "${MEADOW_ISLAND}" — jukebox skipped`)
@@ -970,8 +978,10 @@ const POIS = []
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
 let activePoi     = null   // the one you're closest to right now, or null
 let _subPromptPoi = null   // whose prompt is currently on screen
-/** @type {import('./scene/Jukebox.js').Jukebox | null} */
+/** @type {import('./scene/Gramophone.js').Gramophone | null} */
 let jukeboxProp   = null
+const JUKEBOX_ZONE = 2.5      // radius of the gramophone's music circle
+const worldJukebox = new WorldJukebox()
 let doodleBoard   = null   // the Doodle Wall's whiteboard on Meadow
 let _prevActiveIslandForLerp = null
 let _islandLerpSettling = 0
@@ -991,15 +1001,18 @@ let _forceIslandLerp = true
  * @param {string}         o.sub       prompt line before the first open
  * @param {string}         o.foundSub  prompt line after it
  * @param {Function}       o.open      what F actually does
+ * @param {number}         [o.range]   trigger radius, overriding the size-based one
+ * @param {Function}       [o.measure] () => distance from you, instead of from the marker
  */
-function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, open }) {
+function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, open, range, measure }) {
   const marker = new QuestMarker({ color })
   const r = marker.attachTo(target, planetGroup)
   const poi = {
     key, island, marker, iconKey, title, sub, foundSub, open,
     color: `#${color.toString(16).padStart(6, '0').toUpperCase()}`,
     // Trigger radius scales off the prop so it survives a world re-export
-    range: Math.max(2.6, r * 2.2),
+    range: range ?? Math.max(2.6, r * 2.2),
+    measure,
     near:  false,
     found: false,        // has it been opened at least once
   }
@@ -1021,7 +1034,7 @@ const _dropRay = new THREE.Raycaster()
  *                                    on one island end up at either end of it
  * @returns {{ position: THREE.Vector3, normal: THREE.Vector3 }|null} planetGroup-local
  */
-function dropOntoIsland(islandName, awayFrom = null) {
+function dropOntoIsland(islandName, awayFrom = null, fracs = [0.55, 0.42, 0.30, 0.18, 0]) {
   const meshes = islandMeshes[islandName]
   if (!meshes?.length) return null
   planetGroup.updateMatrixWorld(true)
@@ -1051,7 +1064,7 @@ function dropOntoIsland(islandName, awayFrom = null) {
 
   // Walk back in from the island's edge until the ray actually lands on it.
   const above = core.distanceTo(centre) + reach + 30
-  for (const frac of [0.55, 0.42, 0.30, 0.18, 0]) {
+  for (const frac of fracs) {
     const target = centre.clone().addScaledVector(slide, reach * frac)
     const dir    = target.clone().sub(core).normalize()
     const from   = core.clone().addScaledVector(dir, above)
@@ -1084,9 +1097,27 @@ function surfaceAt(islandName, worldPoint, skip = null) {
 }
 
 const _bp = new THREE.Vector3(), _bn = new THREE.Vector3(), _bf = new THREE.Vector3(), _bw = new THREE.Vector3(), _bq = new THREE.Quaternion()
-/** Spin the whiteboard about its own up axis so its face points at the camera. */
-function faceBoardToCamera() {
-  const g = doodleBoard.group
+const _jbPos = new THREE.Vector3()
+/**
+ * A heightAt(x, z) for a prop: the height of the planet's surface under a
+ * point in the prop's own space (props themselves don't take rays).
+ */
+function groundUnder(g) {
+  g.updateMatrixWorld(true)
+  planetGroup.updateMatrixWorld(true)
+  const core = new THREE.Vector3().setFromMatrixPosition(planetGroup.matrixWorld)
+  _dropRay.camera = camSystem.camera
+  _dropRay.layers.enableAll()
+  return (x, z) => {
+    const w = g.localToWorld(new THREE.Vector3(x, 0, z))
+    const dir = w.clone().sub(core).normalize()
+    _dropRay.set(core.clone().addScaledVector(dir, core.distanceTo(w) + 6), dir.clone().negate())
+    const hit = _dropRay.intersectObject(planetGroup, true)[0]
+    return hit ? g.worldToLocal(hit.point.clone()).y : null
+  }
+}
+/** Spin a prop about its own up axis so its front (+Z) points at the camera. */
+function faceToCamera(g) {
   g.updateMatrixWorld(true)
   g.getWorldPosition(_bp)
   _bn.setFromMatrixPosition(planetGroup.matrixWorld)
@@ -1097,7 +1128,55 @@ function faceBoardToCamera() {
   _bf.addScaledVector(_bn, -_bf.dot(_bn)).normalize()
   const angle = Math.atan2(_bn.dot(new THREE.Vector3().crossVectors(_bf, _bw)), _bf.dot(_bw))
   g.rotateY(angle)
-  doodleBoard.faced = true
+}
+
+/**
+ * Try spots in rings around `aroundWorld` and return the one (planetGroup-
+ * local, like dropOntoIsland) where a circle of `radius` lands on the island
+ * most completely, keeping clear of `avoid` and of `aroundWorld` itself
+ * (where you spawn), so the music starts when you walk in.
+ */
+function ringSpot(islandName, aroundWorld, radius, avoid = null) {
+  const meshes = islandMeshes[islandName] || []
+  if (!meshes.length) return null
+  planetGroup.updateMatrixWorld(true)
+  const core = new THREE.Vector3().setFromMatrixPosition(planetGroup.matrixWorld)
+  const avoidAt = avoid ? avoid.getWorldPosition(new THREE.Vector3()) : null
+  const onIsland = (w) => {
+    const dir = w.clone().sub(core).normalize()
+    _dropRay.set(core.clone().addScaledVector(dir, core.distanceTo(w) + 20), dir.clone().negate())
+    _dropRay.layers.enableAll()
+    const hit = _dropRay.intersectObjects(meshes, true)[0]
+    return hit ? hit.point : null
+  }
+  const basis = (n) => {
+    const t1 = new THREE.Vector3().crossVectors(n, Math.abs(n.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize()
+    return [t1, new THREE.Vector3().crossVectors(n, t1)]
+  }
+  const n0 = aroundWorld.clone().sub(core).normalize()
+  const [a1, a2] = basis(n0)
+  let best = null
+  for (const rr of [3.1, 3.6, 4.2]) {
+    for (let k = 0; k < 16; k++) {
+      const ang = (k / 16) * Math.PI * 2
+      const guess = aroundWorld.clone().addScaledVector(a1, Math.cos(ang) * rr).addScaledVector(a2, Math.sin(ang) * rr)
+      const at = onIsland(guess)
+      if (!at) continue
+      if (avoidAt && at.distanceTo(avoidAt) < radius * 0.9) continue
+      if (at.distanceTo(aroundWorld) < radius + 0.5) continue   // you arrive outside the circle
+      const n = at.clone().sub(core).normalize()
+      const [t1, t2] = basis(n)
+      let score = 0
+      for (let j = 0; j < 16; j++) {
+        const b = (j / 16) * Math.PI * 2
+        if (onIsland(at.clone().addScaledVector(t1, Math.cos(b) * radius).addScaledVector(t2, Math.sin(b) * radius))) score++
+      }
+      if (!best || score > best.score) best = { score, at }
+    }
+  }
+  if (!best) return null
+  const local = planetGroup.worldToLocal(best.at.clone())
+  return { position: local, normal: local.clone().normalize() }
 }
 
 /** The middle of an island, planetGroup-local. */
@@ -1654,6 +1733,10 @@ if (import.meta.env.DEV) {
     },
     hop: (dir) => hopIsland(dir),
     sfx,
+    worldJukebox,
+    get jukebox() { return jukeboxProp },
+    get me() { return modelGroup.position },
+    get audioOwner() { return audio.owner },
     feet: () => ({ L: { ..._footSt.L }, R: { ..._footSt.R } }),
     get order() { return HOP_ORDER.slice() },
   }
@@ -2336,18 +2419,36 @@ function animate() {
     let nearestDist = Infinity
     for (const poi of POIS) {
       const dist = poi.island === activeIslandName
-        ? poi.marker.distanceTo(modelGroup.position)
+        ? (poi.measure ? poi.measure() : poi.marker.distanceTo(modelGroup.position))
         : Infinity
       poi.near = dist < poi.range
       poi.marker.update(dt, poi.near, reducedMotion)
       if (poi.near && dist < nearestDist) { nearest = poi; nearestDist = dist }
     }
     activePoi = nearest
-    jukeboxProp?.update(dt, reducedMotion)
+    // The gramophone's circle: step in and it plays a random loop from the
+    // shelf, fading as you walk out. F opens the shelf (and stops it).
+    if (jukeboxProp) {
+      const d = activeIslandName === MEADOW_ISLAND
+        ? jukeboxProp.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position) : Infinity
+      const presence = d < JUKEBOX_ZONE ? 1 : Math.max(0, 1 - (d - JUKEBOX_ZONE) / (JUKEBOX_ZONE * 0.6))
+      worldJukebox.update(dt, presence, !isInputLocked() && !_pageHidden)
+      jukeboxProp.update(dt, {
+        playing: audio.playing, inZone: d < JUKEBOX_ZONE, near: d < JUKEBOX_ZONE * 1.4,
+        reducedMotion, bpm: audio._pattern?.bpm,
+      })
+    }
     doodleBoard?.update(dt, reducedMotion)
-    // Once you're standing on Meadow, turn the board to face the camera.
+    // Once you're standing on Meadow, turn the props to face the camera.
     // Done here rather than at load because the planet turns after loading.
-    if (doodleBoard && !doodleBoard.faced && activeIslandName === MEADOW_ISLAND && !isTeleporting) faceBoardToCamera()
+    if (activeIslandName === MEADOW_ISLAND && !isTeleporting) {
+      if (doodleBoard && !doodleBoard.faced) { faceToCamera(doodleBoard.group); doodleBoard.faced = true }
+      if (jukeboxProp && !jukeboxProp.faced) {
+        faceToCamera(jukeboxProp.group)
+        jukeboxProp.conformRing(groundUnder(jukeboxProp.group))
+        jukeboxProp.faced = true
+      }
+    }
 
     const wantSub = (activePoi && islandUIState === 'near' && !isInputLocked())
       ? activePoi

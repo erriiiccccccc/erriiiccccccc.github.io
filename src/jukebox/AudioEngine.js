@@ -69,6 +69,24 @@ class AudioEngine {
 
   get playing() { return !!this._timer }
 
+  /** The shelf's own level. */
+  get fullLevel() { return 0.9 }
+
+  /**
+   * Set the output level (0..fullLevel). The world jukebox uses this to play
+   * quieter and fade with distance; anything else leaves it at full.
+   * @param {number}  v
+   * @param {boolean} [now] jump there instead of easing
+   */
+  setLevel(v, now = false) {
+    if (!this.master || !this.ctx) return
+    const g = this.master.gain
+    if (now) { g.cancelScheduledValues(this.ctx.currentTime); g.setValueAtTime(v, this.ctx.currentTime); this._level = v; return }
+    if (Math.abs((this._level ?? 0.9) - v) < 0.004) return
+    this._level = v
+    g.setTargetAtTime(v, this.ctx.currentTime, 0.12)
+  }
+
   /** True when `owner` is the one currently making noise. */
   isPlaying(owner) { return !!this._timer && this.owner === owner }
 
