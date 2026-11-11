@@ -1,8 +1,8 @@
 // The Jukebox playing out loud in the world.
 //
 // Step into the gramophone's circle and it puts on a random loop from the
-// shelf at a comfortable level, fading as you walk out and stopping past the
-// edge. Press F and the shelf opens: the world music stops so you can play
+// shelf at a comfortable level. Nothing plays until you're inside; walk out
+// and it fades over a step or two, then stops. Press F and the shelf opens: the world music stops so you can play
 // what you like. Close the shelf while you're still in the circle and it
 // goes back to random loops. A new random loop comes on about every 48 s.
 // The pool is the shelf plus a few house loops (houseLoops.js), so the
@@ -18,6 +18,7 @@ const OWNER  = 'world'
 const LEVEL  = 0.42     // about half the shelf's level: there, not loud
 const SWAP_S = 48       // seconds per loop before another random one
 const RETRY  = 3        // seconds before trying again if a loop failed to start
+const FRESH  = 120      // seconds a fetched shelf stays fresh before re-reading it
 
 export class WorldJukebox {
   constructor() {
@@ -33,8 +34,11 @@ export class WorldJukebox {
   get playing() { return audio.isPlaying(OWNER) }
 
   async _list() {
+    // re-read the shelf now and then, so loops people post join the pool
+    if (this._tracks && performance.now() - this._fetchedAt > FRESH * 1000) { this._tracks = null; this._loading = null }
     if (this._tracks) return this._tracks
     if (!this._loading) {
+      this._fetchedAt = performance.now()
       // the shelf plus the Jukebox's own records, so there's always something
       this._loading = fetchTunes()
         .then(r => (this._tracks = [...HOUSE_LOOPS, ...(r.items || [])]))
@@ -67,7 +71,8 @@ export class WorldJukebox {
   /**
    * Call every frame.
    * @param {number}  dt
-   * @param {number}  presence 1 inside the circle, easing to 0 a little past it
+   * @param {number}  presence 1 inside the circle, 0 outside (main.js eases it
+   *                           out over a step or two once you've been in)
    * @param {boolean} allowed  false while the shelf or any panel is open
    */
   update(dt, presence, allowed) {

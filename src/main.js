@@ -1106,6 +1106,7 @@ function surfaceAt(islandName, worldPoint, skip = null) {
 
 const _bp = new THREE.Vector3(), _bn = new THREE.Vector3(), _bf = new THREE.Vector3(), _bw = new THREE.Vector3(), _bq = new THREE.Quaternion()
 const _jbPos = new THREE.Vector3()
+let _jbHeard = false   // you've stepped into the gramophone's circle (and not walked well out)
 /**
  * A heightAt(x, z) for a prop: the height of the planet's surface under a
  * point in the prop's own space (props themselves don't take rays).
@@ -2439,7 +2440,11 @@ function animate() {
     if (jukeboxProp) {
       const d = activeIslandName === MEADOW_ISLAND
         ? jukeboxProp.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position) : Infinity
-      const presence = d < JUKEBOX_ZONE ? 1 : Math.max(0, 1 - (d - JUKEBOX_ZONE) / (JUKEBOX_ZONE * 0.6))
+      // Silent until you step inside; once in, walking out fades it over
+      // about a step (0.8 units) and then it stops.
+      if (d < JUKEBOX_ZONE) _jbHeard = true
+      else if (d > JUKEBOX_ZONE + 0.8) _jbHeard = false
+      const presence = !_jbHeard ? 0 : d < JUKEBOX_ZONE ? 1 : 1 - (d - JUKEBOX_ZONE) / 0.8
       worldJukebox.update(dt, presence, !isInputLocked() && !_pageHidden)
       jukeboxProp.update(dt, {
         playing: audio.playing, inZone: d < JUKEBOX_ZONE, near: d < JUKEBOX_ZONE * 1.4,
