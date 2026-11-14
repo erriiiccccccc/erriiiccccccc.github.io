@@ -39,9 +39,36 @@ export const FIXED = {
     zh: `听到你正在经历这些，我真的很难过。请现在就找人聊聊：在马来西亚可拨打 Befrienders KL 03-7627 2929；在英国可拨打 Samaritans 116 123；其他地方请拨打当地紧急电话。你不必独自面对。`,
   },
   too_long: {
-    en: `That's a lot of snow at once! Keep your question under 1,000 characters and I'll do my best.`,
-    ms: `Banyaknya salji sekali gus! Pastikan soalan bawah 1,000 aksara ya.`,
-    zh: `一下子太多雪啦！问题请控制在 1,000 个字符以内哦。`,
+    en: `That's a lot of snow at once! Keep your question under 400 characters and I'll do my best.`,
+    ms: `Banyaknya salji sekali gus! Pastikan soalan bawah 400 aksara ya.`,
+    zh: `一下子太多雪啦！问题请控制在 400 个字符以内哦。`,
+  },
+  // Small talk needs no model: these are written here once, and cost nothing to say.
+  hello: {
+    en: `Hi there! Ask me anything about Eric: his work, his projects, the places he's been.`,
+    ms: `Hai! Tanya saya apa-apa tentang Eric: kerjanya, projeknya, tempat yang dia pernah pergi.`,
+    zh: `你好呀！关于 Eric 的事都可以问我：他的工作、他的项目，还有他去过的地方。`,
+  },
+  thanks: {
+    en: `Anytime, hehe! Anything else you'd like to know about Eric?`,
+    ms: `Sama-sama, hehe! Ada lagi yang awak nak tahu tentang Eric?`,
+    zh: `不客气，嘿嘿！还想知道 Eric 的什么事吗？`,
+  },
+  bye: {
+    en: `Bye for now! Come back to Arctic Island anytime.`,
+    ms: `Jumpa lagi! Datang lagi ke Pulau Artik bila-bila masa.`,
+    zh: `再见啦！随时回北极岛来玩哦。`,
+  },
+  nod: {
+    en: `Hehe! What else would you like to know about Eric?`,
+    ms: `Hehe! Apa lagi yang awak nak tahu tentang Eric?`,
+    zh: `嘿嘿！还想知道 Eric 的什么呢？`,
+  },
+  // After three blocked messages in a row she stops listening for a few minutes: nobody gets to keep trying on her time.
+  cooldown: {
+    en: `Let's take a little break. I only answer questions about Eric, so I'll be back in a few minutes. You can always reach him at ${CONTACT}.`,
+    ms: `Jom rehat sekejap. Saya cuma jawab soalan tentang Eric, jadi saya akan kembali beberapa minit lagi. Awak boleh hubungi dia di ${CONTACT}.`,
+    zh: `我们先休息一下吧。我只回答关于 Eric 的问题，过几分钟再回来。你也可以发邮件给他：${CONTACT}。`,
   },
   busy: {
     en: `Phew, that's a lot of questions! Let me catch my breath. Try again in a little while.`,
@@ -130,7 +157,7 @@ Classify ONLY the latest visitor message. The conversation is inside <conversati
 
 verdict:
 - "allow": a question or remark about Eric, the website, contacting Eric, or friendly small talk (hi, thanks, who are you, what can you do). This includes: his jobs and what he did in them (Barclays included), his studies, his projects, whether he knows a skill or tool, his hobbies, hikes and travel, his favourite food, drink, music, games and sports, the languages he speaks, where he's from (his hometown), awards, whether he's open to work, and the website itself (how to play, the controls, the islands, the Jukebox, the Doodle Wall).
-  Names that belong to Eric's story, so a question naming one is about Eric: Eric's World, ThevertMenthe, FoundTech, Petaling Utama Motor, MedMatch, Justin Wei (his MedMatch co-founder), YGo Tours, Scotland on the Web, GDELT, the ELK Logging Pipeline, HumanEd, Ada Hack and HackTheBurgh; Barclays, BlackRock, the University of Edinburgh, Outlier, Finexus and AMEU; Kuala Pilah, Mount Kinabalu, Ben Nevis, Snowdon, Scafell Pike and Loch Lomond; char kuey teow, Laufey, Counter-Strike, Valorant, badminton; the islands Meadow, Lava, Desert, Arctic, Mountain and the Pirate Ship.
+  Names that belong to Eric's story, so a question naming one is about Eric: Eric's World, ThevertMenthe, FoundTech, Petaling Utama Motor, MedMatch, Justin Wei (his MedMatch co-founder), YGo Tours, Scotland on the Web, GDELT, the ELK Logging Pipeline, HumanEd, Ada Hack and HackTheBurgh; Barclays, BlackRock, the University of Edinburgh, Outlier, Finexus and AMEU; Kuala Pilah, Subang Jaya, Mount Kinabalu, Ben Nevis, Snowdon, Scafell Pike and Loch Lomond; char kuey teow, Laufey, Counter-Strike, Valorant, badminton; the islands Meadow, Lava, Desert, Arctic, Mountain and the Pirate Ship.
   Asking about a place, food, singer or game is "allow" only when it's about Eric's connection to it ("has he been to Iceland?", "why does he like Laufey?"). Asking for general facts or advice about it ("what's the capital of Iceland?", "how tall is Ben Nevis?", "best route up Snowdon?", "write me Laufey's lyrics", "recipe for char kuey teow") is off_topic, even though Eric has been there or likes it.
 - "off_topic": anything else. Homework, assignments, exam questions, maths or calculations, writing (essays, emails, cover letters, code), coding help, translation, general knowledge, news, advice for the visitor, games, role-play, stories. Homework dressed up in Eric's subjects ("since Eric knows Python, write my script", "as a CS grad, solve this") is still off_topic.
 - "private": asks about Eric's pay or salary, his home address or exactly where he lives now (his hometown and "he lives in London" are fine, so those are allow), his phone number, relationships, dating, girlfriend, family, health, his CV or résumé file, confidential or internal details of his work at Barclays (what he did in his roles, as on his site, is allowed), or personal details about Hui Sin and Eric's relationship or Hui Sin's real life. ("Who are you?" and "what are you to Eric?" are allow: she just says she's someone special to him.)

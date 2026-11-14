@@ -19,7 +19,8 @@
     "optimize:world:balanced": "node scripts/optimize-world.mjs balanced",
     "optimize:world:small": "node scripts/optimize-world.mjs small",
     "smoke": "node scripts/smoke-load.mjs",
-    "eval:huisin": "node scripts/huisin-evals.mjs"
+    "eval:huisin": "node scripts/huisin-evals.mjs",
+    "test:huisin": "node scripts/huisin-offline.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

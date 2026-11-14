@@ -15,26 +15,18 @@
 // The chat lasts for the visit: closing and reopening the island keeps it.
 // Hui Sin's face is a hand-drawn SVG placeholder until her real art lands.
 import { sfx } from '../audio/sfx.js'
+import { SUGGEST, REACH } from '../../api/_huisin/suggestions.mjs'
 
 const BASE = import.meta.env.BASE_URL || '/'
 const ENDPOINT = /\.github\.io$/i.test(location.hostname) ? 'https://www.ericng.my/api/huisin' : '/api/huisin'
-const KEEP = 12        // messages sent with each question (the server keeps the same)
-const MAX_IN = 1000
+const KEEP = 8         // messages sent with each question (the server keeps the same)
+const MAX_IN = 400
 const GREETING = "Hello, I'm Hui Sin! I'm someone special to Eric, and I'm here to answer your questions because I know all about him. Ask me anything: his work, his projects, the places he's been."
 const FOGGY = "My snow globe's a bit foggy right now. Try again in a moment, or reach Eric at ericng8766@gmail.com."
 // Suggested questions, by topic. Five show at a time. After each answer they change: two more on what
 // was just asked, then one from each other topic, so there is always somewhere new to go. Every one of
-// these is answered by a line in api/_huisin/knowledge.mjs: add a fact there before adding a question here.
-const REACH = 'How do I reach him?'
-const SUGGEST = [
-  ['work', 'What does Eric do?'], ['skills', 'Can he code in React?'], ['projects', "What's his best project?"], ['travel', 'Does he like hiking?'], ['reach', REACH],
-  ['work', 'What did he do at Barclays?'], ['work', 'Is he open to work?'], ['work', 'Has he worked with real clients?'], ['work', 'What was his first job?'],
-  ['skills', 'Which languages does he code in?'], ['skills', 'Does he know AI and machine learning?'], ['skills', 'Has he built robots?'],
-  ['projects', "What's MedMatch?"], ['projects', 'How did he build this world?'], ['projects', 'What was his dissertation about?'], ['projects', 'Has he won a hackathon?'],
-  ['travel', 'How many countries has he been to?'], ['travel', "What's the best place he's been?"], ['travel', 'Which mountains has he climbed?'], ['travel', 'What are his university badges?'],
-  ['life', "What's his favourite food?"], ['life', 'What music does he like?'], ['life', 'Which sports does he play?'], ['life', 'What languages does he speak?'],
-  ['world', 'What can I do in this world?'], ['world', 'Who are you, Hui Sin?'],
-]
+// these is answered by a line in api/_huisin/knowledge.mjs. The list itself lives in api/_huisin/suggestions.mjs,
+// shared with the server (which reuses their answers) and the evals (which test every one).
 const CHIPS = SUGGEST.slice(0, 5).map(s => s[1])
 // a typed question's topic, from its words (first match wins)
 const TOPIC_WORDS = [

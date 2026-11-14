@@ -2175,6 +2175,12 @@ if (import.meta.env.DEV) {
     get audioOwner() { return audio.owner },
     feet: () => ({ L: { ..._footSt.L }, R: { ..._footSt.R } }),
     get order() { return HOP_ORDER.slice() },
+    // for taking pictures of the world: the scene, the camera, his model
+    get scene() { return scene },
+    get camera() { return camSystem.camera },
+    get char() { return _charRoot },
+    get cam() { return camSystem },
+    get THREE() { return THREE },
     // Pip, for testing: __ew.pip.goto(1) turns the planet so hiding spot 1 is under you,
     // __ew.pip.here() puts its mound beside you, __ew.pip.forget() starts the hunt over
     pip: {
