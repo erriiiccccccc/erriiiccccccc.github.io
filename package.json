@@ -1,7 +1,7 @@
 {
   "name": "erriiiccccccc-github-io",
   "version": "1.0.0",
-  "description": "Eric's interactive 3D portfolio — a walkable Little Prince-style planet built with Three.js",
+  "description": "Eric's interactive 3D portfolio \u2014 a walkable Little Prince-style planet built with Three.js",
   "author": "Eric Ng Min Chern <erriiiccccccc@github>",
   "license": "MIT",
   "homepage": "https://erriiiccccccc.github.io",
@@ -18,7 +18,8 @@
     "optimize:world:fidelity": "node scripts/optimize-world.mjs fidelity",
     "optimize:world:balanced": "node scripts/optimize-world.mjs balanced",
     "optimize:world:small": "node scripts/optimize-world.mjs small",
-    "smoke": "node scripts/smoke-load.mjs"
+    "smoke": "node scripts/smoke-load.mjs",
+    "eval:huisin": "node scripts/huisin-evals.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

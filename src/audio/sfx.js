@@ -435,6 +435,17 @@ export class Sfx {
     this.tone(1900, { a: 0.002, d: 0.03, gain: 0.02, verb: 0 })
   }
 
+  /** Chat: a message leaves (a quick rising blip) and one arrives (two soft bells). */
+  msgOut() {
+    if (!this._ok() || this._throttle('msgOut', 80)) return
+    this.tone(540, { a: 0.004, d: 0.11, gain: 0.03, to: 1180, verb: 0.12 })
+  }
+  msgIn() {
+    if (!this._ok() || this._throttle('msgIn', 120)) return
+    this._bell(1318.5, { gain: 0.03, d: 0.45, verb: 0.3 })
+    this._bell(1760, { at: 0.08, gain: 0.026, d: 0.55, verb: 0.3 })
+  }
+
   /** On rises, off falls. */
   toggle(on) {
     if (!this._ok()) return

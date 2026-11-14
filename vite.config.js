@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -209,5 +209,23 @@ export default defineConfig({
         }
       })
     }
+  }, {
+    // Hui Sin in dev: the real api/huisin.mjs, run inside Vite, with the
+    // key from .env.local (Vite doesn't put it in process.env on its own).
+    name: 'huisin-api',
+    configureServer(server) {
+      const env = loadEnv('development', __dirname, '')
+      for (const k of ['ELM_API_KEY', 'HUISIN_API_KEY', 'HUISIN_BASE_URL', 'HUISIN_MODEL', 'HUISIN_GATE_MODEL', 'HUISIN_DENY', 'HUISIN_CANARY', 'HUISIN_OFF']) {
+        if (env[k] && !process.env[k]) process.env[k] = env[k]
+      }
+      server.middlewares.use('/api/huisin', async (req, res) => {
+        try {
+          const { default: handler } = await server.ssrLoadModule('/api/huisin.mjs')
+          await handler(req, res)
+        } catch (err) {
+          if (!res.headersSent) { res.statusCode = 500; res.end(String(err?.message || err)) } else res.end()
+        }
+      })
+    },
   }]
 })

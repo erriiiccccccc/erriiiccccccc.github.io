@@ -1,6 +1,6 @@
 // Island registry. Panel modules are eager so pressing E never pays for a
 // cold dynamic-import + parse hitch. meadow_island → AboutOverlay in main.js.
-import { ARCTIC_HTML } from '../islands/arctic.js'
+import { ARCTIC_HTML, initArctic } from '../islands/arctic.js'
 import { PROJECTS_HTML, initProjects } from '../islands/projects.js'
 import { EXPERIENCE_HTML } from '../islands/experience.js'
 import { CONTACT_HTML, initContact } from '../islands/contact.js'
@@ -29,10 +29,12 @@ export const ISLANDS = {
   arctic_island: {
     iconKey: 'snowflake',
     name: 'Arctic Island',
-    section: 'Coming Soon',
+    section: 'Ask Hui Sin',
     shell: 'frost',
     color: '#64B5F6',
+    variant: 'huisin',
     html: ARCTIC_HTML,
+    init: initArctic,
   },
 
   mountain_island: {
