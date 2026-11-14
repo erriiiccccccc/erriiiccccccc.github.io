@@ -1865,6 +1865,7 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
    CONTACT — desert-sunset "drop me a line"
    ═══════════════════════════════════════════════════════════════════════════ */
 .contact-split {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.4rem;
@@ -1884,12 +1885,19 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   background: #130a1d; /* fallback base while the photo loads */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
+/* photo + words. On wide screens it's only a wrapper (the photo fills the whole aside); on phones it
+   becomes its own block, so the buttons sit under the photo instead of over the people in it. */
+.ca-stage { display: contents; }
 /* the travel photo, covering the whole panel behind the content */
 .ca-photo {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center 50%;
+  /* a little larger than the panel and held to its bottom edge, which puts the four of them in the
+     clear band between the words and the buttons */
+  background-size: 122% auto;
+  background-position: 50% 100%;
+  background-repeat: no-repeat;
+  background-color: #6b4127;
   pointer-events: none;
 }
 /* warm scrim: darkens bottom-left so the eyebrow/title/socials stay readable,
@@ -1898,14 +1906,15 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* dark behind the words at the top and the buttons at the bottom, clear across the middle */
   background:
-    linear-gradient(160deg,
-      color-mix(in srgb, var(--ic) 14%, transparent) 0%,
-      rgba(19, 10, 29, 0.35) 42%,
-      rgba(19, 10, 29, 0.82) 100%),
-    linear-gradient(0deg,
-      rgba(19, 10, 29, 0.55) 0%,
-      transparent 55%);
+    linear-gradient(180deg,
+      rgba(19, 10, 29, 0.78) 0%,
+      rgba(19, 10, 29, 0.5) 30%,
+      rgba(19, 10, 29, 0.06) 46%,
+      rgba(19, 10, 29, 0.1) 60%,
+      rgba(19, 10, 29, 0.78) 80%,
+      rgba(19, 10, 29, 0.92) 100%);
 }
 
 /* ─── OLD DESERT OVERLAY (revert here) ──────────────────────────────────────
@@ -2009,15 +2018,14 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 /* Grid 1fr tracks fill reliably from the stretched column (a nested flex chain
    stops short here), so the message box grows to match the left panel's height
    and the two columns bottom out together — no dead space, card stays tall. */
-.contact-main { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; }
-.cf-head { margin-bottom: 1rem; }
-.cf-head-title { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 3px; }
-.cf-head-sub   { font-size: 0.78rem; color: var(--txt-mute); }
+.contact-main { display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; min-height: 0; }
 
-/* form fills row 2; cf-row + actions keep natural size, message field is the 1fr */
-.contact-form { display: grid; grid-template-rows: auto 1fr auto; gap: 0.85rem; min-height: 0; }
-.contact-form > .cf-field { min-height: 0; }           /* message field — flex col, 1fr row */
-.contact-form > .cf-field .cf-textarea { flex: 1; }    /* textarea fills the field's height */
+/* the form takes what's left under the sky; the message box is the part that stretches */
+.contact-form { flex: 1; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; }
+.cf-status:empty { display: none; }
+.contact-form.is-gone { display: none; }
+.cf-field--msg { flex: 1; min-height: 0; }
+.cf-field--msg .cf-textarea { flex: 1; }
 .cf-hp { position: absolute !important; left: -9999px !important; }
 .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
 .cf-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
@@ -2041,7 +2049,7 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   background: var(--glass-raise-2);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ic) 16%, transparent);
 }
-.cf-textarea { resize: none; min-height: 96px; line-height: 1.5; }
+.cf-textarea { resize: none; min-height: 84px; line-height: 1.5; }
 .cf-input--invalid { border-color: #f87171; }
 .cf-error { font-size: 0.72rem; color: #f87171; min-height: 0.9em; }
 
@@ -2101,9 +2109,111 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   font-size: 0.82rem;
 }
 
+/* ── The photo takes London's light: blue at night, warm at each end of the day ── */
+.ca-tint { position: absolute; inset: 0; pointer-events: none; --night: 0; --golden: 0; }
+.ca-tint::before, .ca-tint::after { content: ''; position: absolute; inset: 0; transition: opacity 1.2s; }
+.ca-tint::before { background: #161e5c; opacity: var(--night); mix-blend-mode: multiply; }
+.ca-tint::after { background: #ff8c3c; opacity: var(--golden); mix-blend-mode: soft-light; }
+
+/* ── LinkedIn: the big one, for anyone who wants the full work history ───── */
+.contact-aside .ca-li { display: flex; align-items: center; gap: 0.8rem; min-height: 58px; padding: 0.6rem 0.9rem; box-sizing: border-box; border-radius: var(--r-sm); text-decoration: none; color: #fff;
+  background: linear-gradient(135deg, #0a66c2, #0b4f96); border: 1px solid rgba(255, 255, 255, 0.24); box-shadow: 0 12px 30px -12px rgba(10, 102, 194, 0.9);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s, filter 0.2s; }
+.contact-aside .ca-li:hover { transform: translateY(-2px); text-decoration: none; filter: brightness(1.1); box-shadow: 0 16px 36px -12px rgba(10, 102, 194, 1); }
+.contact-aside .ca-li:active { transform: scale(0.98); }
+.contact-aside .ca-li:focus-visible, .contact-row:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ca-li-ic { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: #fff; color: #0a66c2; }
+.ca-li-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.ca-li-text b { font-size: 0.94rem; font-weight: 700; }
+.ca-li-text small { font-size: 0.74rem; opacity: 0.88; }
+
+/* the email row is a button: it copies, and says so */
+.contact-row--copy { width: 100%; box-sizing: border-box; font: inherit; text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.contact-hint { margin-left: 0.35rem; font-style: normal; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: 0.85; }
+.contact-row--copy.is-copied { border-color: #4ade80; }
+.contact-row--copy.is-copied .contact-go { color: #4ade80; transform: none; }
+.ca-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.contact-row--mini { min-height: 48px; padding: 0.4rem 0.6rem; gap: 0.6rem; box-sizing: border-box; }
+.contact-row--mini .contact-ic { width: 30px; height: 30px; }
+.contact-row--mini .contact-text { flex: 1; font-weight: 600; }
+
+/* ── The sky over London, right now ──────────────────────────────────────── */
+.sky { --s0: #3d7fd6; --s1: #8cc3ef; --s2: #efe0c0; --dune: #dba66a; --stars: 0;
+  position: relative; flex: none; height: 86px; overflow: hidden; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke));
+  background: linear-gradient(180deg, var(--s0) 0%, var(--s1) 55%, var(--s2) 100%); }
+.sky-stars { position: absolute; inset: 0; opacity: var(--stars); transition: opacity 1.2s; }
+.sky-stars i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: var(--o); animation: sky-twinkle 3.4s ease-in-out infinite; animation-delay: calc(var(--o) * -5s); }
+.sky-sun, .sky-moon { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; opacity: 0; transition: left 1.2s, top 1.2s, opacity 0.8s; }
+.sky-sun { background: radial-gradient(circle, #fff 0%, #ffe9a8 45%, #ffc65c 100%); box-shadow: 0 0 0 6px rgba(255, 220, 140, 0.22), 0 0 34px 10px rgba(255, 200, 110, 0.55); }
+.sky-moon { background: #f4f1e4; box-shadow: inset -6px -3px 0 0 #cfcab4, 0 0 22px 4px rgba(230, 235, 255, 0.35); }
+.sky-dunes { position: absolute; left: 0; right: 0; bottom: 0; display: block; width: 100%; height: 46%; }
+.sky-dune--1 { fill: var(--dune); }
+.sky-dune--2 { fill: color-mix(in srgb, var(--dune) 72%, var(--s2)); }
+.sky-dune--3 { fill: color-mix(in srgb, var(--dune) 46%, var(--s2)); }
+.wp-content .sky-text { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 1.7rem 0.9rem 0.55rem; display: flex; flex-direction: column; gap: 1px; line-height: 1.3;
+  background: linear-gradient(0deg, rgba(12, 6, 3, 0.78), rgba(12, 6, 3, 0)); }
+.wp-content .sky-time { font-size: 0.84rem; font-weight: 700; color: #fff; }
+.sky-line { font-size: 0.78rem; color: rgba(255, 255, 255, 0.9); }
+
+/* ── What's this about? ──────────────────────────────────────────────────── */
+.cf-intent { min-width: 0; margin: 0; padding: 0; border: 0; }
+.cf-intent legend { padding: 0; margin-bottom: 0.4rem; }
+.cf-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.cf-chip { position: relative; cursor: pointer; }
+.cf-chip input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.cf-chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1rem; box-sizing: border-box; border-radius: 999px; font-size: 0.82rem; font-weight: 600; color: var(--txt-soft);
+  background: var(--glass-raise); border: 1px solid var(--glass-stroke);
+  transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.2s, transform 0.3s cubic-bezier(0.2, 1.25, 0.32, 1); }
+.cf-chip:hover span { color: #fff; border-color: color-mix(in srgb, var(--ic) 45%, var(--glass-stroke)); }
+.cf-chip:active span { transform: scale(0.95); }
+.cf-chip input:checked + span { color: #1c0d02; background: var(--ic); border-color: transparent; transform: scale(1.04); box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--ic) 90%, transparent); }
+.cf-chip input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+.cf-label i { margin-left: 0.3rem; font-style: normal; font-weight: 500; font-size: 0.68rem; color: var(--txt-faint); }
+/* the extra questions open and close without the form jumping */
+.cf-extra { display: grid; grid-template-rows: 0fr; margin-top: -0.7rem; opacity: 0; transition: grid-template-rows 0.38s var(--ease-out), margin-top 0.38s var(--ease-out), opacity 0.25s; }
+.cf-extra.is-on { grid-template-rows: 1fr; margin-top: 0; opacity: 1; }
+.cf-extra-in { min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
+
+.cf-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; min-height: 1.3em; font-size: 0.72rem; color: var(--txt-mute); }
+.cf-draft { display: inline-flex; align-items: center; gap: 0.3rem; color: #86efac; opacity: 0; transform: translateY(3px); transition: opacity 0.25s, transform 0.25s; }
+.cf-draft.is-on { opacity: 1; transform: none; }
+.cf-kbd { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; }
+.cf-kbd kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 5px; font: 600 0.66rem/1 var(--font-mono, ui-monospace, monospace);
+  color: var(--txt); background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-stroke); border-bottom-width: 2px; }
+.cf-submit.is-sending svg { animation: cf-wiggle 0.7s ease-in-out infinite; }
+
+/* sent: the form steps out, this steps in */
+.cf-sent { flex: 1; display: grid; place-content: center; justify-items: center; gap: 0.35rem; padding: 1.4rem 1rem; text-align: center; animation: cf-rise 0.55s var(--ease-out) 0.25s both; }
+.cf-sent[hidden] { display: none; }
+.wp-content .cf-sent h4 { margin: 0; font-size: 1.1rem; color: #fff; }
+.wp-content .cf-sent p { margin: 0; max-width: 34ch; font-size: 0.86rem; color: var(--txt-soft); }
+.cf-again { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; min-height: 44px; margin-top: 0.6rem; padding: 0 1.2rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.84rem; font-weight: 600; color: #fff; border: 1px solid color-mix(in srgb, var(--ic) 50%, var(--glass-stroke)); transition: background 0.18s, transform 0.2s var(--ease-out); }
+.cf-again:hover { background: color-mix(in srgb, var(--ic) 16%, transparent); transform: translateY(-1px); }
+.cf-again:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.cf-plane { position: absolute; left: 0; top: 0; z-index: 5; margin: -17px 0 0 -17px; pointer-events: none; color: #fff; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45)); will-change: transform; }
+.cf-toast { position: absolute; left: 50%; bottom: 0.5rem; z-index: 6; padding: 0.5rem 1rem; border-radius: 999px; pointer-events: none; white-space: nowrap;
+  font-size: 0.8rem; font-weight: 700; color: #0c1a10; background: #86efac; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  opacity: 0; transform: translate(-50%, 10px); transition: opacity 0.2s, transform 0.3s var(--ease-out); }
+.cf-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+@keyframes sky-twinkle { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.5); } }
+@keyframes cf-wiggle { 0%, 100% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(2px, -2px) rotate(-8deg); } }
+@keyframes cf-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (hover: none) { .cf-kbd { display: none; } }
+@media (prefers-reduced-motion: reduce) { .contact-split :is(*, *::before, *::after) { animation: none !important; transition: none !important; } }
+body.reduced-motion .contact-split :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
+
+
 /* ── Custom layouts: small screens ─────────────────────────────────────────── */
 @media (max-width: 720px) {
   /* Contact: stack — form first, desert panel below */
+  .contact-aside { padding: 0; gap: 0.8rem; border: 0; background: none; box-shadow: none; overflow: visible; }
+  .ca-stage { display: block; position: relative; min-height: 470px; padding: 1.4rem 1.3rem; box-sizing: border-box; overflow: hidden;
+    border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke)); background: #130a1d; }
+  .ca-photo { background-size: cover; background-position: 50% 100%; }
+  .ca-scrim { background: linear-gradient(180deg, rgba(19, 10, 29, 0.82) 0%, rgba(19, 10, 29, 0.55) 38%, rgba(19, 10, 29, 0.05) 60%, rgba(19, 10, 29, 0.22) 100%); }
+  .ca-socials { margin-top: 0; }
   .contact-split { grid-template-columns: 1fr; gap: 1.1rem; }
   .contact-main  { order: 1; }
   .contact-aside { order: 2; }
