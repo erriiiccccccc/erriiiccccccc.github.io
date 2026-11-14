@@ -1771,6 +1771,7 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 }
 .tl-maplink:hover { color: #fff; }
 .tl-maplink:focus-visible { outline: 2px solid var(--ic); outline-offset: 3px; border-radius: 2px; }
+@media (hover: none) { .tl-maplink { display: inline-flex; align-items: center; min-height: 44px; } }      /* a finger-sized link on touch screens */
 
 /* the log */
 .tl-log {

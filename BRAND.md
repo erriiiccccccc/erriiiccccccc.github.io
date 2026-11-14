@@ -41,13 +41,22 @@ One word, one concept. Apply these across all UI, overlays, tooltips, and copy.
 | Island visited/explored | found | visited, discovered |
 | Loading screen tips | Loading messages | Flavour text, loading tips |
 | Action: open an island | dive in | explore, open, visit |
+| Arctic's guide | Hui Sin | Mochi, chatbot, assistant, AI |
+| What Eric does on the About screen | Emotes (wave, nod, jump, call) | animations, actions |
+| The list of islands on the About screen | Quest log | checklist, progress |
+| The snow creature on Arctic | Pip | mascot, NPC, pet |
+| Meadow's music player | the Jukebox | music player, radio |
+| Meadow's whiteboard | the Doodle Wall | guestbook, canvas |
+| Mountain's project screen | the Hub, and the List | gallery, carousel, grid |
 
 ---
 
 ## Typography
 
-- **Cinzel** (headings, modal titles, overlay headers): dramatic, adventure-game register. Use for titles and section names only.
-- **Inter** (body, labels, all copy): clean, readable, modern. Everything else.
+- **Instrument Serif** (`--font-display`): panel titles, the Press E title card, project titles, big numbers, the Map / How to Play / Options titles. It has one weight, so titles are always 400 and get their presence from size. Warm and storybook, but reads modern.
+- **Cinzel** (`--font-logo`): the Eric's World! wordmark on the loader, and nowhere else. As a heading font it read fantasy RPG and cramped on long titles.
+- **Inter** (`--font-body`): body, buttons, all running copy.
+- **Monospace** (`--font-mono`): eyebrows, keys, small uppercase labels and counters.
 
 ---
 
@@ -61,6 +70,8 @@ One word, one concept. Apply these across all UI, overlays, tooltips, and copy.
 | Horizon glow | `#FF8C42` | Sunset, atmosphere |
 
 Each island also has its own accent color defined in `src/data/content.js`. These are used for popup accents, panel header tints, and emissive glow.
+
+Every control takes its colour from the island it's on. No third-party brand colours on buttons (a LinkedIn link is a quiet, on-theme row or tag, never LinkedIn blue).
 
 ---
 
@@ -86,13 +97,30 @@ Each island also has its own accent color defined in `src/data/content.js`. Thes
 - Performance: shells only move opacity, transform and clip-path. No animated `filter: blur()`, SVG filters or blend modes on panels: they made first openings drop to ~20 fps while the GPU built them.
 - Hop order follows the planet (nearest neighbour from the meadow), so `›` is always a short warp.
 
+**What lives on each island:**
+- Meadow, About Me: Character Select. Profile and Emotes on the left, the Quest log and Now playing on the right, the nameplate along the bottom. Click or tap Eric and he talks: a speech bubble by his head types the line out. On phones the nameplate and the four cards are one row to swipe. The Jukebox and the Doodle Wall stand on the island itself.
+- Mountain, Projects: the Hub, one project at a time with its demo across the whole panel and a rail of tiles; the List is the same projects as rows. Every project leads with one outcome line.
+- Lava, Experience: Strata. Layers of rock, newest on top and molten, the outcome first. An open layer is always as tall as what it says.
+- Desert, Contact: the form asks what it's about first. The sky over it is London's real hour; drag it and the day goes by, "Now in London" brings it back.
+- Arctic, Ask Hui Sin: a guide who answers questions about Eric from facts he wrote, in a chat that behaves like a messaging app. Her suggested questions change after every answer. Pip hides in the snow outside: catch it three times and it comes with you.
+- Pirate Ship, Travel Log: the storybook globe.
+
+**Decisions that hold everywhere:**
+- No Short Version, no plain "recruiter mode". The world is the whole point.
+- No CV or résumé file on the site. LinkedIn carries the work history.
+- Text is never cut off. Things are sized by what they say and the container scrolls; a secondary line steps out whole before anything is shortened to "...".
+- Every screen is checked at laptop heights (down to about 1280 x 585) and on phones (down to 360 x 640), not only on a big monitor.
+- Friends' photos (Morocco on Desert, the glacier on Arctic) stay, untinted.
+
 **Sound (`src/audio/sfx.js`):**
 - Everything is synthesised on the Jukebox's AudioContext. No sample files.
 - One key, G major pentatonic. Each island owns a note: Meadow G5, Mountain D5, Arctic E5, Lava A4, Desert B4, Pirate G4. Arriving plays the note, diving in plays it with its fifth, a first find plays a rising arpeggio, all six found rolls every note into one chord.
 - Each shell has its own texture: Mountain TV power-on hum, Arctic ice crackle, Lava rumble and ember fizz, Desert hot wind, Pirate ocean swell. Closing is a shorter, softer version.
 - Footsteps follow the ground: grass, rock, snow, sand, wood deck. Plus jump, landing, warp whoosh, UI clicks and toggles.
 - Ambience (wandering wind and a low space hum) sits under everything at about -44 dB, dips while a panel is open and steps aside for the Jukebox.
-- Levels: effects stay between about -24 and -49 dB, nothing peaks above -15 dB. Options has Sound (on/off) and Volume (scales everything, the Jukebox included).
+- Levels: effects stay between about -24 and -49 dB, nothing peaks above -15 dB. Options has Sound (on/off) and Volume (scales everything, the Jukebox included). The Jukebox has its own brass knob for the same Volume, so nobody has to leave it to turn the music down.
+- The music's own loudness (quieter out in the world than at the shelf) is a separate control from Volume inside the engine: one must never overwrite the other.
+- Eric's voice is a soft low blip every few letters while his line types out, and Pip squeaks when caught.
 
 **Loading into the world:**
 - No gate: the world opens on its own. Sound is tried the moment the page loads and always fades in softly over 2.5 s.
