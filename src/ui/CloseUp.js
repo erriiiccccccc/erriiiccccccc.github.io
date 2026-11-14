@@ -85,6 +85,14 @@ export class CloseUp {
           <div class="cu-head"><div class="cu-eyebrow">Meadow · The Jukebox</div><h2 class="cu-h">Pick a record</h2></div>
           <div class="cu-recs" id="cu-recs" role="list" aria-label="Records"></div>
           <div class="cu-pinned" id="cu-pinned"></div>
+          <div class="cu-vol">
+            <button class="cu-knob" type="button" id="cu-mute" aria-pressed="false" aria-label="Mute"><span class="cu-dial" aria-hidden="true"></span></button>
+            <div class="cu-volmain">
+              <label class="cu-vollabel" for="cu-volume">Volume</label>
+              <input class="cu-volrange" type="range" id="cu-volume" min="0" max="100" step="1" value="70">
+            </div>
+            <output class="cu-volval" id="cu-volv" for="cu-volume">70</output>
+          </div>
         </div>
       </section>
 
@@ -142,6 +150,15 @@ export class CloseUp {
     el.addEventListener('click', e => this._click(e))
     $('#cu-title').addEventListener('input', () => { $('#cu-titlehelp').textContent = ''; $('#cu-title').removeAttribute('aria-invalid'); this._syncPress() })
     $('#cu-tempo').addEventListener('input', e => { this._st.bpm = +e.target.value; $('#cu-tempov').textContent = this._st.bpm; this._live() })
+    // the volume knob: the same volume as Options, here so nobody has to leave the Jukebox to turn it down
+    const volume = $('#cu-volume')
+    volume.addEventListener('input', () => this.onVolume?.(+volume.value / 100, false))
+    volume.addEventListener('change', () => this.onVolume?.(+volume.value / 100, true))
+    $('#cu-mute').addEventListener('click', () => {
+      const now = +volume.value / 100
+      if (now > 0) { this._unmuteTo = now; this.onVolume?.(0, true) }
+      else this.onVolume?.(this._unmuteTo || 0.7, true)
+    })
     // the grid: press and drag to paint notes on (or, starting on a lit pad, off)
     const grid = $('#cu-grid')
     grid.addEventListener('pointerdown', e => {
@@ -184,6 +201,18 @@ export class CloseUp {
   }
 
   isOpen() { return !!this.view }
+
+  /** Show a volume (0 to 1) on the Jukebox's knob. main.js calls this whenever the volume changes, from here or from Options. */
+  showVolume(v) {
+    const pct = Math.round(Math.max(0, Math.min(1, v)) * 100)
+    const vol = this.el.querySelector('.cu-vol'), range = this.$('#cu-volume'), mute = this.$('#cu-mute')
+    vol.style.setProperty('--v', (pct / 100).toFixed(2))
+    if (+range.value !== pct) range.value = pct
+    range.setAttribute('aria-valuetext', `${pct}%`)
+    this.$('#cu-volv').textContent = pct
+    mute.setAttribute('aria-pressed', pct === 0 ? 'true' : 'false')
+    mute.setAttribute('aria-label', pct === 0 ? 'Unmute' : 'Mute')
+  }
 
   // ── Open / close ──────────────────────────────────────────────────────────
   /** Show a screen. main.js calls this as the camera glide lands. */

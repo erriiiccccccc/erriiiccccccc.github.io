@@ -286,7 +286,9 @@ settingsOverlay.onSoundChange = (on) => {
   // (browsers allow that once the page has had any gesture at all)
   if (on && (navigator.userActivation?.hasBeenActive ?? true)) sfx.unlock()
 }
-settingsOverlay.onVolumeChange = (v) => sfx.setVolume(v)
+settingsOverlay.onVolumeChange = (v) => { sfx.setVolume(v); closeUp.showVolume(v) }
+// The Jukebox's own knob moves the same volume. When it's let go with nothing playing, a click lets the new level be heard.
+closeUp.onVolume = (v, save) => { settingsOverlay.setVolume(v, save); if (save && v > 0 && !closeUp.playingId) sfx.click() }
 
 // Sound can only start inside a user gesture. Every key press or tap gives the
 // shared context a chance to start (first time) or wake (after a tab switch).

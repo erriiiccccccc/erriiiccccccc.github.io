@@ -157,13 +157,18 @@ export class SettingsOverlay {
 
     const vol = el.querySelector('#volume-range')
     const volVal = el.querySelector('#volume-val')
-    const paintVol = () => vol.style.setProperty('--fill', `${vol.value}%`)
-    paintVol()
+    // the slider shows whatever this._volume is (it can also be set from the Jukebox)
+    this._paintVolume = () => {
+      const pct = Math.round(this._volume * 100)
+      vol.value = pct
+      volVal.textContent = `${pct}%`
+      vol.setAttribute('aria-valuetext', `${pct}%`)
+      vol.style.setProperty('--fill', `${pct}%`)
+    }
+    this._paintVolume()
     vol.addEventListener('input', () => {
       this._volume = Number(vol.value) / 100
-      volVal.textContent = `${vol.value}%`
-      vol.setAttribute('aria-valuetext', `${vol.value}%`)
-      paintVol()
+      this._paintVolume()
       this.onVolumeChange?.(this._volume)
     })
     vol.addEventListener('change', () => this._persist())
@@ -201,4 +206,14 @@ export class SettingsOverlay {
   get reducedMotion() { return this._reducedMotion }
   get hintsVisible()  { return this._hintsVisible }
   get soundOn()       { return this._soundOn }
+  get volume()        { return this._volume }
+
+  /** Set the volume from outside Options (the Jukebox has its own knob). 0 to 1. `save` false while a
+   *  slider is still being dragged, true once it's let go. */
+  setVolume(v, save = true) {
+    this._volume = Math.max(0, Math.min(1, v))
+    this._paintVolume?.()
+    if (save) this._persist()
+    this.onVolumeChange?.(this._volume)
+  }
 }
