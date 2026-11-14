@@ -1,728 +1,376 @@
-// Mountain Island — editorial horizontal collage (justified mosaic rows).
-// Shared horizontal scroll; projects grow on hover/focus and open a detail sheet.
+// Mountain Island: the Game Hub. One project at a time, like a console home
+// screen: its demo plays across the whole panel behind the title, a rail of
+// tiles runs along the bottom, and the arrow keys flick between them. Every
+// project leads with its outcome line.
+//
+//   ← →        previous / next project (also: wheel, swipe, the rail, 1 to 9)
+//   L          The Index: every project as one typographic list
+//   Watch demo hides the words so the demo has the screen; Esc brings them back
+//
+// Media: two stacked layers cross-fade. Only the project on screen has a
+// video element, the poster shows until it's actually playing, and neighbours'
+// posters are warmed so a flick never lands on black. Projects without a
+// recording get a drawn, moving cover (projectCovers.js).
+// Reduced motion: posters instead of autoplay, no parallax, instant swaps.
 import { svgIcon } from '../ui/icons.js'
-import { GALLERY, PROJECT_BY_ID } from './projectsData.js'
-import { layoutCollage, shouldRelayout } from './projectsLayout.js'
+import { sfx } from '../audio/sfx.js'
+import { PROJECTS } from './projectsData.js'
+import { coverHtml } from './projectCovers.js'
 
-const REDUCE = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-const COARSE = window.matchMedia?.('(pointer: coarse)').matches ?? false
-const DRAG_THRESHOLD = 12
+const N = PROJECTS.length
+const pad = (n) => String(n).padStart(2, '0')
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const calm = () => document.body.classList.contains('reduced-motion') || (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+const FINE = window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? true
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+const svg = (d, s = 16) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const ICON = {
+  hub: svg('<rect x="3" y="4" width="18" height="11" rx="2"/><path d="M4 19h3M10.5 19h3M17 19h3"/>'),
+  list: svg('<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
+  eye: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
 }
 
-function cardHtml(item) {
-  const isProject = item.type === 'project'
-  const ar = item.aspectRatio
-  const accent = item.accent || '#FF8A65'
-  const tag = isProject ? 'button' : 'div'
-  const attrs = isProject
-    ? `type="button" class="pj-card pj-card--project" data-id="${escapeHtml(item.id)}" style="--pc:${accent};--ar:${ar}" aria-label="${escapeHtml(item.title)}. Dive in for details."`
-    : `class="pj-card pj-card--art" data-id="${escapeHtml(item.id)}" style="--pc:${accent};--ar:${ar}" aria-hidden="true"`
-
-  const media = item.mediaType === 'video'
-    ? `<img class="pj-card-poster" alt="${escapeHtml(item.alt || '')}" loading="lazy" decoding="async" data-src="${escapeHtml(item.poster)}" />
-       <video class="pj-card-video" muted loop playsinline preload="none" poster="${escapeHtml(item.poster || '')}" data-src="${escapeHtml(item.src)}"></video>`
-    : `<img class="pj-card-poster" alt="${escapeHtml(item.alt || '')}" loading="lazy" decoding="async" data-src="${escapeHtml(item.src || item.poster)}" />`
-
-  const teaser = isProject
-    ? `<span class="pj-card-teaser">
-         <span class="pj-card-title">${escapeHtml(item.title)}</span>
-         <span class="pj-card-sub">${escapeHtml(item.subtitle)}</span>
-         <span class="pj-card-cta">dive in ${svgIcon('arrowRight', 14)}</span>
-       </span>`
-    : `<span class="pj-card-label">${escapeHtml(item.title)}</span>`
-
-  const badge = item.badge
-    ? `<span class="pj-card-badge">${svgIcon('trophy', 12)} ${escapeHtml(item.badge)}</span>`
-    : ''
-
-  const ph = isProject
-    ? `<span class="pj-card-ph" aria-hidden="true">${svgIcon('mountain', 36)}</span>`
-    : ''
-
-  return `<${tag} ${attrs}>
-    <span class="pj-card-media">
-      ${ph}
-      ${media}
-    </span>
-    ${badge}
-    ${teaser}
-  </${tag}>`
+/** Dark or light text on an accent, whichever reads better. */
+function inkOn(hex) {
+  const n = parseInt(hex.slice(1), 16)
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
+  return L > 0.3 ? '#0c0a12' : '#ffffff'
 }
+
+const thumb = (p) => p.poster ? `<img src="${p.poster}" alt="" loading="lazy" decoding="async">` : coverHtml(p.cover, { still: true })
+
+const tilesHtml = PROJECTS.map((p, i) => `
+  <button type="button" class="gh-tile" role="tab" id="gh-tab-${i}" aria-selected="false" aria-controls="gh-info" tabindex="-1" data-i="${i}" style="--ta:${p.accent}">
+    <span class="gh-tile-media">${thumb(p)}</span>
+    <span class="gh-tile-name">${esc(p.title)}</span>
+    <span class="gh-prog" aria-hidden="true"></span>
+  </button>`).join('')
+
+const rowsHtml = PROJECTS.map((p, i) => `
+  <li>
+    <button type="button" class="gh-row" data-i="${i}" style="--ta:${p.accent};--k:${i}">
+      <span class="gh-row-n">${pad(i + 1)}</span>
+      <span class="gh-row-thumb">${thumb(p)}</span>
+      <span class="gh-row-main"><b class="gh-row-t">${esc(p.title)}</b><span class="gh-row-o">${esc(p.outcome)}</span></span>
+      <span class="gh-row-m">${esc(p.role)} · ${esc(p.year)}</span>
+      <span class="gh-row-go">${svgIcon('arrowRight', 18)}</span>
+    </button>
+  </li>`).join('')
 
 export const PROJECTS_HTML = `
-  <div class="pj-collage" data-island-dispose>
-    <div class="pj-scroller" tabindex="0" aria-label="Project gallery. Scroll horizontally. Use arrow keys to move between projects.">
-      <div class="pj-track"></div>
+  <div class="gh" data-island-dispose data-view="hub">
+    <div class="gh-stage" aria-hidden="true">
+      <div class="gh-bg"></div><div class="gh-bg"></div>
+      <div class="gh-shade"></div><div class="gh-tint"></div>
     </div>
-    <div class="pj-sheet-scrim" hidden aria-hidden="true"></div>
-    <aside class="pj-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="pj-sheet-title">
-      <button type="button" class="pj-sheet-close" aria-label="Close details">${svgIcon('close', 18)}</button>
-      <div class="pj-sheet-media"></div>
-      <div class="pj-sheet-body">
-        <p class="pj-sheet-kicker"></p>
-        <h3 id="pj-sheet-title" class="pj-sheet-title"></h3>
-        <p class="pj-sheet-sub"></p>
-        <p class="pj-sheet-blurb"></p>
-        <div class="pj-sheet-tags"></div>
-        <div class="pj-sheet-links"></div>
+
+    <div class="gh-top">
+      <p class="gh-keys" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd><span>switch</span><kbd>L</kbd><span>list</span></p>
+      <div class="gh-switch" role="group" aria-label="How the projects are shown">
+        <button type="button" class="gh-switch-b" data-view="hub" aria-pressed="true">${ICON.hub}<span>Hub</span></button>
+        <button type="button" class="gh-switch-b" data-view="index" aria-pressed="false">${ICON.list}<span>List</span></button>
       </div>
-    </aside>
+    </div>
+
+    <div class="gh-hub">
+      <div class="gh-mid">
+        <section class="gh-info" id="gh-info" role="tabpanel" tabindex="-1"></section>
+        <div class="gh-count" aria-hidden="true"><span class="gh-n"><b>01</b></span><i>/ ${pad(N)}</i></div>
+      </div>
+      <div class="gh-dock">
+        <button type="button" class="gh-step" data-step="-1" aria-label="Previous project">${svgIcon('chevronLeft', 20)}</button>
+        <div class="gh-rail" role="tablist" aria-label="Projects" aria-orientation="horizontal">${tilesHtml}</div>
+        <button type="button" class="gh-step" data-step="1" aria-label="Next project">${svgIcon('chevronRight', 20)}</button>
+      </div>
+    </div>
+
+    <div class="gh-index" inert>
+      <ol class="gh-list">${rowsHtml}</ol>
+    </div>
+    <div class="gh-float" aria-hidden="true"></div>
+    <button type="button" class="gh-back" hidden>${ICON.eye}<span>Show details</span></button>
+    <p class="sr-only" id="gh-say" aria-live="polite"></p>
   </div>
 `
 
-function hydrateImages(root) {
-  root.querySelectorAll('img.pj-card-poster[data-src]').forEach((img) => {
-    const url = img.getAttribute('data-src')
-    if (!url) return
-    img.onload = () => {
-      const card = img.closest('.pj-card')
-      if (!card) return
-      card.classList.add('has-media')
-      // Art: lock tile width to the photo’s real aspect — never crop
-      if (card.classList.contains('pj-card--art') && img.naturalWidth > 0 && img.naturalHeight > 0) {
-        const ar = img.naturalWidth / img.naturalHeight
-        card.style.setProperty('--ar', String(ar))
-      }
-    }
-    img.onerror = () => img.closest('.pj-card')?.classList.add('has-fallback')
-    img.src = url
-  })
+function infoHtml(p) {
+  const badges = [
+    p.badge && `<span class="gh-badge gh-badge--win">${svgIcon('trophy', 12)}${esc(p.badge)}</span>`,
+    p.href && `<span class="gh-badge gh-badge--live">Live</span>`,
+    p.id === 'medmatch' && `<span class="gh-badge">Piloting</span>`,
+  ].filter(Boolean).join('')
+  const here = p.id === 'erics-world'
+  const cta = [
+    p.href && !here && `<a class="gh-btn gh-btn--primary" href="${esc(p.href)}" target="_blank" rel="noopener noreferrer">Visit site ${svgIcon('external', 15)}</a>`,
+    here && `<span class="gh-pill gh-pill--here">You're in it right now</span>`,
+    p.repo && `<a class="gh-btn" href="${esc(p.repo)}" target="_blank" rel="noopener noreferrer">${svgIcon('github', 16)} Source</a>`,
+    p.demo && `<button type="button" class="gh-btn gh-btn--ghost" data-clean>${ICON.eye} Watch demo</button>`,
+    !p.href && !p.repo && `<span class="gh-pill">No public link</span>`,
+  ].filter(Boolean).join('')
+  return `
+    <div class="gh-badges">${badges}</div>
+    <h3 class="gh-title">${esc(p.title)}</h3>
+    <p class="gh-meta">${esc(p.role)} · ${esc(p.year)}</p>
+    <p class="gh-outcome">${esc(p.outcome)}</p>
+    <p class="gh-blurb">${esc(p.blurb)}</p>
+    <ul class="gh-tags">${p.tags.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="gh-cta">${cta}</div>`
 }
 
 export function initProjects(root) {
-  const collage = root.querySelector('.pj-collage')
-  const scroller = root.querySelector('.pj-scroller')
-  const track = root.querySelector('.pj-track')
-  const sheet = root.querySelector('.pj-sheet')
-  const scrim = root.querySelector('.pj-sheet-scrim')
-  if (!collage || !scroller || !track || !sheet) return
-
+  const gh = root.querySelector('.gh')
+  if (!gh) return
   const ac = new AbortController()
   const { signal } = ac
-  let layoutState = null
-  let sheetOpen = false
-  let lastFocus = null
-  let drag = null
-  let momentumId = 0
-  let vel = 0
-  const nearIds = new Set()
+  const $ = (s) => gh.querySelector(s)
+  const layers = [...gh.querySelectorAll('.gh-bg')]
+  const stage = $('.gh-stage'), hub = $('.gh-hub'), info = $('.gh-info'), rail = $('.gh-rail'), num = $('.gh-n'), say = $('#gh-say')
+  const index = $('.gh-index'), float = $('.gh-float'), back = $('.gh-back')
+  const tiles = [...rail.children], rows = [...gh.querySelectorAll('.gh-row')]
+  const panel = gh.closest('#world-panel')
+  let cur = -1, front = 0, view = 'hub', clean = false, dead = false
 
-  const pauseAllVideos = () => {
-    collage.querySelectorAll('video').forEach((v) => {
-      try {
-        v.pause()
-        v.currentTime = 0
-      } catch { /* ignore */ }
-    })
+  // The panel's header floats over the hub: keep our top controls clear of it.
+  const head = gh.closest('.wp-card')?.querySelector('.wp-header')
+  const ro = new ResizeObserver(() => gh.style.setProperty('--gh-top', `${head.offsetHeight}px`))
+  if (head) ro.observe(head)
+
+  const video = () => layers[front].querySelector('video')
+  const playing = () => view === 'hub' && !document.hidden && !dead
+
+  // ── Media ───────────────────────────────────────────────────────────────────
+  function addVideo(box, p) {
+    const v = document.createElement('video')
+    v.muted = true; v.loop = true; v.playsInline = true
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', '')
+    v.preload = 'auto'
+    v.poster = p.poster
+    v.src = p.demo
+    v.addEventListener('playing', () => v.classList.add('is-on'), { once: true })
+    const tile = tiles[PROJECTS.indexOf(p)]
+    v.addEventListener('timeupdate', () => { if (v.duration) tile.style.setProperty('--prog', (v.currentTime / v.duration).toFixed(3)) })
+    box.appendChild(v)
+    return v
   }
-
-  let clearSpotlight = () => {}
-  let clearTimer = 0
-
-  const dispose = () => {
-    cancelAnimationFrame(momentumId)
-    pauseAllVideos()
-    clearSpotlight()
-    ac.abort()
-    ro.disconnect()
-    io.disconnect()
-  }
-  root._disposeIsland = dispose
-
-  const io = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const id = entry.target.getAttribute('data-id')
-        if (!id) continue
-        if (entry.isIntersecting) nearIds.add(id)
-        else {
-          nearIds.delete(id)
-          const video = entry.target.querySelector('video.pj-card-video')
-          if (video) {
-            video.pause()
-            try { video.currentTime = 0 } catch { /* ignore */ }
-            entry.target.classList.remove('is-playing')
-          }
-        }
-      }
-    },
-    { root: scroller, rootMargin: '200px', threshold: 0.01 },
-  )
-
-  const ensureVideoSrc = (video) => {
-    if (!video || video.getAttribute('src')) return
-    const url = video.getAttribute('data-src')
-    if (url) video.src = url
-  }
-
-  const playCardVideo = (card) => {
-    if (REDUCE || sheetOpen) return
-    const video = card.querySelector('video.pj-card-video')
-    if (!video) return
-    const id = card.getAttribute('data-id')
-    if (id && !nearIds.has(id)) return
-    ensureVideoSrc(video)
-    video.muted = true
-    video.playsInline = true
-    video.play()?.catch(() => {})
-    card.classList.add('is-playing')
-  }
-
-  const stopCardVideo = (card) => {
-    const video = card.querySelector('video.pj-card-video')
-    if (!video) return
-    video.pause()
-    try { video.currentTime = 0 } catch { /* ignore */ }
-    card.classList.remove('is-playing')
-  }
-
-  // ── Detail sheet (defined before layout bind so click handlers are safe) ──
-  const sheetEls = {
-    media: sheet.querySelector('.pj-sheet-media'),
-    kicker: sheet.querySelector('.pj-sheet-kicker'),
-    title: sheet.querySelector('.pj-sheet-title'),
-    sub: sheet.querySelector('.pj-sheet-sub'),
-    blurb: sheet.querySelector('.pj-sheet-blurb'),
-    tags: sheet.querySelector('.pj-sheet-tags'),
-    links: sheet.querySelector('.pj-sheet-links'),
-    close: sheet.querySelector('.pj-sheet-close'),
-  }
-
-  const closeSheet = () => {
-    if (!sheetOpen) return
-    sheetOpen = false
-    sheet.hidden = true
-    scrim.hidden = true
-    collage.classList.remove('is-sheet-open')
-    sheetEls.media.innerHTML = ''
-    if (lastFocus?.focus) lastFocus.focus()
-    lastFocus = null
-  }
-
-  const openSheet = (id) => {
-    const p = PROJECT_BY_ID[id]
-    if (!p) return
-    clearSpotlight()
-    lastFocus = document.activeElement
-    sheetOpen = true
-    collage.classList.add('is-sheet-open')
-    pauseAllVideos()
-
-    sheet.style.setProperty('--pc', p.accent)
-    sheetEls.kicker.textContent = 'Project'
-    sheetEls.title.textContent = p.title
-    sheetEls.sub.textContent = p.subtitle
-    sheetEls.blurb.textContent = p.blurb
-    sheetEls.tags.innerHTML = (p.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('')
-      + (p.badge ? `<span class="tag tag--accent">${svgIcon('trophy', 13)} ${escapeHtml(p.badge)}</span>` : '')
-
-    const links = [
-      p.href ? `<a class="pj-btn pj-btn--primary" href="${escapeHtml(p.href)}" target="_blank" rel="noopener noreferrer">${svgIcon('external', 15)} Visit live</a>` : '',
-      p.repo ? `<a class="pj-btn" href="${escapeHtml(p.repo)}" target="_blank" rel="noopener noreferrer">${svgIcon('github', 15)} Source</a>` : '',
-    ].filter(Boolean).join('')
-    sheetEls.links.innerHTML = links
-
-    const poster = p.poster || p.src
-    if (p.mediaType === 'video' && p.src) {
-      sheetEls.media.innerHTML = `
-        <img class="pj-sheet-poster" alt="${escapeHtml(p.alt || '')}" src="${escapeHtml(poster)}" />
-        <video class="pj-sheet-video" muted loop playsinline preload="metadata" poster="${escapeHtml(poster)}" src="${escapeHtml(p.src)}"></video>`
-      const v = sheetEls.media.querySelector('video')
-      if (v && !REDUCE) v.play().catch(() => {})
+  function media(p) {
+    const box = document.createElement('div')
+    box.className = 'gh-media'
+    if (p.demo) {
+      box.innerHTML = `<img src="${p.poster}" alt="" decoding="async">`
+      if (!calm()) addVideo(box, p)                 // reduced motion: the still, until "Watch demo"
     } else {
-      sheetEls.media.innerHTML = `<img class="pj-sheet-poster" alt="${escapeHtml(p.alt || '')}" src="${escapeHtml(poster)}" />`
-      const img = sheetEls.media.querySelector('img')
-      if (img) img.onerror = () => { img.style.opacity = '0' }
+      box.innerHTML = coverHtml(p.cover, { still: calm() })
     }
-
-    sheet.hidden = false
-    scrim.hidden = false
-    requestAnimationFrame(() => sheetEls.close?.focus())
+    return box
   }
 
-  sheetEls.close?.addEventListener('click', closeSheet, { signal })
-  scrim?.addEventListener('click', closeSheet, { signal })
+  // ── Choosing a project ──────────────────────────────────────────────────────
+  function select(i, { dir = 0, quiet = false, focus = false } = {}) {
+    i = ((i % N) + N) % N
+    if (i === cur) return
+    if (!dir) dir = cur < 0 || i > cur ? 1 : -1
+    const p = PROJECTS[i]
+    cur = i
+    gh.style.setProperty('--pa', p.accent)
+    gh.style.setProperty('--pa-ink', inkOn(p.accent))
+    gh.style.setProperty('--dir', dir)
 
-  // ── Spotlight hover — FLIP enlarge + make-way (max 2 row-slots) ───────────
-  const PUSH_PAD = 10
-  const PUSH_MAX = 72
-  const FLIP_MS = 520
-  const FLIP_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-  const flipTransition = () => `transform ${FLIP_MS}ms ${FLIP_EASE}`
+    // the new media goes into the back layer, the two cross-fade, the old one is emptied
+    const next = layers[1 - front], old = layers[front]
+    clearTimeout(next._t)
+    next.replaceChildren(media(p))
+    tiles.forEach(t => t.style.setProperty('--prog', 0))
+    next.classList.add('on'); old.classList.remove('on')
+    old._t = setTimeout(() => { if (!old.classList.contains('on')) old.replaceChildren() }, calm() ? 0 : 800)
+    front = 1 - front
+    if (playing()) video()?.play().catch(() => {})
 
-  let spotlight = null // { card, ghost, pushed: [{ el, tx }] }
-  let flipGen = 0
+    info.innerHTML = infoHtml(p)
+    info.setAttribute('aria-labelledby', `gh-tab-${i}`)
+    info.classList.remove('is-in'); void info.offsetWidth; info.classList.add('is-in')
 
-  const cancelScheduledClear = () => {
-    if (clearTimer) { clearTimeout(clearTimer); clearTimer = 0 }
+    // the big number rolls in the direction you moved
+    num.querySelectorAll('b').forEach(b => { b.className = `out ${dir > 0 ? 'out-up' : 'out-down'}`; setTimeout(() => b.remove(), 420) })
+    const b = document.createElement('b')
+    b.textContent = pad(i + 1)
+    b.className = dir > 0 ? 'in-up' : 'in-down'
+    num.appendChild(b)
+
+    tiles.forEach((t, k) => { t.setAttribute('aria-selected', k === i ? 'true' : 'false'); t.tabIndex = k === i ? 0 : -1 })
+    rows.forEach((r, k) => r.classList.toggle('is-cur', k === i))
+    const t = tiles[i]
+    rail.scrollTo({ left: t.offsetLeft - rail.clientWidth / 2 + t.offsetWidth / 2, behavior: calm() ? 'auto' : 'smooth' })
+    if (focus) t.focus({ preventScroll: true })
+    say.textContent = `Project ${i + 1} of ${N}: ${p.title}. ${p.outcome}`
+    if (!quiet) sfx.click()
+
+    // warm the neighbours' posters, so the next flick has a picture straight away
+    for (const k of [i + 1, i - 1]) { const q = PROJECTS[((k % N) + N) % N]; if (q.poster) new Image().src = q.poster }
   }
+  const step = (d) => select(cur + d, { dir: d, focus: document.activeElement?.classList?.contains('gh-tile') })
 
-  /** Two frames so the invert paint commits before Play. */
-  const afterPaint = (fn) => {
-    requestAnimationFrame(() => requestAnimationFrame(fn))
-  }
-
-  const resetCardBox = (card) => {
-    card.classList.remove('is-spotlight', 'is-flipping')
-    card.style.position = ''
-    card.style.left = ''
-    card.style.top = ''
-    card.style.width = ''
-    card.style.height = ''
-    card.style.zIndex = ''
-    card.style.transform = ''
-    card.style.transformOrigin = ''
-    card.style.transition = ''
-  }
-
-  /** Instant teardown (dispose / relayout / sheet open). */
-  const hardClearSpotlight = () => {
-    cancelScheduledClear()
-    flipGen += 1
-    if (!spotlight) return
-    const { card, ghost, pushed } = spotlight
-    ;(pushed || []).forEach(({ el }) => {
-      el.style.transition = ''
-      el.style.transform = ''
-      el.classList.remove('is-pushed', 'is-flipping')
-    })
-    resetCardBox(card)
-    ghost?.remove()
-    spotlight = null
-    collage.classList.remove('has-spotlight')
-  }
-
-  clearSpotlight = hardClearSpotlight
-
-  /** Reverse FLIP back to resting layout. */
-  const flipLeave = () => {
-    cancelScheduledClear()
-    if (!spotlight || spotlight.leaving) return
-    const { card, ghost, pushed } = spotlight
-    const gen = ++flipGen
-
-    if (REDUCE) {
-      hardClearSpotlight()
-      return
+  // ── Watch demo: the words step aside ────────────────────────────────────────
+  function setClean(on) {
+    if (on === clean) return
+    clean = on
+    gh.classList.toggle('is-clean', on)
+    back.hidden = !on
+    if (on) {
+      const p = PROJECTS[cur]
+      if (p.demo && !video()) addVideo(layers[front].querySelector('.gh-media'), p).play().catch(() => {})   // reduced motion: you asked for it
+      back.focus({ preventScroll: true })
+    } else if (panel?.contains(document.activeElement) || document.activeElement === document.body) {
+      info.querySelector('[data-clean]')?.focus({ preventScroll: true })
     }
-
-    const expRect = card.getBoundingClientRect()
-
-    ;(pushed || []).forEach(({ el, tx }) => {
-      el.style.transition = 'none'
-      el.style.transform = `translate3d(${tx}px, 0, 0)`
-    })
-    resetCardBox(card)
-    ghost?.remove()
-    const restRect = card.getBoundingClientRect()
-
-    const dx = expRect.left - restRect.left
-    const dy = expRect.top - restRect.top
-    const sx = expRect.width / Math.max(1, restRect.width)
-    const sy = expRect.height / Math.max(1, restRect.height)
-
-    card.style.transition = 'none'
-    card.style.transformOrigin = '0 0'
-    card.style.zIndex = '12'
-    card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
-    card.classList.add('is-flipping')
-    void card.offsetWidth
-
-    spotlight = { card, ghost: null, pushed: pushed || [], leaving: true }
-
-    afterPaint(() => {
-      if (gen !== flipGen) return
-      card.style.transition = flipTransition()
-      card.style.transform = 'translate(0px, 0px) scale(1, 1)'
-      ;(pushed || []).forEach(({ el }) => {
-        el.style.transition = flipTransition()
-        el.style.transform = 'translate3d(0px, 0px, 0)'
-      })
-      window.setTimeout(() => {
-        if (gen !== flipGen) return
-        ;(pushed || []).forEach(({ el }) => {
-          el.style.transform = ''
-          el.style.transition = ''
-          el.classList.remove('is-pushed', 'is-flipping')
-        })
-        card.classList.remove('is-flipping')
-        card.style.transform = ''
-        card.style.transformOrigin = ''
-        card.style.transition = ''
-        card.style.zIndex = ''
-        if (spotlight?.card === card) {
-          spotlight = null
-          collage.classList.remove('has-spotlight')
-        }
-      }, FLIP_MS + 48)
-    })
   }
 
-  const scheduleClear = (card) => {
-    cancelScheduledClear()
-    clearTimer = setTimeout(() => {
-      clearTimer = 0
-      if (spotlight?.card === card && card.matches(':hover')) return
-      if (spotlight?.card === card) flipLeave()
-    }, 120)
+  // ── Hub ⇄ The Index ─────────────────────────────────────────────────────────
+  function setView(v) {
+    if (v === view) return
+    view = v
+    setClean(false)
+    gh.dataset.view = v
+    gh.querySelectorAll('.gh-switch-b').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v ? 'true' : 'false'))
+    hub.inert = v === 'index'
+    index.inert = v !== 'index'
+    if (v === 'index') {
+      video()?.pause()
+      gh.classList.remove('is-list-in'); void gh.offsetWidth; gh.classList.add('is-list-in')
+      rows[cur]?.scrollIntoView({ block: 'nearest' })
+      rows[cur]?.focus({ preventScroll: true })
+    } else {
+      hideFloat()
+      if (playing()) video()?.play().catch(() => {})
+      tiles[cur].focus({ preventScroll: true })
+    }
+    sfx.toggle(v === 'index')
   }
 
-  const activateSpotlight = (card) => {
-    if (COARSE || sheetOpen) return
-    if (drag?.moved) return
-    cancelScheduledClear()
-    if (spotlight?.card === card && !spotlight.leaving) return
-
-    if (spotlight) hardClearSpotlight()
-
-    const row = card.parentElement
-    if (!row?.classList.contains('pj-row') || !track.contains(card)) return
-
-    const metrics = [...track.querySelectorAll('.pj-card')].map((el) => {
-      const r = el.parentElement
-      return {
-        el,
-        left: el.offsetLeft + r.offsetLeft,
-        top: r.offsetTop,
-        w: el.offsetWidth,
-        h: el.offsetHeight,
+  // The Index: a preview that trails the pointer (mouse only; rows carry a thumbnail anyway)
+  let fx = 0, fy = 0, tx = 0, ty = 0, fRaf = 0, fRow = null
+  function hideFloat() { float.classList.remove('is-on'); fRow = null; cancelAnimationFrame(fRaf); fRaf = 0 }
+  function floatTick() {
+    const dx = tx - fx, dy = ty - fy
+    fx += dx * 0.16; fy += dy * 0.16
+    float.style.setProperty('--fx', `${fx.toFixed(1)}px`)
+    float.style.setProperty('--fy', `${fy.toFixed(1)}px`)
+    float.style.setProperty('--fr', `${Math.max(-7, Math.min(7, dx * 0.05)).toFixed(2)}deg`)
+    fRaf = Math.abs(dx) + Math.abs(dy) > 0.3 && float.classList.contains('is-on') ? requestAnimationFrame(floatTick) : 0
+  }
+  if (FINE) {
+    index.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || calm()) return
+      const row = e.target.closest('.gh-row')
+      if (!row) return hideFloat()
+      const o = gh.getBoundingClientRect(), fw = float.offsetWidth, fh = float.offsetHeight
+      tx = Math.min(o.width - fw - 16, Math.max(16, e.clientX - o.left + 28))
+      ty = Math.min(o.height - fh - 16, Math.max(16, e.clientY - o.top - fh / 2))
+      if (row !== fRow) {
+        if (!fRow) { fx = tx; fy = ty }
+        fRow = row
+        float.style.setProperty('--ta', row.style.getPropertyValue('--ta'))
+        float.innerHTML = thumb(PROJECTS[+row.dataset.i])
+        float.classList.add('is-on')
       }
-    })
-    const self = metrics.find((m) => m.el === card)
-    if (!self || self.w < 8 || self.h < 8) return
-
-    const rowH = layoutState?.rowHeight || self.h
-    const gap = layoutState?.gap ?? 10
-    const rows = layoutState?.rowCount || track.querySelectorAll('.pj-row').length
-
-    // Max 2 slots; modest width growth
-    const expH = rows >= 2 ? rowH * 2 + gap : Math.round(self.h * 1.06)
-    let expW = self.w * (expH / self.h)
-    expW = Math.min(expW, scroller.clientWidth * 0.28)
-    expW = Math.max(expW, self.w * 1.08)
-
-    const centerX = self.left + self.w / 2
-    let expLeft = centerX - expW / 2
-    const maxLeft = Math.max(0, track.offsetWidth - expW)
-    expLeft = Math.max(0, Math.min(expLeft, maxLeft))
-    const expRight = expLeft + expW
-    const expTop = 0
-
-    const firstLeft = self.left
-    const firstTop = self.top
-    const firstW = self.w
-    const firstH = self.h
-
-    const pushed = []
-    metrics.forEach((m) => {
-      if (m.el === card) return
-      const oL = m.left
-      const oR = m.left + m.w
-      if (oR < expLeft - 4 || oL > expRight + 4) return
-      const oCenter = oL + m.w / 2
-      let tx = 0
-      if (oCenter < centerX) tx = Math.min(0, expLeft - PUSH_PAD - oR)
-      else tx = Math.max(0, expRight + PUSH_PAD - oL)
-      tx = Math.max(-PUSH_MAX, Math.min(PUSH_MAX, tx))
-      if (Math.abs(tx) < 1) return
-      pushed.push({ el: m.el, tx })
-    })
-
-    const ghost = document.createElement('span')
-    ghost.className = 'pj-card-ghost'
-    ghost.setAttribute('aria-hidden', 'true')
-    ghost.style.width = `${firstW}px`
-    card.before(ghost)
-
-    const gen = ++flipGen
-    card.classList.add('is-spotlight', 'is-flipping')
-    collage.classList.add('has-spotlight')
-
-    // Last layout (absolute at expanded box)
-    card.style.position = 'absolute'
-    card.style.left = `${expLeft}px`
-    card.style.top = `${expTop}px`
-    card.style.width = `${expW}px`
-    card.style.height = `${expH}px`
-    card.style.zIndex = '12'
-    card.style.transformOrigin = '0 0'
-
-    const dx = firstLeft - expLeft
-    const dy = firstTop - expTop
-    const sx = firstW / expW
-    const sy = firstH / expH
-
-    if (REDUCE) {
-      card.style.transform = 'translate(0,0) scale(1)'
-      pushed.forEach(({ el, tx }) => {
-        el.classList.add('is-pushed')
-        el.style.transform = `translate3d(${tx}px, 0, 0)`
-      })
-      spotlight = { card, ghost, pushed }
-      return
-    }
-
-    // Invert — paint still matches First
-    card.style.transition = 'none'
-    card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
-    pushed.forEach(({ el }) => {
-      el.classList.add('is-pushed', 'is-flipping')
-      el.style.transition = 'none'
-      el.style.transform = 'translate3d(0px, 0px, 0)'
-    })
-    void card.offsetWidth
-
-    spotlight = { card, ghost, pushed }
-
-    // Play — double rAF so invert is on screen before easing to Last
-    afterPaint(() => {
-      if (gen !== flipGen || spotlight?.card !== card) return
-      card.style.transition = flipTransition()
-      card.style.transform = 'translate(0px, 0px) scale(1, 1)'
-      pushed.forEach(({ el, tx }) => {
-        el.style.transition = flipTransition()
-        el.style.transform = `translate3d(${tx}px, 0, 0)`
-      })
-      window.setTimeout(() => {
-        if (gen !== flipGen) return
-        card.classList.remove('is-flipping')
-        pushed.forEach(({ el }) => el.classList.remove('is-flipping'))
-      }, FLIP_MS + 48)
-    })
+      if (!fRaf) fRaf = requestAnimationFrame(floatTick)
+    }, { signal })
+    index.addEventListener('pointerleave', hideFloat, { signal })
   }
 
-  const bindCards = () => {
-    track.querySelectorAll('.pj-card').forEach((card) => {
-      const isProject = card.classList.contains('pj-card--project')
-
-      // Art is decorative only — no spotlight / zoom. Projects get make-way hover.
-      if (!isProject) return
-
-      card.addEventListener('pointerenter', () => {
-        activateSpotlight(card)
-        playCardVideo(card)
-      }, { signal })
-
-      card.addEventListener('pointerleave', (e) => {
-        const next = e.relatedTarget?.closest?.('.pj-card--project')
-        if (next && track.contains(next)) {
-          stopCardVideo(card)
-          return
-        }
-        scheduleClear(card)
-        stopCardVideo(card)
-      }, { signal })
-
-      card.addEventListener('focus', () => {
-        activateSpotlight(card)
-        playCardVideo(card)
-      }, { signal })
-      card.addEventListener('blur', () => {
-        scheduleClear(card)
-        stopCardVideo(card)
-      }, { signal })
-      card.addEventListener('click', (e) => {
-        e.preventDefault()
-        hardClearSpotlight()
-        openSheet(card.getAttribute('data-id'))
-      }, { signal })
-    })
-  }
-
-  const renderLayout = (layout) => {
-    clearSpotlight()
-    layoutState = layout
-    const { rows, contentWidth, rowHeight, gap } = layout
-    track.style.width = `${contentWidth}px`
-    track.style.setProperty('--pj-row-h', `${rowHeight}px`)
-    track.style.setProperty('--pj-gap', `${gap}px`)
-
-    track.innerHTML = rows.map((row) => {
-      const cards = row.items.map(cardHtml).join('')
-      return `<div class="pj-row" style="height:${rowHeight}px;padding-left:${row.lead}px;padding-right:${row.trail}px;gap:${gap}px">${cards}</div>`
-    }).join('')
-
-    hydrateImages(track)
-    io.disconnect()
-    track.querySelectorAll('.pj-card').forEach((el) => io.observe(el))
-    bindCards()
-  }
-
-  const measureAndLayout = () => {
-    const rect = scroller.getBoundingClientRect()
-    const next = layoutCollage(GALLERY, {
-      width: rect.width || scroller.clientWidth,
-      height: rect.height || scroller.clientHeight,
-    })
-    if (!shouldRelayout(layoutState, next) && track.children.length) return
-    const scrollRatio = scroller.scrollWidth
-      ? scroller.scrollLeft / Math.max(1, scroller.scrollWidth)
-      : 0
-    renderLayout(next)
-    requestAnimationFrame(() => {
-      scroller.scrollLeft = scrollRatio * scroller.scrollWidth
-    })
-  }
-
-  const ro = new ResizeObserver(() => {
-    if (signal.aborted) return
-    requestAnimationFrame(measureAndLayout)
-  })
-  ro.observe(scroller)
-
-  // ── Scroll / drag (art + empty track only — never on project cards) ────────
-  // Capture phase so trackpad wheel still works while hovering project cards.
-  collage.addEventListener('wheel', (e) => {
-    if (sheetOpen) return
-    if (!collage.contains(e.target)) return
-    const max = scroller.scrollWidth - scroller.clientWidth
-    if (max <= 0) return
-
-    // Prefer native horizontal; otherwise map vertical trackpad/mouse to X
-    let dx = e.deltaX
-    let dy = e.deltaY
-    // deltaMode 1 = lines (mouse wheels) — scale up
-    if (e.deltaMode === 1) { dx *= 16; dy *= 16 }
-    if (e.deltaMode === 2) { dx *= scroller.clientWidth; dy *= scroller.clientHeight }
-
-    const dominant = Math.abs(dx) > Math.abs(dy) ? dx : dy
-    if (!dominant) return
-
-    const atStart = scroller.scrollLeft <= 0
-    const atEnd = scroller.scrollLeft >= max - 1
-    if ((dominant < 0 && atStart) || (dominant > 0 && atEnd)) return
-
-    e.preventDefault()
-    // Only drop spotlight on a deliberate scroll, not trackpad jitter
-    if (spotlight && Math.abs(dominant) > 24) clearSpotlight()
-    scroller.scrollLeft += dominant
-  }, { signal, passive: false, capture: true })
-
-  const stopMomentum = () => {
-    cancelAnimationFrame(momentumId)
-    momentumId = 0
-    vel = 0
-  }
-
-  const tickMomentum = () => {
-    if (Math.abs(vel) < 0.25) {
-      stopMomentum()
-      return
-    }
-    scroller.scrollLeft += vel
-    vel *= 0.92
-    momentumId = requestAnimationFrame(tickMomentum)
-  }
-
-  scroller.addEventListener('pointerdown', (e) => {
-    if (sheetOpen || e.button !== 0) return
-    if (e.target.closest('.pj-sheet, .pj-sheet-scrim')) return
-    // Project cards own their click — do not start drag / capture
-    if (e.target.closest('.pj-card--project')) return
-    stopMomentum()
-    drag = {
-      id: e.pointerId,
-      x: e.clientX,
-      scroll: scroller.scrollLeft,
-      moved: false,
-      captured: false,
-      lastX: e.clientX,
-      lastT: performance.now(),
-    }
+  // ── Pointer, wheel and touch ────────────────────────────────────────────────
+  gh.addEventListener('click', (e) => {
+    const tile = e.target.closest('.gh-tile')
+    if (tile) return select(+tile.dataset.i, { focus: true })
+    const stepB = e.target.closest('.gh-step')
+    if (stepB) return step(+stepB.dataset.step)
+    const sw = e.target.closest('.gh-switch-b')
+    if (sw) return setView(sw.dataset.view)
+    const row = e.target.closest('.gh-row')
+    if (row) { select(+row.dataset.i, { quiet: true }); return setView('hub') }
+    if (e.target.closest('[data-clean]')) return setClean(true)
+    if (e.target.closest('.gh-back')) return setClean(false)
+    if (clean && !e.target.closest('.gh-dock')) setClean(false)        // tap the demo to get the words back
   }, { signal })
 
-  scroller.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id) return
-    const dx = e.clientX - drag.x
-    if (!drag.moved) {
-      if (Math.abs(dx) < DRAG_THRESHOLD) return
-      drag.moved = true
-      try {
-        scroller.setPointerCapture(e.pointerId)
-        drag.captured = true
-      } catch { /* ignore */ }
-      scroller.classList.add('is-dragging')
-    }
-    scroller.scrollLeft = drag.scroll - dx
+  let wheelAt = 0
+  gh.addEventListener('wheel', (e) => {
+    if (view !== 'hub') return
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+    if (Math.abs(d) < 14) return
+    e.preventDefault()
     const now = performance.now()
-    const dt = Math.max(8, now - drag.lastT)
-    vel = ((drag.lastX - e.clientX) / dt) * 14
-    drag.lastX = e.clientX
-    drag.lastT = now
+    if (now - wheelAt < 520) return                    // one flick per gesture, even on an inertial trackpad
+    wheelAt = now
+    step(d > 0 ? 1 : -1)
+  }, { signal, passive: false })
+
+  let sw = null
+  gh.addEventListener('pointerdown', (e) => {
+    sw = e.pointerType !== 'mouse' && view === 'hub' && !e.target.closest('a, button, .gh-rail') ? { x: e.clientX, y: e.clientY } : null
+  }, { signal })
+  gh.addEventListener('pointerup', (e) => {
+    if (!sw) return
+    const dx = e.clientX - sw.x, dy = e.clientY - sw.y
+    sw = null
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) step(dx < 0 ? 1 : -1)
   }, { signal })
 
-  const endDrag = (e) => {
-    if (!drag || (e.pointerId != null && e.pointerId !== drag.id)) return
-    const didDrag = drag.moved
-    drag = null
-    scroller.classList.remove('is-dragging')
-    if (didDrag && !REDUCE && Math.abs(vel) > 0.4) {
-      momentumId = requestAnimationFrame(tickMomentum)
-    } else {
-      vel = 0
-    }
-  }
+  gh.addEventListener('pointercancel', () => { sw = null }, { signal })
 
-  scroller.addEventListener('pointerup', endDrag, { signal })
-  scroller.addEventListener('pointercancel', endDrag, { signal })
-
-  // ── Keyboard ──────────────────────────────────────────────────────────────
-  const projectCards = () => [...track.querySelectorAll('.pj-card--project')]
-
-  const focusCard = (i) => {
-    const cards = projectCards()
-    if (!cards.length) return
-    const idx = ((i % cards.length) + cards.length) % cards.length
-    const el = cards[idx]
-    el.focus({ preventScroll: true })
-    el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' })
-  }
-
-  collage.addEventListener('keydown', (e) => {
-    if (sheetOpen) return
-    const cards = projectCards()
-    const active = document.activeElement
-    const i = cards.indexOf(active)
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault()
-      focusCard(i < 0 ? 0 : i + 1)
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault()
-      focusCard(i < 0 ? 0 : i - 1)
-    } else if (e.key === 'Home') {
-      e.preventDefault()
-      focusCard(0)
-    } else if (e.key === 'End') {
-      e.preventDefault()
-      focusCard(cards.length - 1)
-    } else if ((e.key === 'Enter' || e.key === ' ') && active?.classList?.contains('pj-card--project')) {
-      e.preventDefault()
-      openSheet(active.getAttribute('data-id'))
-    }
+  // a little depth: the picture leans away from the pointer
+  let mRaf = 0
+  if (FINE) gh.addEventListener('pointermove', (e) => {
+    if (mRaf || calm() || view !== 'hub') return
+    mRaf = requestAnimationFrame(() => {
+      mRaf = 0
+      const o = gh.getBoundingClientRect()
+      stage.style.setProperty('--mx', ((e.clientX - o.left) / o.width * 2 - 1).toFixed(3))
+      stage.style.setProperty('--my', ((e.clientY - o.top) / o.height * 2 - 1).toFixed(3))
+    })
   }, { signal })
 
-  // Capture so sheet Esc wins over the global panel-close handler
+  // ── Keys. Captured at the document so ← → flick projects here instead of hopping islands. ──
+  const moveRow = (d) => {
+    const i = rows.indexOf(document.activeElement)
+    rows[Math.max(0, Math.min(N - 1, (i < 0 ? cur : i) + d))].focus()
+  }
   document.addEventListener('keydown', (e) => {
-    if (!sheetOpen || e.key !== 'Escape') return
-    e.preventDefault()
-    e.stopPropagation()
-    closeSheet()
+    if (dead || !gh.isConnected || !panel?.classList.contains('is-open') || e.altKey || e.ctrlKey || e.metaKey) return
+    const ae = document.activeElement
+    if (ae && ae !== document.body && !panel.contains(ae)) return     // something over the panel has the keyboard
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(ae?.tagName || '')) return
+    const k = e.key
+    let did = true
+    if (k === 'Escape') { if (clean) setClean(false); else did = false }
+    else if (k === 'l' || k === 'L') setView(view === 'hub' ? 'index' : 'hub')
+    else if (view === 'hub') {
+      if (k === 'ArrowRight') step(1)
+      else if (k === 'ArrowLeft') step(-1)
+      else if (k === 'Home') select(0, { dir: -1 })
+      else if (k === 'End') select(N - 1, { dir: 1 })
+      else if (/^[1-9]$/.test(k) && +k <= N) select(+k - 1)
+      else did = false
+    } else {
+      if (k === 'ArrowDown') moveRow(1)
+      else if (k === 'ArrowUp') moveRow(-1)
+      else if (k === 'Home') rows[0].focus()
+      else if (k === 'End') rows[N - 1].focus()
+      else if (k !== 'ArrowLeft' && k !== 'ArrowRight') did = false   // ← → do nothing in the list (and don't hop islands)
+    }
+    if (did) { e.preventDefault(); e.stopPropagation() }
   }, { signal, capture: true })
 
-  if (COARSE) collage.classList.add('is-coarse')
-  if (REDUCE) collage.classList.add('is-reduce')
+  document.addEventListener('visibilitychange', () => { const v = video(); if (v) playing() ? v.play().catch(() => {}) : v.pause() }, { signal })
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      measureAndLayout()
-    })
-  })
+  // Teardown runs after the panel's exit has played, so nothing blanks while it's still on screen.
+  root._disposeIsland = () => {
+    dead = true
+    ac.abort()
+    ro.disconnect()
+    cancelAnimationFrame(fRaf); cancelAnimationFrame(mRaf)
+    layers.forEach(l => { clearTimeout(l._t); l.querySelectorAll('video').forEach(v => { v.pause(); v.removeAttribute('src'); v.load() }) })
+  }
+
+  select(0, { quiet: true })
 }
