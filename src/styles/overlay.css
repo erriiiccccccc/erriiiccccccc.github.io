@@ -1109,7 +1109,8 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 .gh-shade { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.45s;
   background:
     linear-gradient(90deg, rgba(6, 5, 12, 0.97) 0%, rgba(6, 5, 12, 0.95) 30%, rgba(6, 5, 12, 0.74) 44%, rgba(6, 5, 12, 0.3) 60%, rgba(6, 5, 12, 0.03) 78%),
-    linear-gradient(0deg, rgba(6, 5, 12, 0.97) 0%, rgba(6, 5, 12, 0.4) 32%, transparent 56%); }
+    linear-gradient(0deg, rgba(6, 5, 12, 0.97) 0%, rgba(6, 5, 12, 0.4) 32%, transparent 56%),
+    linear-gradient(180deg, rgba(6, 5, 12, 0.78) 0%, rgba(6, 5, 12, 0.5) 15%, transparent 31%); }      /* the top: so the key hints and the switch read over a white site too */
 .gh-tint { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.5; transition: opacity 0.45s;
   background: radial-gradient(55% 70% at 0% 100%, var(--pa), transparent 70%); }
 

@@ -1,40 +1,72 @@
-// Project demo recorder — opens a URL in a real browser, runs a smooth scripted
-// "tour" (eased scroll + an animated fake cursor for clicks), and records a
-// 16:10 webm that drops straight into the Projects media stage, plus a poster.
+// Project demo recorder. Opens a URL in a real browser, runs a smooth scripted
+// "tour" (eased scroll + an animated fake cursor for clicks) and writes the
+// media the Mountain Game Hub plays:
+//
+//   public/projects/<slug>.webm        1920 wide: the full-panel demo
+//   public/projects/<slug>-sm.webm     1280 wide: phones and small windows
+//   public/projects/<slug>.jpg         the poster: the video's own first frame
+//   public/projects/<slug>-thumb.jpg   480 wide: the tiles and the list
+//
+// How it keeps the picture clean
+//   A browser's built-in recorder compresses hard while it records (about
+//   1 Mbit/s, in real time), and no later encode can put back what that threw
+//   away. So this takes the frames straight from the browser instead, nearly
+//   lossless and each with its real timestamp, and encodes them ONCE, at the
+//   size they're shown, at constant quality instead of under a bitrate cap.
+//   Colour is converted properly too (the frames are full-range BT.601, the
+//   video is tagged BT.709), so nothing shifts between the poster and the video.
 //
 // Usage:
-//   node scripts/record-demos.mjs                  # record every shot in SHOTS
+//   node scripts/record-demos.mjs                  # record every site in SHOTS
 //   node scripts/record-demos.mjs foundtech        # record one shot by slug
 //   node scripts/record-demos.mjs --url https://x.com --slug myproj   # ad-hoc
-//
-// Output: public/projects/<slug>.webm  (+ <slug>.jpg poster). The media stage
-// already auto-loads these. A bundled ffmpeg (@ffmpeg-installer/ffmpeg) trims
-// the black page-load lead-in off the front and re-encodes to VP9 so the very
-// first frame is the loaded site.
+//   EW_URL=http://localhost:5173/ node scripts/record-demos.mjs erics-world
+//                                                  # the game itself, from `npm run dev`
 //
 // Requires (dev only):
 //   npm i -D playwright @ffmpeg-installer/ffmpeg && npx playwright install chromium
+// A newer ffmpeg on the PATH is used when there is one (it encodes much faster).
 import { chromium } from 'playwright'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { mkdir, rename, rm, copyFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile, stat, link } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
-import ffmpeg from '@ffmpeg-installer/ffmpeg'
+import bundled from '@ffmpeg-installer/ffmpeg'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT = join(__dirname, '..', 'public', 'projects')
-const W = 1920, H = 1200   // 16:10 — matches the .pj-stage aspect ratio, recorded crisp
+const W = 1920, H = 1200   // 16:10, the shape of the Game Hub's stage
+const FPS = 30
+const FFMPEG = process.env.FFMPEG || (spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0 ? 'ffmpeg' : bundled.path)
 
 // ── Shot list ────────────────────────────────────────────────────────────────
-// { slug, url, steps? }. With no steps it runs the default tour() below. Add
-// your other site projects here so `npm run record` regenerates them all.
+// { slug, url, steps?, ready?, plain? }. With no steps it runs the default tour()
+// below. Add your other site projects here so `npm run record` regenerates them all.
+
+// Eric's World is a game, not a page to scroll: wait for the world, close the
+// intro, then walk about and dive onto the Pirate Ship. It needs the dev server
+// (npm run dev), because the __ew hook only exists there.
+async function gameReady(page){
+  await page.waitForFunction(() => !!window.__ew && document.getElementById('intro-close')?.closest('.is-open'), null, { timeout: 180000 })
+  await page.waitForTimeout(800)
+  await page.evaluate(() => document.getElementById('intro-close').click())
+  await page.waitForTimeout(1500)
+  await page.evaluate(() => { const b = document.getElementById('intro-close'); if (b?.closest('.is-open')) b.click() })
+  await page.waitForTimeout(3500)
+}
+const GAME_TOUR = [
+  { wait: 900 }, { hold: 'd', ms: 2600 }, { wait: 500 }, { hold: 'w', ms: 2400 }, { wait: 400 }, { hold: 'a', ms: 2200 }, { wait: 700 },
+  { run: "__ew.dive('pirate_ship')" }, { wait: 5200 }, { press: 'Escape' }, { wait: 1800 },
+]
+
 const SHOTS = [
   { slug: 'foundtech',      url: 'https://foundtech.com.my' },
   { slug: 'petaling-utama', url: 'https://pumwebsite.vercel.app/' },
   { slug: 'medmatch',       url: 'https://www.medmatch.institute/' },
   { slug: 'ygo',            url: 'https://ygowebsite.vercel.app/' },
   { slug: 'sotwds',         url: 'https://sotwds.vercel.app/' },
-  // { slug: 'erics-world',  url: 'http://localhost:5174' },
+  // only recorded when asked for by name, or when EW_URL says where the dev server is
+  { slug: 'erics-world',    url: process.env.EW_URL || 'http://localhost:5173/', ready: gameReady, steps: GAME_TOUR, plain: true, local: true },
 ]
 
 // Default tour for a site we don't have selectors for. Rather than one long
@@ -163,6 +195,9 @@ async function moveTo(page, target, dur){
 
 async function runStep(page, s){
   if (s.wait != null)         return page.waitForTimeout(s.wait)
+  if (s.hold){ await page.keyboard.down(s.hold); await page.waitForTimeout(s.ms || 1000); return page.keyboard.up(s.hold) }
+  if (s.press)                return page.keyboard.press(s.press)
+  if (s.run)                  return page.evaluate(s.run)          // a line of page JS, for apps with their own hooks
   if (s.paginate){
     const { dwell = 1300, dur = 1100, firstDwell = dwell } = s.paginate
     const stops = await page.evaluate(() => window.__demo.stops())
@@ -186,74 +221,100 @@ async function runStep(page, s){
   }
 }
 
-// ── ffmpeg: trim the black load-in off the front + re-encode VP9 ──────────────
-// `leadSec` = how long the page spent loading (blank/black) before the tour
-// began. We cut that so the very first frame is the loaded site.
-async function optimize(src, dest, leadSec = 0){
-  const ss = Math.max(0, leadSec - 0.15)   // small safety margin so we don't clip content
-  const args = ['-y']
-  if (ss > 0.05) args.push('-ss', ss.toFixed(2))
-  args.push('-i', src,
-    '-an',                          // no audio
-    '-c:v', 'libvpx-vp9',
-    '-crf', '33', '-b:v', '0',      // constant-quality; web-light but still sharp
-    '-vf', 'scale=1280:-2',         // capture is 1920 for sharpness, deliver at 1280 (stage is ~700px)
-    '-pix_fmt', 'yuv420p',
-    '-deadline', 'good', '-cpu-used', '2',
-    dest)
-  const r = spawnSync(ffmpeg.path, args, { stdio: 'ignore' })
-  if (r.status === 0){ await rm(src, { force: true }); return ' (vp9, trimmed ' + ss.toFixed(1) + 's)' }
-  // Fallback: ffmpeg failed for some reason — keep the raw webm.
-  await rename(src, dest).catch(async () => { await copyFile(src, dest); await rm(src, { force: true }) })
-  return ' (raw — ffmpeg failed)'
+// ── ffmpeg: the frames become the four files ─────────────────────────────────
+function ff(args, cwd){
+  const r = spawnSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { cwd, encoding: 'utf8' })
+  if (r.status !== 0) throw new Error('ffmpeg failed: ' + (r.stderr || r.error?.message || '').trim().split('\n').slice(-3).join(' | '))
 }
+// One pass at constant quality (no bitrate cap), long keyframe interval for a loop that's mostly easing.
+const vp9 = (crf) => ['-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', String(crf), '-g', String(FPS * 10), '-row-mt', '1', '-tile-columns', '2', '-deadline', 'good', '-cpu-used', '2', '-an',
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv']
+// JPEG frames are full-range BT.601; video wants limited-range BT.709. Lanczos keeps text edges crisp when scaling.
+const fit = (w) => `scale=${w}:-2:flags=lanczos:in_color_matrix=bt601:in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p`
+const kb = async (f) => Math.round((await stat(f)).size / 1024)
 
 // ── Record one shot ──────────────────────────────────────────────────────────
 async function record(shot){
   const { slug, url } = shot
   const tmp = join(OUT, '.rec-' + slug)
+  await rm(tmp, { recursive: true, force: true })
   await mkdir(tmp, { recursive: true })
 
-  const browser = await chromium.launch()
-  const ctx = await browser.newContext({
-    viewport: { width: W, height: H },
-    deviceScaleFactor: 2,
-    colorScheme: 'dark',
-    recordVideo: { dir: tmp, size: { width: W, height: H } },
-  })
-  await ctx.addInitScript(INIT)
-  // Video recording starts the instant this page exists — everything before the
-  // site paints is black. We timestamp here and trim that lead-in afterward.
-  const t0 = Date.now()
+  const gpu = process.platform === 'win32' ? ['--use-angle=d3d11'] : []
+  const browser = await chromium.launch({ args: [...gpu, '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio'] })
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, colorScheme: 'dark' })
+  if (!shot.plain) await ctx.addInitScript(INIT)
   const page = await ctx.newPage()
 
   console.log('→ ' + slug + '  ' + url)
-  try { await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 }) }
-  catch { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}) }
-  await page.waitForTimeout(800)
+  if (shot.plain) await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  else {
+    try { await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 }) }
+    catch { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {}) }
+  }
+  if (shot.ready) await shot.ready(page); else await page.waitForTimeout(800)
 
-  // Poster from the top of the page — JPEG so it stays web-light
-  await page.screenshot({ path: join(OUT, slug + '.jpg'), type: 'jpeg', quality: 82 }).catch(() => {})
+  // Frames straight from the browser, each with the moment it was drawn. A new one arrives only when
+  // the picture changes, so a held shot is one frame with a long duration, not thirty copies.
+  const cdp = await ctx.newCDPSession(page)
+  const frames = [], writes = []
+  let lastAt = Date.now()
+  cdp.on('Page.screencastFrame', (f) => {
+    lastAt = Date.now()
+    const file = 'f' + String(frames.length).padStart(5, '0') + '.jpg'
+    frames.push({ t: f.metadata.timestamp, file })
+    writes.push(writeFile(join(tmp, file), Buffer.from(f.data, 'base64')))
+    cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {})
+  })
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 96, maxWidth: W, maxHeight: H, everyNthFrame: 1 })
 
-  // Page is loaded + settled here, so this is the black-lead-in duration.
-  const leadSec = (Date.now() - t0) / 1000
-
+  // Let the page finish arriving (hero fades, late images) before the take begins: wait until the picture
+  // has held still for a moment. The video, and so the poster, starts on that settled picture.
+  if (!shot.plain){
+    const giveUp = Date.now() + 6000
+    await page.waitForTimeout(800)
+    while (Date.now() < giveUp && Date.now() - lastAt < 700) await page.waitForTimeout(100)
+  }
+  const first = Math.max(0, frames.length - 1)
+  const tStart = Date.now() / 1000
   for (const s of (shot.steps || tour())) await runStep(page, s)
-
-  const video = page.video()
-  await ctx.close()       // finalizes the recording
+  const tEnd = Date.now() / 1000
+  await cdp.send('Page.stopScreencast').catch(() => {})
+  await Promise.all(writes)
+  await ctx.close()
   await browser.close()
 
-  const src = await video.path()
-  const dest = join(OUT, slug + '.webm')
-  const note = await optimize(src, dest, leadSec)
+  const take = frames.slice(first).filter(f => f.t <= tEnd)
+  if (take.length < 2){
+    // the picture never changed: the site is down, under maintenance, or not a page that scrolls
+    await rm(tmp, { recursive: true, force: true })
+    console.warn('   ✗ skipped ' + slug + ': the page never moved (is the site down or under maintenance?). The files already there are kept.')
+    return
+  }
+  // Each frame was on screen from the moment it was drawn until the next one. Lay them out on an exact
+  // 30-a-second grid (a link per tick, no copies), so the pace of the video is the pace of the take.
+  const at = (f) => Math.min(tEnd, Math.max(tStart, f.t))
+  const ticks = Math.max(2, Math.round((tEnd - tStart) * FPS))
+  for (let k = 0, i = 0; k < ticks; k++){
+    const t = tStart + k / FPS
+    while (i + 1 < take.length && at(take[i + 1]) <= t) i++
+    await link(join(tmp, take[i].file), join(tmp, 'o' + String(k).padStart(5, '0') + '.jpg'))
+  }
+  console.log(`   ${take.length} frames drawn in ${(tEnd - tStart).toFixed(1)}s, encoding…`)
+
+  const out = (name) => join(OUT, slug + name)
+  const src = ['-framerate', String(FPS), '-i', 'o%05d.jpg']
+  ff([...src, '-vf', fit(1920), ...vp9(31), out('.webm')], tmp)
+  ff([...src, '-vf', fit(1280), ...vp9(33), out('-sm.webm')], tmp)
+  ff(['-i', take[0].file, '-q:v', '3', out('.jpg')], tmp)
+  ff(['-i', take[0].file, '-vf', 'scale=480:-2:flags=lanczos', '-q:v', '4', out('-thumb.jpg')], tmp)
   await rm(tmp, { recursive: true, force: true })
-  console.log('   ✓ ' + dest + note)
+  console.log(`   ✓ ${slug}.webm ${await kb(out('.webm'))} KB · -sm.webm ${await kb(out('-sm.webm'))} KB · .jpg ${await kb(out('.jpg'))} KB · -thumb.jpg ${await kb(out('-thumb.jpg'))} KB`)
 }
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2)
-let shots = SHOTS
+let shots = SHOTS.filter(s => !s.local || process.env.EW_URL)
 const ui = argv.indexOf('--url')
 if (ui >= 0){
   const url = argv[ui + 1]

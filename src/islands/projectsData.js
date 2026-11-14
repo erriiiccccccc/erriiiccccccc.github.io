@@ -6,8 +6,12 @@
 // HOW TO ADD MEDIA
 // ────────────────
 // A project with a recorded demo:
-//   drop public/projects/<id>.webm + <id>.jpg (npm run record makes both, at
-//   16:10) and add the id to HAS_DEMO.
+//   run `npm run record <id>` (see scripts/record-demos.mjs) and add the id to
+//   HAS_DEMO. It writes four files to public/projects/, all 16:10:
+//     <id>.webm        1920 wide, the full-panel demo
+//     <id>-sm.webm     1280 wide, for phones and small windows
+//     <id>.jpg         the poster (the video's own first frame)
+//     <id>-thumb.jpg   480 wide, for the tiles and the list
 // A project without one:
 //   give it `cover`: one of the drawn, moving covers in projectCovers.js.
 
@@ -120,9 +124,15 @@ const RAW = [
   },
 ]
 
-/** The projects, in hub order. `demo` is the recorded video (or null), `poster` its still. */
-export const PROJECTS = RAW.map((p) => ({
-  ...p,
-  demo: HAS_DEMO.has(p.id) ? `${BASE}projects/${p.id}.webm` : null,
-  poster: HAS_DEMO.has(p.id) ? `${BASE}projects/${p.id}.jpg` : null,
-}))
+/** Recorded before there was a small version: only the one clip, 1280 wide. (FoundTech's site was
+ *  showing a maintenance page when the others were re-recorded; `npm run record foundtech` once
+ *  it's back, then take it out of this set.) */
+const ONE_SIZE = new Set(['foundtech'])
+
+/** The projects, in hub order. `demo` is the recorded video (or null), `demoSm` the smaller cut of
+ *  it, `poster` its still and `thumb` a small still for tiles. */
+export const PROJECTS = RAW.map((p) => {
+  if (!HAS_DEMO.has(p.id)) return { ...p, demo: null, demoSm: null, poster: null, thumb: null }
+  const f = `${BASE}projects/${p.id}`
+  return { ...p, demo: `${f}.webm`, demoSm: ONE_SIZE.has(p.id) ? `${f}.webm` : `${f}-sm.webm`, poster: `${f}.jpg`, thumb: `${f}-thumb.jpg` }
+})

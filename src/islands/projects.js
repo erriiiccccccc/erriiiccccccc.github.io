@@ -38,7 +38,7 @@ function inkOn(hex) {
   return L > 0.3 ? '#0c0a12' : '#ffffff'
 }
 
-const thumb = (p) => p.poster ? `<img src="${p.poster}" alt="" loading="lazy" decoding="async">` : coverHtml(p.cover, { still: true })
+const thumb = (p) => p.thumb ? `<img src="${p.thumb}" alt="" loading="lazy" decoding="async">` : coverHtml(p.cover, { still: true })
 
 const tilesHtml = PROJECTS.map((p, i) => `
   <button type="button" class="gh-tile" role="tab" id="gh-tab-${i}" aria-selected="false" aria-controls="gh-info" tabindex="-1" data-i="${i}" style="--ta:${p.accent}">
@@ -155,7 +155,10 @@ export function initProjects(root) {
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '')
     v.preload = 'auto'
     v.poster = p.poster
-    v.src = p.demo
+    // The 1920 clip when the stage is big enough to show it; the 1280 one on phones, in small windows,
+    // and for anyone on data saver. Either way the clip is never stretched far past its own size.
+    const lite = navigator.connection?.saveData || stage.clientWidth * Math.min(window.devicePixelRatio || 1, 2) < 1400
+    v.src = lite ? p.demoSm : p.demo
     v.addEventListener('playing', () => v.classList.add('is-on'), { once: true })
     const tile = tiles[PROJECTS.indexOf(p)]
     v.addEventListener('timeupdate', () => { if (v.duration) tile.style.setProperty('--prog', (v.currentTime / v.duration).toFixed(3)) })
