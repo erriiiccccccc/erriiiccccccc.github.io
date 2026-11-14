@@ -1430,6 +1430,9 @@ body.reduced-motion .gh-n b.out { display: none; }
 .hs-chip:hover { background: rgba(206, 234, 255, 0.2); border-color: rgba(206, 234, 255, 0.45); transform: translateY(-1px); }
 .hs-chip:active { transform: scale(0.95); }
 .hs-chip:disabled { opacity: 0.45; cursor: default; transform: none; }
+/* after an answer the suggestions change: the old ones step out, the new ones rise in one after another */
+.hs .hs-chips.is-out .hs-chip { opacity: 0; transform: translateY(5px); }
+.hs .hs-chips .hs-chip.is-new { animation: hs-rise 0.42s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 55ms); }
 .hs.is-fresh .hs-chip { animation: hs-rise 0.45s var(--ease-out) both; animation-delay: 1.5s; }
 .hs.is-fresh .hs-chip:nth-child(2) { animation-delay: 1.57s; } .hs.is-fresh .hs-chip:nth-child(3) { animation-delay: 1.64s; }
 .hs.is-fresh .hs-chip:nth-child(4) { animation-delay: 1.71s; } .hs.is-fresh .hs-chip:nth-child(5) { animation-delay: 1.78s; }

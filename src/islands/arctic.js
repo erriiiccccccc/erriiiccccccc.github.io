@@ -22,7 +22,56 @@ const KEEP = 12        // messages sent with each question (the server keeps the
 const MAX_IN = 1000
 const GREETING = "Hello, I'm Hui Sin! I'm someone special to Eric, and I'm here to answer your questions because I know all about him. Ask me anything: his work, his projects, the places he's been."
 const FOGGY = "My snow globe's a bit foggy right now. Try again in a moment, or reach Eric at ericng8766@gmail.com."
-const CHIPS = ['What does Eric do?', 'Can he code in React?', "What's his best project?", 'Does he like hiking?', 'How do I reach him?']
+// Suggested questions, by topic. Five show at a time. After each answer they change: two more on what
+// was just asked, then one from each other topic, so there is always somewhere new to go. Every one of
+// these is answered by a line in api/_huisin/knowledge.mjs: add a fact there before adding a question here.
+const REACH = 'How do I reach him?'
+const SUGGEST = [
+  ['work', 'What does Eric do?'], ['skills', 'Can he code in React?'], ['projects', "What's his best project?"], ['travel', 'Does he like hiking?'], ['reach', REACH],
+  ['work', 'What did he do at Barclays?'], ['work', 'Is he open to work?'], ['work', 'Has he worked with real clients?'], ['work', 'What was his first job?'],
+  ['skills', 'Which languages does he code in?'], ['skills', 'Does he know AI and machine learning?'], ['skills', 'Has he built robots?'],
+  ['projects', "What's MedMatch?"], ['projects', 'How did he build this world?'], ['projects', 'What was his dissertation about?'], ['projects', 'Has he won a hackathon?'],
+  ['travel', 'How many countries has he been to?'], ['travel', "What's the best place he's been?"], ['travel', 'Which mountains has he climbed?'], ['travel', 'What are his university badges?'],
+  ['life', "What's his favourite food?"], ['life', 'What music does he like?'], ['life', 'Which sports does he play?'], ['life', 'What languages does he speak?'],
+  ['world', 'What can I do in this world?'], ['world', 'Who are you, Hui Sin?'],
+]
+const CHIPS = SUGGEST.slice(0, 5).map(s => s[1])
+// a typed question's topic, from its words (first match wins)
+const TOPIC_WORDS = [
+  ['reach', /\b(reach|contact|email|e-mail|linkedin|get in touch|message him)\b/i],
+  ['work', /\b(work|works|job|jobs|career|barclays|blackrock|intern|internship|experience|hire|hiring|freelance|client|clients|audit)\b/i],
+  ['projects', /\b(project|projects|medmatch|foundtech|ygo|petaling|dissertation|hackathon|portfolio|website|websites|built|build|made|three\.?js)\b/i],
+  ['skills', /\b(code|coding|react|python|java|javascript|typescript|skill|skills|stack|program|programming|ai|ml|machine learning|robot|robots|tools?)\b/i],
+  ['travel', /\b(travel|travels|travelled|country|countries|hike|hikes|hiking|mountain|mountains|trip|trips|iceland|morocco|university|universities|badge|badges|place|places)\b/i],
+  ['life', /\b(food|eat|music|laufey|sport|sports|badminton|basketball|hobby|hobbies|game|games|favourite|favorite|speak|language)\b/i],
+  ['world', /\b(world|planet|island|islands|jukebox|doodle|who are you|hui sin)\b/i],
+]
+const TOPICS = ['work', 'projects', 'skills', 'travel', 'life', 'world']
+const norm = (q) => q.trim().toLowerCase()
+const topicOf = (q) => (SUGGEST.find(s => norm(s[1]) === norm(q)) || TOPIC_WORDS.find(([, re]) => re.test(q)) || [null])[0]
+const askedQs = new Set()                 // kept while the page is open, like the conversation itself
+let shownQs = CHIPS.slice(), turn = 0
+
+/** The next five suggestions after `last` was asked. */
+function nextSuggestions(last) {
+  askedQs.add(norm(last))
+  turn++
+  const topic = topicOf(last)
+  const unasked = SUGGEST.filter(s => !askedQs.has(norm(s[1])))
+  const pool = unasked.length >= 5 ? unasked : SUGGEST.filter(s => norm(s[1]) !== norm(last))      // all asked: start over
+  const out = []
+  const take = (ok, n) => { for (const s of pool) { if (n <= 0 || out.length >= 5) return; if (!out.includes(s) && ok(s)) { out.push(s); n-- } } }
+  const isNew = (s) => !shownQs.includes(s[1])
+  if (topic && topic !== 'reach') take(s => s[0] === topic && isNew(s), 2)                         // more on what they just asked about
+  for (let k = 0; k < TOPICS.length; k++) { const t = TOPICS[(k + turn) % TOPICS.length]; if (t !== topic) take(s => s[0] === t && isNew(s), 1) }
+  take(isNew, 5)
+  take(() => true, 5)
+  // how to reach Eric stays one tap away until it has been asked
+  if (!askedQs.has(norm(REACH)) && !out.some(s => s[1] === REACH)) out[Math.min(out.length, 4)] = SUGGEST[4]
+  shownQs = out.slice(0, 5).map(s => s[1])
+  return shownQs
+}
+const chipHtml = (qs, fresh) => qs.map((q, k) => `<button type="button" class="hs-chip${fresh ? ' is-new' : ''}" style="--k:${k}" data-ask="${q.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${q.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</button>`).join('')
 const PHOTO = {
   src: `${BASE}islandphoto/arcticislandphoto.jpeg`,
   alt: 'Eric and three friends in helmets, holding ice axes inside a blue glacier crevasse',
@@ -87,7 +136,7 @@ export const ARCTIC_HTML = `
     </div>
     <div class="hs-log" role="log" aria-live="polite" aria-label="Chat with Hui Sin"></div>
     <div class="hs-chips" role="group" aria-label="Suggested questions">
-      ${CHIPS.map(c => `<button type="button" class="hs-chip" data-ask="${c.replace(/"/g, '&quot;')}">${c}</button>`).join('')}
+      ${chipHtml(CHIPS, false)}
     </div>
     <form class="hs-form" autocomplete="off">
       <label class="sr-only" for="hs-input">Ask Hui Sin a question</label>
@@ -306,6 +355,26 @@ export function initArctic(root) {
 
   // ── Sending ───────────────────────────────────────────────────────────────
   const setBusy = (on) => { busy = on; send.disabled = on; el.classList.toggle('is-typing', on); el.querySelectorAll('.hs-chip').forEach(c => { c.disabled = on }) }
+
+  // Fresh suggestions after every answer: the old ones step out, the new ones rise in one after another.
+  if (shownQs.join('|') !== CHIPS.join('|')) chips.innerHTML = chipHtml(shownQs, false)      // reopened mid-conversation
+  let chipT = 0
+  function swapChips(last) {
+    const qs = nextSuggestions(last)
+    const focused = chips.contains(document.activeElement)
+    const put = () => {
+      if (!here()) return
+      chips.classList.remove('is-out')
+      chips.innerHTML = chipHtml(qs, !calm())
+      chips.scrollLeft = 0
+      if (busy) chips.querySelectorAll('.hs-chip').forEach(c => { c.disabled = true })
+      else if (focused) chips.querySelector('.hs-chip')?.focus({ preventScroll: true })
+    }
+    clearTimeout(chipT)
+    if (calm()) return put()
+    chips.classList.add('is-out')
+    chipT = setTimeout(put, 180)
+  }
   const hasText = () => form.classList.toggle('has-text', !!input.value.trim())
   input.addEventListener('input', hasText)
   hasText()
@@ -419,6 +488,7 @@ export function initArctic(root) {
     out.setAttribute('aria-busy', 'false')
     el.classList.remove('is-talking')
     setBusy(false)
+    swapChips(q)
     toEnd(true)
   }
 
