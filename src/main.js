@@ -33,6 +33,7 @@ import { WorldJukebox } from './jukebox/worldPlayer.js'
 import { HOUSE_LOOPS } from './jukebox/houseLoops.js'
 import { fetchPattern } from './jukebox/jukeboxApi.js'
 import { DoodleBoard } from './scene/DoodleBoard.js'
+import { Pip } from './scene/Pip.js'
 import { BOARD_DRAWINGS } from './data/doodleBoard.js'
 import { LoadDirector } from './loading/LoadDirector.js'
 import { perfMark, perfMeasure, perfNavBaseline, perfSummary, isPerfEnabled } from './loading/perfLog.js'
@@ -855,6 +856,9 @@ perfMark('world_download_start')
         console.warn(`[world] could not find a spot on "${MEADOW_ISLAND}" — jukebox skipped`)
       }
 
+      // Pip, the snow imp hiding on Arctic (an easter egg: no arrow, no marker)
+      setupPip()
+
       // The props and markers were placed in planetGroup space, but the globe
       // itself (model) stays hidden and then slides in during the loader
       // arrival. Left as planetGroup siblings they float in empty space before
@@ -867,6 +871,7 @@ perfMark('world_download_start')
       const noRaycast = (root) => root.traverse(o => { o.raycast = () => {} })
       const adopt = (obj) => { model.attach(obj); noRaycast(obj) }
       if (jukeboxProp) adopt(jukeboxProp.group)
+      if (pip && !pipFriend) adopt(pip.group)
       if (doodleBoard) adopt(doodleBoard.group)
       for (const poi of POIS) {
         adopt(poi.marker.group)
@@ -1020,6 +1025,152 @@ function addPoi({ key, target, island, color, iconKey, title, sub, foundSub, ope
 }
 
 const _dropRay = new THREE.Raycaster()
+
+// ── Pip: an easter egg on Arctic ─────────────────────────────────────────────
+// It hides in a mound of snow. Catch it (F when you're next to it) and it hides
+// somewhere else; the third time it comes with you. How far someone has got is
+// remembered in this browser.
+const ARCTIC_ISLAND = 'arctic_island'
+const PIP_KEY = 'ew-pip-v1'
+let pip = null, pipPoi = null, pipSpots = [], pipSpot = 0
+let pipCaught = 0, pipFriend = false
+try { const s = JSON.parse(localStorage.getItem(PIP_KEY) || '{}'); pipCaught = Math.max(0, Math.min(3, s.caught | 0)); pipFriend = !!s.friend } catch { /* no storage: it just starts over */ }
+const savePip = () => { try { localStorage.setItem(PIP_KEY, JSON.stringify({ caught: pipCaught, friend: pipFriend })) } catch { /* fine */ } }
+const _pipV = new THREE.Vector3()
+
+/**
+ * Open ground on an island: spots a small prop can sit, spread around it.
+ * Rays come down from above in a ring; a hit only counts if the surface faces
+ * up, and anything standing well above the lowest hits (a roof, a treetop) is
+ * dropped. planetGroup-local { position, normal }.
+ */
+function groundSpots(islandName, want = 6) {
+  const meshes = islandMeshes[islandName]
+  if (!meshes?.length) return []
+  planetGroup.updateMatrixWorld(true)
+  const box = new THREE.Box3()
+  for (const m of meshes) box.expandByObject(m)
+  if (box.isEmpty()) return []
+  const centre = box.getCenter(new THREE.Vector3())
+  const size   = box.getSize(new THREE.Vector3())
+  const reach  = Math.max(size.x, size.y, size.z) * 0.5
+  const core   = new THREE.Vector3().setFromMatrixPosition(planetGroup.matrixWorld)
+  const normal = centre.clone().sub(core).normalize()
+  const t1 = new THREE.Vector3().crossVectors(normal, Math.abs(normal.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize()
+  const t2 = new THREE.Vector3().crossVectors(normal, t1)
+  const above = core.distanceTo(centre) + reach + 30
+  const hits = []
+  const RING = 24
+  for (let k = 0; k < RING; k++) {
+    const a = (k / RING) * Math.PI * 2, frac = [0.3, 0.46, 0.38][k % 3]
+    const dir = centre.clone().addScaledVector(t1, Math.cos(a) * reach * frac).addScaledVector(t2, Math.sin(a) * reach * frac).sub(core).normalize()
+    _dropRay.set(core.clone().addScaledVector(dir, above), dir.clone().negate())
+    _dropRay.layers.enableAll()
+    const hit = _dropRay.intersectObjects(meshes, true)[0]
+    if (!hit || !hit.face) continue
+    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+    if (n.dot(dir) < 0.8) continue                                   // the side of something, not ground
+    hits.push({ world: hit.point.clone(), r: hit.point.distanceTo(core) })
+  }
+  if (hits.length < 2) return []
+  const low = hits.map(h => h.r).sort((x, y) => x - y)[Math.floor(hits.length * 0.25)]
+  const ground = hits.filter(h => h.r < low + 0.5)
+  const out = [], step = Math.max(1, Math.floor(ground.length / want))
+  for (let i = 0; i < ground.length && out.length < want; i += step) {
+    const local = planetGroup.worldToLocal(ground[i].world.clone())
+    out.push({ position: local, normal: local.clone().normalize() })
+  }
+  return out
+}
+
+function setupPip() {
+  pip = new Pip()
+  if (pipFriend) { pip.setFriend(); scene.add(pip.group); return }
+  pipSpots = groundSpots(ARCTIC_ISLAND, 6)
+  if (pipSpots.length < 2) {
+    if (import.meta.env.DEV) console.warn('[world] no open snow found on Arctic: Pip skipped')
+    pip = null
+    return
+  }
+  planetGroup.add(pip.group)
+  placePip(pipCaught % pipSpots.length)
+  pipPoi = addPoi({
+    key:      'pip',
+    target:   pip.group,
+    island:   ARCTIC_ISLAND,
+    color:    0x7DD3FC,
+    iconKey:  'snowflake',
+    title:    'Something in the snow',
+    sub:      'catch it!',
+    foundSub: 'catch it again!',
+    open:     catchPip,
+    arrow:    false,                 // an easter egg: nothing points at it
+    range:    3,
+    measure:  () => pip.busy ? Infinity : pip.group.getWorldPosition(_pipV).distanceTo(modelGroup.position),
+  })
+}
+
+/** Put Pip's mound on hiding spot `i` (planetGroup space), whatever it's parented to by now. */
+function placePip(i) {
+  pipSpot = i
+  const spot = pipSpots[i], parent = pip.group.parent
+  planetGroup.attach(pip.group)
+  pip.group.position.copy(spot.position)
+  pip.group.quaternion.setFromUnitVectors(WORLD_UP, spot.normal)
+  pip.group.scale.setScalar(1)
+  if (parent && parent !== planetGroup) parent.attach(pip.group)
+}
+
+function catchPip() {
+  if (!pip || pipFriend || pip.busy) return
+  pipCaught++
+  savePip()
+  pip.caught()
+  sfx.pip()
+  if (pipPoi) pipPoi.title = 'Pip'                 // now you know its name
+  if (pipCaught >= 3) {
+    showDiscoverToast(`<span class="dt-row">${svgIcon('snowflake', 16)}<span><strong>You caught Pip three times!</strong> It's coming with you now.</span></span>`, 5200)
+    setTimeout(befriendPip, 1000)
+    return
+  }
+  showDiscoverToast(`<span class="dt-row">${svgIcon('snowflake', 16)}<span><strong>You caught Pip!</strong> ${pipCaught} of 3. It's hiding somewhere else now.</span></span>`, 4200)
+  setTimeout(() => {
+    // the spot farthest from this one, so the hunt takes you across the island
+    const here = pipSpots[pipSpot].position
+    let best = -1, bestD = -1
+    pipSpots.forEach((s, k) => { const d = s.position.distanceTo(here); if (k !== pipSpot && d > bestD) { best = k; bestD = d } })
+    placePip(best)
+    pip.reset()
+  }, 1100)
+}
+
+function befriendPip() {
+  pipFriend = true
+  savePip()
+  if (pipPoi) pipPoi.island = '__nowhere__'        // no more prompt: it's not hiding any more
+  scene.add(pip.group)                             // out of the planet: it walks with him now
+  pip.group.scale.setScalar(1)
+  pip.group.quaternion.identity()
+  pip.group.position.copy(modelGroup.position)
+  pip.setFriend()
+  sfx.pip()
+}
+
+/** Pip the friend: beside him and a step behind, catching up when he moves. */
+function tickPipFriend(dt, moving) {
+  const ry = modelGroup.rotation.y
+  // his own right and back, on the ground at his feet
+  _pipV.set(Math.cos(ry) * 1.15 - Math.sin(ry) * 0.6, 0, -Math.sin(ry) * 1.15 - Math.cos(ry) * 0.6).add(modelGroup.position)
+  const k = 1 - Math.exp(-dt * (moving ? 5 : 8))
+  pip.group.position.x += (_pipV.x - pip.group.position.x) * k
+  pip.group.position.z += (_pipV.z - pip.group.position.z) * k
+  pip.group.position.y = modelGroup.position.y
+  pip.group.rotation.y = ry
+  pip.group.scale.setScalar(modelGroup.scale.x)
+  // he's the hero of About and of the close-ups: Pip waits out of shot
+  pip.group.visible = modelGroup.visible && (_charRoot ? _charRoot.visible : true) && !presentationMode && !aboutOverlay.isOpen() && !isTeleporting
+  pip.update(dt, { moving: moving && isGrounded, calm: reducedMotion })
+}
 
 /**
  * Find a spot to stand a procedural prop on, somewhere on `islandName`.
@@ -1961,6 +2112,24 @@ if (import.meta.env.DEV) {
     get audioOwner() { return audio.owner },
     feet: () => ({ L: { ..._footSt.L }, R: { ..._footSt.R } }),
     get order() { return HOP_ORDER.slice() },
+    // Pip, for testing: __ew.pip.goto(1) turns the planet so hiding spot 1 is under you,
+    // __ew.pip.here() puts its mound beside you, __ew.pip.forget() starts the hunt over
+    pip: {
+      get state() { return { caught: pipCaught, friend: pipFriend, spots: pipSpots.length, spot: pipSpot, near: !!pipPoi?.near, busy: !!pip?.busy } },
+      get group() { return pip?.group },
+      goto(i) {
+        const w = planetGroup.localToWorld(pipSpots[i].position.clone()).normalize()
+        planetGroup.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(w, WORLD_UP))
+      },
+      here() {
+        const spot = surfaceAt(ARCTIC_ISLAND, modelGroup.position.clone().add(new THREE.Vector3(1.25, 0, 0.5)))
+        if (!spot) return false
+        pipSpots.push(spot); placePip(pipSpots.length - 1); pip.reset()
+        return true
+      },
+      catch: () => catchPip(),
+      forget() { try { localStorage.removeItem(PIP_KEY) } catch { /* fine */ } },
+    },
   }
 }
 // ✕ / backdrop click inside the world panel → run the canonical close so
@@ -2675,6 +2844,13 @@ function animate() {
         ? doodleBoard.group.getWorldPosition(_jbPos).distanceTo(modelGroup.position) : Infinity
       doodleBoard.update(dt, reducedMotion, db < BOARD_ZONE)
     }
+    if (pip && !pipFriend) {
+      const awake = activeIslandName === ARCTIC_ISLAND
+      let face = 0
+      // it turns its face to the camera (which sits behind Eric), so whoever's playing sees its eyes, not its back
+      if (awake) { pip.group.worldToLocal(_pipV.copy(camSystem.camera.position)); face = Math.atan2(_pipV.x, _pipV.z) }
+      pip.update(dt, { awake, near: !!pipPoi?.near, calm: reducedMotion, face })
+    }
     updateCharFade(dt)
     updateScopeFade(dt)
     // Once you're standing on Meadow, turn the props to face the camera.
@@ -2930,6 +3106,7 @@ function animate() {
     introOverlay.open(returning)
   }
 
+  if (pip && pipFriend) tickPipFriend(dt, moving)
   tickHop()
   applyViewShift()
   if (aboutOverlay.isOpen()) tickAboutAnchor()

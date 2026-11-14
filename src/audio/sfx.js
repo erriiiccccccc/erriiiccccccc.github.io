@@ -453,6 +453,14 @@ export class Sfx {
     this.tone(f, { type: 'triangle', a: 0.004, d: 0.06, gain: 0.034, to: f * 1.07, verb: 0.06 })
   }
 
+  /** Pip, caught: a tiny squeak (two quick rising chirps and a sparkle). */
+  pip() {
+    if (!this._ok() || this._throttle('pip', 200)) return
+    this.tone(1250, { type: 'triangle', a: 0.004, d: 0.07, gain: 0.04, to: 2100, verb: 0.2 })
+    this.tone(1500, { at: 0.09, type: 'triangle', a: 0.004, d: 0.09, gain: 0.04, to: 2600, verb: 0.2 })
+    this._bell(3136, { at: 0.2, gain: 0.02, d: 0.5, verb: 0.4 })
+  }
+
   /** On rises, off falls. */
   toggle(on) {
     if (!this._ok()) return
