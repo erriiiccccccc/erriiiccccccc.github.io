@@ -37,6 +37,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- display=optional: never block readiness on webfonts; system fallbacks are fine -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=optional" rel="stylesheet" />
+  <!-- The title face. display=swap, because titles only appear once the world has loaded (panels, the
+       title card), so it has seconds to arrive and nothing visible ever shifts. With "optional" a
+       first-time visitor would get the fallback serif for their whole visit. -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./src/styles/overlay.css" />
   <link rel="preload" href="./world.glb" as="fetch" crossorigin />
 </head>

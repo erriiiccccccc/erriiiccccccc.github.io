@@ -50,6 +50,10 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 THREE.Mesh.prototype.raycast = acceleratedRaycast
 
+// Titles are Instrument Serif. The stylesheet asks for it with display=optional (never block on a
+// webfont), so start fetching it now: by the time a panel opens it's ready, even on a first visit.
+document.fonts?.load("400 1em 'Instrument Serif'").catch(() => {})
+
 const ISLAND_NAMES = Object.keys(ISLANDS)
 const ISLAND_COLOR_HEX = {}
 for (const name of ISLAND_NAMES) {
