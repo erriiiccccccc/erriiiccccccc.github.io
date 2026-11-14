@@ -79,12 +79,12 @@ class AudioEngine {
    * @param {boolean} [now] jump there instead of easing
    */
   setLevel(v, now = false) {
-    if (!this.master || !this.ctx) return
-    const g = this.master.gain
-    if (now) { g.cancelScheduledValues(this.ctx.currentTime); g.setValueAtTime(v, this.ctx.currentTime); this._level = v; return }
+    if (!this.level || !this.ctx) return
+    const g = this.level.gain, x = v / this.fullLevel            // fullLevel is "as loud as the Volume setting allows"
+    if (now) { g.cancelScheduledValues(this.ctx.currentTime); g.setValueAtTime(x, this.ctx.currentTime); this._level = v; return }
     if (Math.abs((this._level ?? 0.9) - v) < 0.004) return
     this._level = v
-    g.setTargetAtTime(v, this.ctx.currentTime, 0.12)
+    g.setTargetAtTime(x, this.ctx.currentTime, 0.12)
   }
 
   /** True when `owner` is the one currently making noise. */
@@ -99,8 +99,15 @@ class AudioEngine {
     this.master.gain.value = 0.9
     this.master.connect(ctx.destination)
 
+    // The music's own level (the world plays quieter than the shelf and fades with distance, see
+    // setLevel). It has its own gain, between the music and the master, so the master is the Volume
+    // setting and nothing else. Sound effects join at the master, so they never dip with the music.
+    this.level = ctx.createGain()
+    this.level.gain.value = 1
+    this.level.connect(this.master)
+
     this.dry = ctx.createGain()
-    this.dry.connect(this.master)
+    this.dry.connect(this.level)
 
     // Reverb: a convolver fed a noise impulse we generate per mood, not a
     // loaded IR file. `_setMood` swaps the buffer and the send level.
@@ -111,7 +118,7 @@ class AudioEngine {
     this.revReturn.gain.value = 0.9
     this.revSend.connect(this.reverb)
     this.reverb.connect(this.revReturn)
-    this.revReturn.connect(this.master)
+    this.revReturn.connect(this.level)
 
     // Delay with a feedback loop, for the night mood's long echoes.
     this.delay    = ctx.createDelay(1.5)
@@ -126,7 +133,7 @@ class AudioEngine {
     this.delay.connect(this.delTone)
     this.delTone.connect(this.delFb)
     this.delFb.connect(this.delay)          // the loop
-    this.delTone.connect(this.master)
+    this.delTone.connect(this.level)
   }
 
   /** Point the sends and the impulse at one mood's voicing. */

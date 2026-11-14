@@ -446,6 +446,13 @@ export class Sfx {
     this._bell(1760, { at: 0.08, gain: 0.026, d: 0.55, verb: 0.3 })
   }
 
+  /** Eric talking: one soft, low blip per few letters, each at a slightly different pitch, like a game's speech. */
+  talk() {
+    if (!this._ok() || this._throttle('talk', 50)) return
+    const f = 165 + Math.random() * 75
+    this.tone(f, { type: 'triangle', a: 0.004, d: 0.06, gain: 0.034, to: f * 1.07, verb: 0.06 })
+  }
+
   /** On rises, off falls. */
   toggle(on) {
     if (!this._ok()) return

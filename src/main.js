@@ -30,6 +30,8 @@ import { AsciiScreen } from './fx/AsciiScreen.js'
 import { QuestMarker } from './scene/QuestMarker.js'
 import { Gramophone } from './scene/Gramophone.js'
 import { WorldJukebox } from './jukebox/worldPlayer.js'
+import { HOUSE_LOOPS } from './jukebox/houseLoops.js'
+import { fetchPattern } from './jukebox/jukeboxApi.js'
 import { DoodleBoard } from './scene/DoodleBoard.js'
 import { BOARD_DRAWINGS } from './data/doodleBoard.js'
 import { LoadDirector } from './loading/LoadDirector.js'
@@ -188,6 +190,8 @@ let closeUpWhich  = null       // 'jukebox' | 'studio' | 'board'
 
 aboutOverlay.onStartClose = () => {
   sfx.close('card', 'meadow_island')
+  gsap.killTweensOf(modelGroup.position)                       // a hop in progress
+  if (audio.isPlaying(ABOUT_OWNER)) { audio.stop(ABOUT_OWNER); audio.setLevel(audio.fullLevel) }
   // 1. Lights snap off first (quick) — character goes dark while still zoomed in.
   aboutLightsOn = false
   // 2. Once they're gone: pan out, then turn him away and drop him. The turn
@@ -1434,7 +1438,7 @@ gltfCharLoader.load(LOCO_BASE + 'ericlowpolyskeleton.glb', gltf => {
     const emotes = [clipOf(a), clipOf(c), clipOf(g)].filter(Boolean)
 
     // idle is the static bind pose (built by the controller); walk/run animate
-    animCtrl.loadGlbClips(root, { idle: null, walk: walkClip, run: runClip, emotes })
+    animCtrl.loadGlbClips(root, { idle: null, walk: walkClip, run: runClip, emotes, named: { nod: clipOf(a), call: clipOf(c), wave: clipOf(g) } })
     modelLoaded = true
 
     _footBones.L = root.getObjectByName('L_Foot')
@@ -1672,6 +1676,8 @@ function openIslandPanel() {
       // Clear tracking offsets so there's no jump on first frame
       for (const v of Object.values(_aboutOffsets)) { v.x = 0; v.y = 0 }
 
+      _aboutBaseY = modelGroup.position.y
+      refreshAboutCards()
       aboutOverlay.open()
       // Lights come on only now — after he's up at the top, not on E press
       aboutLightsOn = true
@@ -1729,6 +1735,91 @@ function hopFrom(from, dir) {
   _hopTarget   = next
   _hopLandedAt = 0
   startTeleport(next)
+}
+
+// ── About: Character Select ─────────────────────────────────────────────────
+// Emotes: wave, nod and call are clips on his rig. Jump is a small hop, since About holds him in the air.
+let _aboutBaseY     = 0          // his height while About holds him (set as it opens)
+let _aboutTrackHold = 0          // until then, head tracking yields to an emote clip
+let _aboutTrackHeld = false
+function aboutEmote(name) {
+  if (!aboutOverlay.isOpen() || !presentationMode || !modelLoaded) return
+  if (name === 'jump') {
+    gsap.killTweensOf(modelGroup.position)
+    modelGroup.position.y = _aboutBaseY
+    sfx.jump()
+    gsap.timeline()
+      .to(modelGroup.position, { y: _aboutBaseY + 0.5, duration: 0.24, ease: 'power2.out' })
+      .to(modelGroup.position, { y: _aboutBaseY, duration: 0.3, ease: 'power2.in', onComplete: () => sfx.land('meadow_island') })
+      .to(modelGroup.position, { y: _aboutBaseY + 0.07, duration: 0.09, ease: 'power1.out' })
+      .to(modelGroup.position, { y: _aboutBaseY, duration: 0.1, ease: 'power1.in' })
+    return
+  }
+  const dur = animCtrl.playEmote(name)
+  if (dur) { _aboutTrackHold = performance.now() + (dur + 0.4) * 1000; _aboutTrackHeld = true }
+}
+/** His head follows the pointer, except while an emote is using it (a nod is all head). */
+function aboutTrackingTick() {
+  if (performance.now() < _aboutTrackHold) return
+  if (_aboutTrackHeld) {
+    _aboutTrackHeld = false
+    // pick the tracking up from wherever the clip left his head, so nothing snaps
+    for (const key of ['head', 'neck', 'spine']) {
+      const bone = _aboutBones[key], base = _aboutBase[key], cfg = _ABOUT_TRACK_CFG[key]
+      if (!bone || !base) continue
+      _aboutOffsets[key].y = THREE.MathUtils.clamp(bone.rotation.y - base.y, -cfg.yc, cfg.yc)
+      _aboutOffsets[key].x = THREE.MathUtils.clamp(bone.rotation.x - base.x, -cfg.pc, cfg.pc)
+    }
+  }
+  _applyAboutTracking()
+}
+/** Where his head is on screen: the speech bubble hangs off it. */
+const _aboutHeadV = new THREE.Vector3()
+function tickAboutAnchor() {
+  if (_aboutBones.head) { _aboutBones.head.getWorldPosition(_aboutHeadV); _aboutHeadV.y += 0.14 }
+  else { modelGroup.getWorldPosition(_aboutHeadV); _aboutHeadV.y += 1.9 }
+  const up = _aboutHeadV.y
+  _aboutHeadV.project(camSystem.camera)
+  const x = (_aboutHeadV.x * 0.5 + 0.5) * window.innerWidth, y = (-_aboutHeadV.y * 0.5 + 0.5) * window.innerHeight
+  // the top of his hair, the same way (the bubble sits above it on phones)
+  _aboutHeadV.unproject(camSystem.camera); _aboutHeadV.y = up + 0.5; _aboutHeadV.project(camSystem.camera)
+  aboutOverlay.setAnchor(x, y, (-_aboutHeadV.y * 0.5 + 0.5) * window.innerHeight)
+}
+/** The quest log and the music card, as things stand right now. */
+function refreshAboutCards() {
+  const order = HOP_ORDER.length ? HOP_ORDER : ISLAND_NAMES
+  aboutOverlay.setQuests(order.map(name => ({
+    name, title: ISLANDS[name].section, where: ISLANDS[name].name, color: ISLANDS[name].color,
+    found: visitedIslands.has(name), here: name === 'meadow_island',
+  })))
+  syncAboutMusic()
+}
+/** A quest was pressed: close About, let him drop, then warp there and open it. */
+function warpFromAbout(name) {
+  if (_aboutHopPending || !aboutOverlay.isOpen() || !islandDirs[name]) return
+  _aboutHopPending = true
+  aboutOverlay.close()
+  setTimeout(() => {
+    _aboutHopPending = false
+    _hopTarget   = name
+    _hopLandedAt = 0
+    startTeleport(name)
+  }, reducedMotion ? 380 : 680)
+}
+// Now playing: one of the Jukebox's own records, played here at a gentle level.
+const ABOUT_OWNER = 'about'
+let _aboutTrack = 0
+function syncAboutMusic() {
+  aboutOverlay.setMusic({ title: HOUSE_LOOPS[_aboutTrack].title, playing: audio.isPlaying(ABOUT_OWNER), soundOn: audio.soundOn })
+}
+async function aboutMusic(action) {
+  const wasPlaying = audio.isPlaying(ABOUT_OWNER)
+  if (action === 'next') _aboutTrack = (_aboutTrack + 1) % HOUSE_LOOPS.length
+  if (action === 'toggle' && wasPlaying) { audio.stop(ABOUT_OWNER); audio.setLevel(audio.fullLevel); syncAboutMusic(); return }
+  if (action === 'next' && !wasPlaying) { sfx.click(); syncAboutMusic(); return }      // nothing on: just flip to the next record
+  const pattern = await fetchPattern(HOUSE_LOOPS[_aboutTrack])
+  if (pattern && aboutOverlay.isOpen()) { audio.setLevel(0.55, true); audio.play(pattern, ABOUT_OWNER) }
+  syncAboutMusic()
 }
 
 // The About screen (meadow) has its own chrome, so it hops through here: close
@@ -1877,6 +1968,10 @@ if (import.meta.env.DEV) {
 ui.onClosePanel = closeIslandPanel
 ui.onHop        = hopIsland
 aboutOverlay.onHop = hopFromAbout
+aboutOverlay.onEmote = aboutEmote
+aboutOverlay.onWarp  = warpFromAbout
+aboutOverlay.onMusic = aboutMusic
+aboutOverlay.onBlip  = () => sfx.talk()
 ui.onShell      = shellWorldFx
 
 // ─── Island interaction keys + global ESC + M for map ────────────────────────
@@ -1896,6 +1991,8 @@ document.addEventListener('keydown', e => {
     hopFromAbout(e.key === 'ArrowLeft' ? -1 : 1)
     return
   }
+  // About: keys 1 to 4 are his emotes
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && aboutOverlay.key(e.key)) { e.preventDefault(); return }
 
   if (isAnyOverlayOpen()) return  // suppress gameplay keys while a modal is up
 
@@ -2473,7 +2570,7 @@ function animate() {
     animCtrl.update(dt, moving, sprint, !isGrounded)
     // Mouse tracking for About overlay: applied AFTER mixer so offsets sit on
     // top of the animation pose rather than fighting it
-    if (aboutOverlay.isOpen() && !IS_TOUCH) _applyAboutTracking()
+    if (aboutOverlay.isOpen() && !IS_TOUCH) aboutTrackingTick()
   } else {
     // Procedural fallback while GLB/FBX loads
     character.update(dt, moving, time, !isGrounded)
@@ -2835,6 +2932,7 @@ function animate() {
 
   tickHop()
   applyViewShift()
+  if (aboutOverlay.isOpen()) tickAboutAnchor()
   // On the About screen an ASCII lens follows the pointer (fx/AsciiScreen)
   if (!asciiFx.render(scene, camSystem.camera, dt, aboutOverlay.isOpen() && fbxInScene)) {
     renderer.render(scene, camSystem.camera)

@@ -170,6 +170,10 @@ export class AnimationController {
       this._stripRootMotion(clips.emotes)
       this._emotes = clips.emotes.map(c => this.mixer.clipAction(c))
     }
+    // The same clips by name (wave, nod, call), for the About screen's emote buttons.
+    // clipAction() hands back the one action per clip, so these are the actions above.
+    this._named = {}
+    for (const [name, clip] of Object.entries(clips.named || {})) if (clip) this._named[name] = this.mixer.clipAction(clip)
 
     this._anims.idle.setLoop(THREE.LoopRepeat)
     this._anims.idle.play()
@@ -316,14 +320,31 @@ export class AnimationController {
     this.mixer.addEventListener('finished', this._finishCb)
   }
 
+  /**
+   * Play a named emote once (wave, nod, call), then settle back to idle. Only while standing: it
+   * never cuts into a walk or a jump. Asking again mid-emote restarts it.
+   * @returns {number} how long it runs in seconds, or 0 if it can't play right now
+   */
+  playEmote(name) {
+    const action = this._named?.[name]
+    if (!this.ready || !action) return 0
+    if (this._state !== ANIM_STATE.IDLE && this._state !== ANIM_STATE.EMOTE) return 0
+    this._clearFinishCb()
+    this._runEmote(action)
+    return action.getClip().duration
+  }
+
   // Pick a random idle emote and play it once, then return to idle.
   _playEmote() {
     const pool = this._emotes.filter(Boolean)
     if (!pool.length) return
+    this._runEmote(pool[Math.floor(Math.random() * pool.length)])
+  }
 
-    const emoteAction = pool[Math.floor(Math.random() * pool.length)]
+  _runEmote(emoteAction) {
     this._state = ANIM_STATE.EMOTE
-    this._crossFadeOnce(emoteAction, FADE.IDLE_TO_EMOTE, 1.0)
+    if (emoteAction === this._action) { emoteAction.reset(); emoteAction.play() }      // the same one again: from the top
+    else this._crossFadeOnce(emoteAction, FADE.IDLE_TO_EMOTE, 1.0)
 
     this._finishCb = (e) => {
       if (e.action !== emoteAction) return
