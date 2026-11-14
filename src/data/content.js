@@ -2,7 +2,7 @@
 // cold dynamic-import + parse hitch. meadow_island → AboutOverlay in main.js.
 import { ARCTIC_HTML, initArctic } from '../islands/arctic.js'
 import { PROJECTS_HTML, initProjects } from '../islands/projects.js'
-import { EXPERIENCE_HTML } from '../islands/experience.js'
+import { EXPERIENCE_HTML, initExperience } from '../islands/experience.js'
 import { CONTACT_HTML, initContact } from '../islands/contact.js'
 import { TRAVEL_HTML, initTravelStats, warmTravel } from '../travel/TravelStats.js'
 
@@ -56,6 +56,7 @@ export const ISLANDS = {
     color: '#E53935',
     variant: 'exp',
     html: EXPERIENCE_HTML,
+    init: initExperience,
   },
 
   desert_island: {

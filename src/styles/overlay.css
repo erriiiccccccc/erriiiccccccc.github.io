@@ -1459,108 +1459,110 @@ body.reduced-motion .gh-n b.out { display: none; }
 body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   EXPERIENCE — editorial timeline. A faint spine connects each role; the node is
-   the company's real logo in a uniform white tile (monogram tile as fallback).
-   Accent only on the current role and on hover. No textures, no gimmicks.
+   EXPERIENCE — Strata. A cross-section of the island: one layer of rock per
+   role, newest on top and molten, older ones cooled. --temp is a layer's
+   colour and --glow how much heat it still has; the open layer takes most of
+   the height and shows its outcome line. The gauge on the left is the
+   thermometer, with a dot that rides beside the open layer.
    ═══════════════════════════════════════════════════════════════════════════ */
-.wp-card.wp--exp { width: min(700px, 96vw); max-height: min(88vh, 820px); }
+.wp-card.wp--exp { width: min(840px, 96vw); height: min(92vh, 760px); max-height: none; }
+.wp-card.wp--exp .wp-content { display: flex; flex-direction: column; overflow: hidden; padding: 0.9rem 1.2rem 1.1rem 0; }
+.st { --now: #FFD27A; flex: 1; min-height: 0; display: grid; grid-template-columns: 78px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
 
-.exp-list { list-style: none; margin: 0; padding: 0.4rem 0 0; position: relative; }
-/* the spine — runs behind the tiles, showing through the gaps between them */
-.exp-list::before {
-  content: '';
-  position: absolute;
-  top: 1.5rem;
-  bottom: 1.5rem;
-  left: 23px;
-  width: 1px;
-  background: var(--glass-stroke);
-}
+/* ── The gauge ───────────────────────────────────────────────────────────── */
+.st-gauge { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.15rem 0 0.15rem 1.1rem; }
+.st-cap { font: 600 0.56rem/1 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 220, 200, 0.45); }
+.st-line { position: relative; flex: 1; width: 2px; margin-left: 8px; border-radius: 2px; background: linear-gradient(180deg, #FFD27A, #FF6A2A 34%, #8a3418 70%, #4a3832); }
+.st-mark { position: absolute; left: 50%; top: 0; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #fff; transform: translate(-50%, 0);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--now) 35%, transparent), 0 0 18px var(--now); transition: box-shadow 0.4s; }
+.st-mark-y { position: absolute; left: 15px; top: 0; margin-top: -0.5em; font: 600 0.62rem/1 var(--font-mono, ui-monospace, monospace); color: #ffe9d6; white-space: nowrap; }
 
-.exp-item {
-  display: grid;
-  grid-template-columns: 46px 1fr;
-  gap: 1.15rem;
-  align-items: start;
-}
+/* ── The layers ──────────────────────────────────────────────────────────── */
+.st .st-stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+  border-radius: 14px; border: 1px solid rgba(255, 130, 70, 0.18); background: #0d0706; }
+.st-stack::-webkit-scrollbar { display: none; }
+.st .era { --temp: #FF6A2A; --glow: 0.6; position: relative; flex: 1 1 0; min-height: 42px; margin: 0; overflow: hidden; display: flex; flex-direction: column; cursor: pointer;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 22%), transparent) 0%, transparent 74%), rgba(18, 8, 6, 0.6);
+  transition: flex-grow 0.52s var(--ease-out), min-height 0.52s var(--ease-out), background 0.4s; }
+.st .era + .era { border-top: 1px solid rgba(0, 0, 0, 0.55); }
+.st .era:not(.on):hover { background: linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 34%), transparent) 0%, transparent 82%), rgba(26, 11, 8, 0.7); }
+.st .era.on { flex-grow: 7; min-height: 172px; cursor: default;
+  background:
+    radial-gradient(120% 160% at 0% 100%, color-mix(in srgb, var(--temp) calc(var(--glow) * 38%), transparent), transparent 68%),
+    linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 16%), transparent), transparent 80%),
+    rgba(18, 8, 6, 0.5); }
+/* a jagged seam where one layer sits on the next */
+.st .era::before { content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 6px; z-index: 2; pointer-events: none; opacity: var(--glow);
+  background: linear-gradient(90deg, var(--temp), color-mix(in srgb, var(--temp) 30%, transparent) 70%, transparent);
+  clip-path: polygon(0 0, 8% 60%, 17% 10%, 29% 80%, 41% 20%, 55% 70%, 68% 0, 79% 60%, 90% 15%, 100% 50%, 100% 0); }
+/* the two layers that are still going are molten: light keeps moving across them */
+.st .era:nth-child(-n+2)::after { content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.45;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 210, 122, 0.35) 35%, transparent 50%, rgba(255, 140, 60, 0.25) 70%, transparent 85%);
+  background-size: 240% 100%; animation: st-flow 7s linear infinite; }
+.st.is-in .era { animation: st-lay 0.55s var(--ease-out) both; animation-delay: calc(120ms + (8 - var(--k)) * 40ms); }
 
-/* Company logo tile — uniform white so every brand mark (and the black BlackRock
-   wordmark) reads cleanly on the dark panel. */
-.exp-tile {
-  position: relative;
-  z-index: 1;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
-}
-.exp-logo { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
-.exp-mono {
-  display: none;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: #1a1726;
-}
-/* show the monogram only when no logo image is present (none set, or it 404'd
-   and removed itself) */
-.exp-tile:not(:has(.exp-logo)) .exp-mono { display: block; }
-.exp-item:hover .exp-tile {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.4);
-}
+.st .era-h { margin: 0; font: inherit; color: inherit; }
+.st .era-head { all: unset; box-sizing: border-box; position: relative; z-index: 1; display: flex; align-items: baseline; gap: 0.75rem; width: 100%; min-height: 42px; padding: 0.72rem 1.1rem 0.45rem 1.2rem; cursor: pointer; }
+.st .era-head:focus-visible { outline: 2px solid var(--temp); outline-offset: -4px; border-radius: 10px; }
+.era-role { flex: 0 1 auto; min-width: 0; font-size: 0.95rem; font-weight: 600; color: rgba(255, 240, 230, 0.86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s, font-size 0.35s var(--ease-out); }
+.era:hover .era-role, .era.on .era-role { color: #fff; }
+.era.on .era-role { font-size: 1.1rem; }
+.era-org { flex: 0 30 auto; min-width: 0; font-size: 0.84rem; color: rgba(255, 225, 205, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.era-yr { margin-left: auto; padding-left: 0.5rem; font: 600 0.68rem/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.06em; white-space: nowrap; color: color-mix(in srgb, var(--temp) 60%, #fff); }
 
-.exp-content { padding-bottom: 1.7rem; min-width: 0; }
-.exp-item:last-child .exp-content { padding-bottom: 0.2rem; }
-.exp-headline { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
-.exp-role {
-  font-family: var(--font-body);
-  font-size: 1.02rem;
-  font-weight: 600;
-  color: #fff;
-  line-height: 1.3;
-}
-.exp-meta {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--txt-soft);
-  margin-top: 0.22rem;
-  font-variant-numeric: tabular-nums;
-}
-.exp-desc {
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: var(--txt-soft);
-  margin-top: 0.5rem;
-  max-width: 56ch;
-}
+.era-body { position: relative; z-index: 1; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 1rem; align-items: start; padding: 0.55rem 1.3rem 1rem 1.2rem;
+  opacity: 0; transform: translateY(10px); transition: opacity 0.22s, transform 0.45s var(--ease-out); }
+.era.on .era-body { opacity: 1; transform: none; transition-delay: 0.14s; }
+.era-tile { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; overflow: hidden; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); }
+.era-tile img { width: 100%; height: 100%; max-width: none; padding: 7px; box-sizing: border-box; object-fit: contain; }
+.era-tile b { font: 700 0.78rem/1 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.02em; color: #1a0a05; }
+.era-tile:has(img) b { display: none; }
+.st .era-out { margin: 0; font-size: clamp(1.05rem, 1.7vw, 1.3rem); line-height: 1.38; font-weight: 600; text-wrap: balance;
+  color: color-mix(in srgb, var(--temp) 36%, #fff); text-shadow: 0 0 28px color-mix(in srgb, var(--temp) 40%, transparent); }
+.era.on .era-out { animation: st-wipe 0.7s var(--ease-out) 0.14s both; }
+.st .era-desc { margin: 0.5rem 0 0; max-width: 62ch; font-size: 0.86rem; line-height: 1.55; color: rgba(255, 235, 220, 0.74); }
+.era-when { display: inline-block; margin-right: 0.6rem; font: 600 0.66rem/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 220, 200, 0.58); }
 
-/* Current role — accent ring on the tile + a small Now tag */
-.exp-item--now .exp-tile {
-  border-color: color-mix(in srgb, var(--ic) 60%, #fff);
-  box-shadow:
-    0 0 0 2px var(--ic),
-    0 2px 12px color-mix(in srgb, var(--ic) 45%, transparent);
+/* ── Under the stack: the way to the full history, and the keys ──────────── */
+.st-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 0 0 78px; }
+.st .st-li { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.6rem; min-height: 48px; padding: 0 1.25rem; border-radius: 14px; cursor: pointer;
+  font-size: 0.92rem; font-weight: 600; color: #fff; background: linear-gradient(180deg, rgba(255, 138, 58, 0.24), rgba(229, 57, 53, 0.18)); border: 1px solid rgba(255, 150, 90, 0.48);
+  box-shadow: 0 8px 26px -8px rgba(255, 106, 31, 0.5); transition: transform 0.2s var(--ease-out), box-shadow 0.2s, background 0.2s; }
+.st .st-li:hover { transform: translateY(-2px); text-decoration: none; background: linear-gradient(180deg, rgba(255, 138, 58, 0.36), rgba(229, 57, 53, 0.28)); box-shadow: 0 12px 34px -8px rgba(255, 106, 31, 0.7); }
+.st .st-li:active { transform: scale(0.97); }
+.st .st-li:focus-visible { outline: 2px solid #ffd27a; outline-offset: 3px; }
+.st-keys { margin: 0; display: flex; align-items: center; gap: 0.35rem; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 225, 205, 0.5); }
+.st-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box; border-radius: 6px; font: 600 0.7rem/1 var(--font-mono, ui-monospace, monospace);
+  color: #fff; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22); border-bottom-width: 2px; }
+.st-keys span { margin-left: 0.25rem; }
+
+@keyframes st-flow { from { background-position: 100% 0; } to { background-position: -140% 0; } }
+@keyframes st-lay { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes st-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+@media (hover: none) { .st-keys { display: none; } }
+/* short screens: thinner layers, and the detail line gives way so all nine still fit */
+@media (max-height: 740px) and (min-width: 721px) {
+  .st .era { min-height: 37px; }
+  .st .era.on { min-height: 150px; }
+  .st .era-head { min-height: 37px; padding-top: 0.56rem; }
+  .st .era-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
-.exp-now {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ic);
-  background: color-mix(in srgb, var(--ic) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ic) 35%, transparent);
-  padding: 0.14rem 0.45rem;
-  border-radius: 999px;
+@media (max-width: 720px) {
+  .wp-card.wp--exp { height: min(90vh, 740px); height: min(90dvh, 740px); }
+  .wp-card.wp--exp .wp-content { padding: 0.7rem 0.75rem 0.9rem; }
+  .st { grid-template-columns: minmax(0, 1fr); }
+  .st-gauge { display: none; }
+  .st-foot { padding-left: 0; }
+  .st .st-li { flex: 1; justify-content: center; }
+  .st .era-head { gap: 0.5rem; padding: 0.72rem 0.85rem 0.45rem; }
+  .st .era.on { min-height: 236px; }
+  .era.on .era-role { font-size: 1.02rem; white-space: normal; }
+  .era-body { grid-template-columns: 44px minmax(0, 1fr); gap: 0.8rem; padding: 0.45rem 0.9rem 0.9rem 0.85rem; }
+  .era-tile { width: 44px; height: 44px; border-radius: 10px; }
 }
+@media (prefers-reduced-motion: reduce) { .st :is(*, *::before, *::after) { animation: none !important; transition: none !important; } }
+body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TRAVEL LOG (Pirate Ship): the Storybook globe ‖ the log
@@ -2106,10 +2108,6 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
   .contact-main  { order: 1; }
   .contact-aside { order: 2; }
   .cf-row { grid-template-columns: 1fr; }
-  /* Experience: shrink the logo tile, tighten spacing */
-  .exp-item { grid-template-columns: 40px 1fr; gap: 0.9rem; }
-  .exp-tile { width: 40px; height: 40px; border-radius: 10px; }
-  .exp-list::before { left: 20px; }
 }
 
 /* ── World panel + HUD: small screens ──────────────────────────────────────── */
