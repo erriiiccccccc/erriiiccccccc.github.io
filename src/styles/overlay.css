@@ -654,7 +654,7 @@ html.glass-solid {
   border: 1px solid color-mix(in srgb, var(--ic) 32%, transparent);
   box-shadow: 0 0 24px color-mix(in srgb, var(--ic) 22%, transparent);
 }
-.wp-titles { min-width: 0; }
+.wp-titles { flex: 1 1 0; min-width: 0; container-type: inline-size; }   /* a container, so the eyebrow can adapt to the room it has */
 .wp-eyebrow {
   font-size: 0.7rem;
   font-weight: 600;
@@ -801,6 +801,9 @@ html.glass-solid {
 }
 #world-panel.is-touch .wp-esc,
 #world-panel.no-hop .wp-hop { display: none; }
+/* when the title block is narrow (phones, the Arctic side sheet) the "04 / 06 ·" counter gives way and the island's name stays whole */
+@container (max-width: 235px) { .wp-count { display: none; } }
+#world-panel.is-touch .wp-btn { width: 44px; height: 44px; }
 
 /* Shell-only layers. Hidden unless their shell asks for them. */
 .wp-beam, .wp-frost { display: none; pointer-events: none; }
@@ -1183,8 +1186,8 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   box-shadow: 0 0 0 2px var(--ta), 0 14px 40px rgba(0, 0, 0, 0.5), 0 0 40px color-mix(in srgb, var(--ta) 40%, transparent); }
 .gh-tile-media { position: absolute; inset: 0; }
 .gh-tile-media img, .gh-row-thumb img, .gh-float img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
-.gh-tile-name { position: absolute; inset: auto 0 0 0; padding: 1.1rem 0.5rem 0.4rem; font-size: 0.68rem; font-weight: 600; line-height: 1.2; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82)); }
+.gh-tile-name { position: absolute; inset: auto 0 0 0; padding: 1.1rem 0.5rem 0.4rem; font-size: 0.68rem; font-weight: 600; line-height: 1.2; color: #fff; text-wrap: balance;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.86) 62%); }
 .gh-prog { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: var(--ta); transform-origin: 0 50%; transform: scaleX(var(--prog, 0)); }
 .gh .gh-step { all: unset; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: #fff;
   background: rgba(10, 8, 18, 0.55); border: 1px solid rgba(255, 255, 255, 0.16); transition: background 0.2s, transform 0.2s var(--ease-out), border-color 0.2s; }
@@ -1287,13 +1290,16 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
 @keyframes cv-scroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 @keyframes cv-spin { from { transform: rotateX(-24deg) rotateY(0deg); } to { transform: rotateX(-24deg) rotateY(360deg); } }
 
-/* ── Short screens: the story line gives way before anything gets cramped ── */
+/* ── Short screens: the tags, then the story line, step out whole before anything gets cramped
+   (projects.js measures and sets fit-1 / fit-2; nothing is ever cut mid-sentence) ── */
+.gh.fit-1 .gh-tags { display: none; }
+.gh.fit-2 .gh-blurb { display: none; }
 @media (max-height: 760px) and (min-width: 761px) {
-  .gh-blurb { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .gh-title { font-size: clamp(1.9rem, 3.8vw, 3.2rem); }
+  .gh-badges { margin-bottom: 0.55rem; }
+  .gh-meta { margin: 0.55rem 0 0.65rem; }
 }
-@media (max-height: 620px) and (min-width: 761px) { .gh-blurb, .gh-tags { display: none; } }
-@media (hover: none) { .gh-keys { display: none; } .gh-float { display: none; } }
+@media (hover: none) { .gh-keys { display: none; } .gh-float { display: none; } .gh .gh-switch-b { min-height: 44px; } }
 
 /* ── Phones: the demo sits on top at its own shape, the words scroll under it ── */
 @media (max-width: 760px) {
@@ -1306,7 +1312,7 @@ html.glass-solid #world-panel[data-shell="frost"] .wp-card {
   .gh::before { content: ''; position: absolute; inset: 40% 0 0 0; z-index: -1; pointer-events: none; opacity: 0.22; background: radial-gradient(80% 60% at 0% 100%, var(--pa), transparent 70%); }
   .gh-top { top: calc(var(--gh-top) + 0.6rem); right: 0.7rem; }
   .gh-keys { display: none; }
-  .gh .gh-switch-b { min-height: 36px; padding: 0 0.75rem; }
+  .gh .gh-switch-b { min-height: 44px; padding: 0 0.75rem; }
   .gh-hub { justify-content: flex-start; padding-top: calc(var(--gh-top) + 62.5vw); }
   .gh-mid { flex: 1; flex-direction: column-reverse; align-items: stretch; justify-content: flex-end; gap: 0.2rem; padding-top: 0.5rem; overflow-y: auto; overscroll-behavior: contain; }
   .gh-count { align-self: flex-end; margin-top: -0.2rem; }
@@ -1424,6 +1430,7 @@ body.reduced-motion .gh-n b.out { display: none; }
 .hs.is-fresh .hs-chip { animation: hs-rise 0.45s var(--ease-out) both; animation-delay: 1.5s; }
 .hs.is-fresh .hs-chip:nth-child(2) { animation-delay: 1.57s; } .hs.is-fresh .hs-chip:nth-child(3) { animation-delay: 1.64s; }
 .hs.is-fresh .hs-chip:nth-child(4) { animation-delay: 1.71s; } .hs.is-fresh .hs-chip:nth-child(5) { animation-delay: 1.78s; }
+@media (hover: none) { .hs-chip { min-height: 44px; } }
 .hs-chip:focus-visible, .hs-send:focus-visible, .hs-photo:focus-visible, .hs-lightbox-x:focus-visible { outline: 2px solid #a5e0ff; outline-offset: 2px; }
 
 /* the box: the whole pill lights up when you're in it (no outline on the field inside) */
@@ -1461,9 +1468,10 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
 /* ═══════════════════════════════════════════════════════════════════════════
    EXPERIENCE — Strata. A cross-section of the island: one layer of rock per
    role, newest on top and molten, older ones cooled. --temp is a layer's
-   colour and --glow how much heat it still has; the open layer takes most of
-   the height and shows its outcome line. The gauge on the left is the
-   thermometer, with a dot that rides beside the open layer.
+   colour and --glow how much heat it still has. The open layer is always as
+   tall as what it says (it never shrinks below its words); the closed ones
+   share what's left, and on a short screen the stack scrolls. The gauge on
+   the left is the thermometer, with a dot that rides beside the open layer.
    ═══════════════════════════════════════════════════════════════════════════ */
 .wp-card.wp--exp { width: min(840px, 96vw); height: min(92vh, 760px); max-height: none; }
 .wp-card.wp--exp .wp-content { display: flex; flex-direction: column; overflow: hidden; padding: 0.9rem 1.2rem 1.1rem 0; }
@@ -1481,12 +1489,12 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
 .st .st-stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
   border-radius: 14px; border: 1px solid rgba(255, 130, 70, 0.18); background: #0d0706; }
 .st-stack::-webkit-scrollbar { display: none; }
-.st .era { --temp: #FF6A2A; --glow: 0.6; position: relative; flex: 1 1 0; min-height: 42px; margin: 0; overflow: hidden; display: flex; flex-direction: column; cursor: pointer;
+.st .era { --temp: #FF6A2A; --glow: 0.6; position: relative; flex: 1 0 auto; min-height: 42px; margin: 0; overflow: hidden; display: flex; flex-direction: column; cursor: pointer;
   background: linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 22%), transparent) 0%, transparent 74%), rgba(18, 8, 6, 0.6);
-  transition: flex-grow 0.52s var(--ease-out), min-height 0.52s var(--ease-out), background 0.4s; }
+  transition: flex-grow 0.52s var(--ease-out), background 0.4s; }
 .st .era + .era { border-top: 1px solid rgba(0, 0, 0, 0.55); }
 .st .era:not(.on):hover { background: linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 34%), transparent) 0%, transparent 82%), rgba(26, 11, 8, 0.7); }
-.st .era.on { flex-grow: 7; min-height: 172px; cursor: default;
+.st .era.on { flex: 3 0 auto; cursor: default;
   background:
     radial-gradient(120% 160% at 0% 100%, color-mix(in srgb, var(--temp) calc(var(--glow) * 38%), transparent), transparent 68%),
     linear-gradient(90deg, color-mix(in srgb, var(--temp) calc(var(--glow) * 16%), transparent), transparent 80%),
@@ -1510,9 +1518,11 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
 .era-org { flex: 0 30 auto; min-width: 0; font-size: 0.84rem; color: rgba(255, 225, 205, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .era-yr { margin-left: auto; padding-left: 0.5rem; font: 600 0.68rem/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.06em; white-space: nowrap; color: color-mix(in srgb, var(--temp) 60%, #fff); }
 
-.era-body { position: relative; z-index: 1; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 1rem; align-items: start; padding: 0.55rem 1.3rem 1rem 1.2rem;
-  opacity: 0; transform: translateY(10px); transition: opacity 0.22s, transform 0.45s var(--ease-out); }
-.era.on .era-body { opacity: 1; transform: none; transition-delay: 0.14s; }
+.era-body { position: relative; z-index: 1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.52s var(--ease-out); }
+.era.on .era-body { grid-template-rows: 1fr; }
+.era-in { min-height: 0; overflow: hidden; opacity: 0; transform: translateY(10px); transition: opacity 0.22s, transform 0.45s var(--ease-out); }
+.era.on .era-in { opacity: 1; transform: none; transition-delay: 0.14s; }
+.era-grid { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 1rem; align-items: start; padding: 0.55rem 1.3rem 1.05rem 1.2rem; }
 .era-tile { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; overflow: hidden; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); }
 .era-tile img { width: 100%; height: 100%; max-width: none; padding: 7px; box-sizing: border-box; object-fit: contain; }
 .era-tile b { font: 700 0.78rem/1 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.02em; color: #1a0a05; }
@@ -1523,13 +1533,24 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
 .st .era-desc { margin: 0.5rem 0 0; max-width: 62ch; font-size: 0.86rem; line-height: 1.55; color: rgba(255, 235, 220, 0.74); }
 .era-when { display: inline-block; margin-right: 0.6rem; font: 600 0.66rem/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 220, 200, 0.58); }
 
+/* on a short screen the stack scrolls: a fade and a chevron say there's more below */
+.st-more { grid-column: 2; grid-row: 1; align-self: end; z-index: 3; height: 46px; display: grid; place-items: end center; padding-bottom: 5px; pointer-events: none;
+  border-radius: 0 0 14px 14px; color: #ffd9b8; background: linear-gradient(0deg, rgba(13, 7, 6, 0.96) 12%, rgba(13, 7, 6, 0)); opacity: 0; transition: opacity 0.3s; }
+.st-more svg { animation: st-nudge 1.6s ease-in-out infinite; }
+.st.has-more .st-more { opacity: 1; }
+.st .st-stack { grid-column: 2; grid-row: 1; }
+
 /* ── Under the stack: the way to the full history, and the keys ──────────── */
 .st-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 0 0 78px; }
-.st .st-li { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.6rem; min-height: 48px; padding: 0 1.25rem; border-radius: 14px; cursor: pointer;
-  font-size: 0.92rem; font-weight: 600; color: #fff; background: linear-gradient(180deg, rgba(255, 138, 58, 0.24), rgba(229, 57, 53, 0.18)); border: 1px solid rgba(255, 150, 90, 0.48);
-  box-shadow: 0 8px 26px -8px rgba(255, 106, 31, 0.5); transition: transform 0.2s var(--ease-out), box-shadow 0.2s, background 0.2s; }
-.st .st-li:hover { transform: translateY(-2px); text-decoration: none; background: linear-gradient(180deg, rgba(255, 138, 58, 0.36), rgba(229, 57, 53, 0.28)); box-shadow: 0 12px 34px -8px rgba(255, 106, 31, 0.7); }
-.st .st-li:active { transform: scale(0.97); }
+.st .st-li { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 34px; padding: 0 0.8rem 0 0.7rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.76rem; font-weight: 600; letter-spacing: 0.01em; color: rgba(255, 230, 212, 0.8); background: rgba(255, 138, 58, 0.06); border: 1px solid rgba(255, 150, 90, 0.26);
+  transition: color 0.2s, border-color 0.2s, background 0.2s; }
+.st .st-li svg { flex: none; }
+.st .st-li svg:first-child { color: #ffb04e; }
+.st .st-li svg:last-child { opacity: 0.55; transition: transform 0.2s var(--ease-out), opacity 0.2s; }
+.st .st-li:hover { color: #fff; text-decoration: none; border-color: rgba(255, 176, 78, 0.62); background: rgba(255, 138, 58, 0.14); }
+.st .st-li:hover svg:last-child { opacity: 1; transform: translate(2px, -2px); }
+.st .st-li:active { background: rgba(255, 138, 58, 0.22); }
 .st .st-li:focus-visible { outline: 2px solid #ffd27a; outline-offset: 3px; }
 .st-keys { margin: 0; display: flex; align-items: center; gap: 0.35rem; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 225, 205, 0.5); }
 .st-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box; border-radius: 6px; font: 600 0.7rem/1 var(--font-mono, ui-monospace, monospace);
@@ -1539,14 +1560,25 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
 @keyframes st-flow { from { background-position: 100% 0; } to { background-position: -140% 0; } }
 @keyframes st-lay { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes st-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes st-nudge { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(2px); } }
 
 @media (hover: none) { .st-keys { display: none; } }
-/* short screens: thinner layers, and the detail line gives way so all nine still fit */
+/* short screens: thinner layers and a tighter open one, so all nine still fit where they can */
 @media (max-height: 740px) and (min-width: 721px) {
-  .st .era { min-height: 37px; }
-  .st .era.on { min-height: 150px; }
-  .st .era-head { min-height: 37px; padding-top: 0.56rem; }
-  .st .era-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .wp-card.wp--exp { height: min(96vh, 760px); }
+  .wp-card.wp--exp .wp-content { padding-top: 0.5rem; padding-bottom: 0.7rem; }
+  .st .era { min-height: 36px; }
+  .st .era-head { min-height: 36px; padding-top: 0.5rem; padding-bottom: 0.35rem; }
+  .era-grid { padding-top: 0.35rem; padding-bottom: 0.8rem; }
+  .st .era-out { font-size: 1.02rem; line-height: 1.34; }
+  .st .era-desc { margin-top: 0.35rem; line-height: 1.5; }
+  .st-foot { padding-top: 0.55rem; }
+}
+@media (max-height: 620px) and (min-width: 721px) {
+  .st .era { min-height: 32px; }
+  .st .era-head { min-height: 32px; padding-top: 0.38rem; padding-bottom: 0.26rem; }
+  .era-role { font-size: 0.9rem; }
+  .era.on .era-role { font-size: 1rem; }
 }
 @media (max-width: 720px) {
   .wp-card.wp--exp { height: min(90vh, 740px); height: min(90dvh, 740px); }
@@ -1554,12 +1586,21 @@ body.reduced-motion .hs :is(*, *::before, *::after) { animation: none !important
   .st { grid-template-columns: minmax(0, 1fr); }
   .st-gauge { display: none; }
   .st-foot { padding-left: 0; }
-  .st .st-li { flex: 1; justify-content: center; }
-  .st .era-head { gap: 0.5rem; padding: 0.72rem 0.85rem 0.45rem; }
-  .st .era.on { min-height: 236px; }
-  .era.on .era-role { font-size: 1.02rem; white-space: normal; }
-  .era-body { grid-template-columns: 44px minmax(0, 1fr); gap: 0.8rem; padding: 0.45rem 0.9rem 0.9rem 0.85rem; }
+  .st-more { grid-column: 1; }
+  .st .st-stack { grid-column: 1; }
+  .st-foot { justify-content: center; }
+  .st .st-li { min-height: 44px; padding: 0 1.1rem 0 1rem; font-size: 0.82rem; }
+  .st .era-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 0.6rem; row-gap: 1px; align-items: baseline; padding: 0.6rem 0.85rem 0.5rem; }
+  .era-role { grid-column: 1; font-size: 0.92rem; line-height: 1.3; white-space: normal; }
+  .era-org { grid-column: 1; grid-row: 2; font-size: 0.76rem; line-height: 1.3; }
+  .era-yr { grid-column: 2; grid-row: 1; margin-left: 0; padding-left: 0; }
+  .era.on .era-role { font-size: 1.02rem; }
+  .era-grid { grid-template-columns: 44px minmax(0, 1fr); gap: 0.8rem; padding: 0.45rem 0.9rem 0.95rem 0.85rem; }
   .era-tile { width: 44px; height: 44px; border-radius: 10px; }
+}
+@media (hover: none) {
+  .st .era, .st .era-head { min-height: 44px; }
+  .st .st-li { min-height: 44px; padding: 0 1.1rem 0 1rem; font-size: 0.82rem; }
 }
 @media (prefers-reduced-motion: reduce) { .st :is(*, *::before, *::after) { animation: none !important; transition: none !important; } }
 body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
@@ -1892,12 +1933,8 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 .ca-photo {
   position: absolute;
   inset: 0;
-  /* a little larger than the panel and held to its bottom edge, which puts the four of them in the
-     clear band between the words and the buttons */
-  background-size: 122% auto;
-  background-position: 50% 100%;
-  background-repeat: no-repeat;
-  background-color: #6b4127;
+  background-size: cover;
+  background-position: center 100%;      /* held to the bottom edge, which lifts the four of them clear of the buttons */
   pointer-events: none;
 }
 /* warm scrim: darkens bottom-left so the eyebrow/title/socials stay readable,
@@ -1906,15 +1943,14 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* dark behind the words at the top and the buttons at the bottom, clear across the middle */
   background:
-    linear-gradient(180deg,
-      rgba(19, 10, 29, 0.78) 0%,
-      rgba(19, 10, 29, 0.5) 30%,
-      rgba(19, 10, 29, 0.06) 46%,
-      rgba(19, 10, 29, 0.1) 60%,
-      rgba(19, 10, 29, 0.78) 80%,
-      rgba(19, 10, 29, 0.92) 100%);
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--ic) 14%, transparent) 0%,
+      rgba(19, 10, 29, 0.35) 42%,
+      rgba(19, 10, 29, 0.82) 100%),
+    linear-gradient(0deg,
+      rgba(19, 10, 29, 0.55) 0%,
+      transparent 55%);
 }
 
 /* ─── OLD DESERT OVERLAY (revert here) ──────────────────────────────────────
@@ -2025,7 +2061,7 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 .cf-status:empty { display: none; }
 .contact-form.is-gone { display: none; }
 .cf-field--msg { flex: 1; min-height: 0; }
-.cf-field--msg .cf-textarea { flex: 1; }
+.cf-field--msg .cf-textarea { flex: 1 1 84px; height: 84px; }
 .cf-hp { position: absolute !important; left: -9999px !important; }
 .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
 .cf-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
@@ -2109,23 +2145,7 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
   font-size: 0.82rem;
 }
 
-/* ── The photo takes London's light: blue at night, warm at each end of the day ── */
-.ca-tint { position: absolute; inset: 0; pointer-events: none; --night: 0; --golden: 0; }
-.ca-tint::before, .ca-tint::after { content: ''; position: absolute; inset: 0; transition: opacity 1.2s; }
-.ca-tint::before { background: #161e5c; opacity: var(--night); mix-blend-mode: multiply; }
-.ca-tint::after { background: #ff8c3c; opacity: var(--golden); mix-blend-mode: soft-light; }
-
-/* ── LinkedIn: the big one, for anyone who wants the full work history ───── */
-.contact-aside .ca-li { display: flex; align-items: center; gap: 0.8rem; min-height: 58px; padding: 0.6rem 0.9rem; box-sizing: border-box; border-radius: var(--r-sm); text-decoration: none; color: #fff;
-  background: linear-gradient(135deg, #0a66c2, #0b4f96); border: 1px solid rgba(255, 255, 255, 0.24); box-shadow: 0 12px 30px -12px rgba(10, 102, 194, 0.9);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s, filter 0.2s; }
-.contact-aside .ca-li:hover { transform: translateY(-2px); text-decoration: none; filter: brightness(1.1); box-shadow: 0 16px 36px -12px rgba(10, 102, 194, 1); }
-.contact-aside .ca-li:active { transform: scale(0.98); }
-.contact-aside .ca-li:focus-visible, .contact-row:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.ca-li-ic { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: #fff; color: #0a66c2; }
-.ca-li-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
-.ca-li-text b { font-size: 0.94rem; font-weight: 700; }
-.ca-li-text small { font-size: 0.74rem; opacity: 0.88; }
+.contact-row:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 /* the email row is a button: it copies, and says so */
 .contact-row--copy { width: 100%; box-sizing: border-box; font: inherit; text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; }
@@ -2137,23 +2157,49 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 .contact-row--mini .contact-ic { width: 30px; height: 30px; }
 .contact-row--mini .contact-text { flex: 1; font-weight: 600; }
 
-/* ── The sky over London, right now ──────────────────────────────────────── */
+/* ── The sky over London. It shows the real hour; drag it and the day goes by ── */
 .sky { --s0: #3d7fd6; --s1: #8cc3ef; --s2: #efe0c0; --dune: #dba66a; --stars: 0;
-  position: relative; flex: none; height: 86px; overflow: hidden; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke));
+  position: relative; flex: none; height: 92px; overflow: hidden; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke));
   background: linear-gradient(180deg, var(--s0) 0%, var(--s1) 55%, var(--s2) 100%); }
+.sky-view { position: absolute; inset: 0; border-radius: inherit; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.sky.is-moving .sky-view { cursor: grabbing; }
+.sky-view:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 .sky-stars { position: absolute; inset: 0; opacity: var(--stars); transition: opacity 1.2s; }
 .sky-stars i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: var(--o); animation: sky-twinkle 3.4s ease-in-out infinite; animation-delay: calc(var(--o) * -5s); }
 .sky-sun, .sky-moon { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; opacity: 0; transition: left 1.2s, top 1.2s, opacity 0.8s; }
+/* while it's being dragged (or swept back to now) nothing lags behind the pointer */
+.sky.is-moving :is(.sky-sun, .sky-moon) { transition: opacity 0.25s; }
+.sky.is-moving .sky-stars { transition: none; }
 .sky-sun { background: radial-gradient(circle, #fff 0%, #ffe9a8 45%, #ffc65c 100%); box-shadow: 0 0 0 6px rgba(255, 220, 140, 0.22), 0 0 34px 10px rgba(255, 200, 110, 0.55); }
 .sky-moon { background: #f4f1e4; box-shadow: inset -6px -3px 0 0 #cfcab4, 0 0 22px 4px rgba(230, 235, 255, 0.35); }
 .sky-dunes { position: absolute; left: 0; right: 0; bottom: 0; display: block; width: 100%; height: 46%; }
 .sky-dune--1 { fill: var(--dune); }
 .sky-dune--2 { fill: color-mix(in srgb, var(--dune) 72%, var(--s2)); }
 .sky-dune--3 { fill: color-mix(in srgb, var(--dune) 46%, var(--s2)); }
-.wp-content .sky-text { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 1.7rem 0.9rem 0.55rem; display: flex; flex-direction: column; gap: 1px; line-height: 1.3;
+.wp-content .sky-text { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 1.7rem 0.9rem 0.55rem; display: flex; flex-direction: column; gap: 1px; line-height: 1.3; pointer-events: none;
   background: linear-gradient(0deg, rgba(12, 6, 3, 0.78), rgba(12, 6, 3, 0)); }
-.wp-content .sky-time { font-size: 0.84rem; font-weight: 700; color: #fff; }
+.wp-content .sky-time { font-size: 0.84rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 .sky-line { font-size: 0.78rem; color: rgba(255, 255, 255, 0.9); }
+/* "Drag the sky": shown until someone does */
+.sky-hint { position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 0.35rem; min-height: 24px; padding: 0 0.6rem 0 0.5rem; border-radius: 999px; pointer-events: none;
+  font-size: 0.68rem; font-weight: 600; color: #fff; background: rgba(12, 6, 3, 0.46); border: 1px solid rgba(255, 255, 255, 0.16); transition: opacity 0.35s, transform 0.35s var(--ease-out); }
+.sky-hint svg { animation: sky-nudge 1.8s ease-in-out infinite; }
+.sky.is-used .sky-hint { opacity: 0; transform: translateY(-4px); }
+/* "Now in London": quiet while the sky is live, lit up once it has been dragged away */
+.sky-now { all: unset; box-sizing: border-box; position: absolute; right: 8px; top: 8px; z-index: 2; display: inline-grid; min-height: 26px; padding: 0 0.65rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.68rem; font-weight: 700; color: #fff; background: rgba(12, 6, 3, 0.46); border: 1px solid rgba(255, 255, 255, 0.16);
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.3s cubic-bezier(0.2, 1.25, 0.32, 1), box-shadow 0.2s; }
+.sky-now::before { content: ''; position: absolute; inset: -9px; }                 /* a full-size tap target around a small pill */
+.sky-now > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.38rem; white-space: nowrap; transition: opacity 0.2s; }
+.sky-now-on i { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25); animation: caPulse 2s ease-in-out infinite; }
+.sky-now-off { opacity: 0; }
+.sky[data-live="0"] .sky-now { color: #1c0d02; background: var(--ic); border-color: transparent; transform: scale(1.04); box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--ic) 90%, transparent); }
+.sky[data-live="0"] .sky-now-on { opacity: 0; }
+.sky[data-live="0"] .sky-now-off { opacity: 1; }
+.sky-now:hover { border-color: rgba(255, 255, 255, 0.4); }
+.sky[data-live="0"] .sky-now:hover { filter: brightness(1.08); }
+.sky-now:active { transform: scale(0.96); }
+.sky-now:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ── What's this about? ──────────────────────────────────────────────────── */
 .cf-intent { min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -2198,9 +2244,26 @@ body.reduced-motion .st :is(*, *::before, *::after) { animation: none !important
 .cf-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 
 @keyframes sky-twinkle { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.5); } }
+@keyframes sky-nudge { 0%, 100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
 @keyframes cf-wiggle { 0%, 100% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(2px, -2px) rotate(-8deg); } }
 @keyframes cf-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (hover: none) { .cf-kbd { display: none; } }
+/* laptop-height screens: everything a little tighter, so the whole form fits without scrolling */
+@media (max-height: 760px) and (min-width: 721px) {
+  .contact-main { gap: 0.6rem; }
+  .contact-form { gap: 0.5rem; }
+  .sky { height: 86px; }
+  .cf-chip span { min-height: 40px; }
+  .cf-textarea { min-height: 64px; }
+  .cf-field--msg .cf-textarea { flex-basis: 64px; height: 64px; }
+  .contact-aside { padding: 1.2rem 1.2rem; gap: 1rem; }
+}
+@media (max-height: 660px) and (min-width: 721px) {
+  .sky { height: 78px; }
+  .sky-hint, .sky-now { top: 6px; }
+  .wp-content .sky-text { padding-bottom: 0.4rem; }
+  .cf-error:empty { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .contact-split :is(*, *::before, *::after) { animation: none !important; transition: none !important; } }
 body.reduced-motion .contact-split :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
 
@@ -2211,8 +2274,7 @@ body.reduced-motion .contact-split :is(*, *::before, *::after) { animation: none
   .contact-aside { padding: 0; gap: 0.8rem; border: 0; background: none; box-shadow: none; overflow: visible; }
   .ca-stage { display: block; position: relative; min-height: 470px; padding: 1.4rem 1.3rem; box-sizing: border-box; overflow: hidden;
     border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ic) 28%, var(--glass-stroke)); background: #130a1d; }
-  .ca-photo { background-size: cover; background-position: 50% 100%; }
-  .ca-scrim { background: linear-gradient(180deg, rgba(19, 10, 29, 0.82) 0%, rgba(19, 10, 29, 0.55) 38%, rgba(19, 10, 29, 0.05) 60%, rgba(19, 10, 29, 0.22) 100%); }
+  .ca-photo { background-position: 50% 100%; }
   .ca-socials { margin-top: 0; }
   .contact-split { grid-template-columns: 1fr; gap: 1.1rem; }
   .contact-main  { order: 1; }

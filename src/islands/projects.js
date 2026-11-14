@@ -125,7 +125,7 @@ export function initProjects(root) {
   const { signal } = ac
   const $ = (s) => gh.querySelector(s)
   const layers = [...gh.querySelectorAll('.gh-bg')]
-  const stage = $('.gh-stage'), hub = $('.gh-hub'), info = $('.gh-info'), rail = $('.gh-rail'), num = $('.gh-n'), say = $('#gh-say')
+  const stage = $('.gh-stage'), hub = $('.gh-hub'), mid = $('.gh-mid'), info = $('.gh-info'), rail = $('.gh-rail'), num = $('.gh-n'), say = $('#gh-say')
   const index = $('.gh-index'), float = $('.gh-float'), back = $('.gh-back')
   const tiles = [...rail.children], rows = [...gh.querySelectorAll('.gh-row')]
   const panel = gh.closest('#world-panel')
@@ -133,8 +133,17 @@ export function initProjects(root) {
 
   // The panel's header floats over the hub: keep our top controls clear of it.
   const head = gh.closest('.wp-card')?.querySelector('.wp-header')
-  const ro = new ResizeObserver(() => gh.style.setProperty('--gh-top', `${head.offsetHeight}px`))
+  const ro = new ResizeObserver(() => { if (head) gh.style.setProperty('--gh-top', `${head.offsetHeight}px`); fit() })
   if (head) ro.observe(head)
+  ro.observe(gh)
+
+  // Short screens: nothing is cut mid-sentence. When the words don't fit under the top bar, the tags
+  // step out first, then the story line. The title and the outcome line always stay whole.
+  function fit() {
+    gh.classList.remove('fit-1', 'fit-2')
+    if (window.matchMedia('(max-width: 760px)').matches) return        // phones scroll the words instead
+    for (const c of ['fit-1', 'fit-2']) { if (info.offsetHeight <= mid.clientHeight) break; gh.classList.add(c) }
+  }
 
   const video = () => layers[front].querySelector('video')
   const playing = () => view === 'hub' && !document.hidden && !dead
@@ -189,6 +198,7 @@ export function initProjects(root) {
     info.innerHTML = infoHtml(p)
     info.setAttribute('aria-labelledby', `gh-tab-${i}`)
     info.classList.remove('is-in'); void info.offsetWidth; info.classList.add('is-in')
+    fit()
 
     // the big number rolls in the direction you moved
     num.querySelectorAll('b').forEach(b => { b.className = `out ${dir > 0 ? 'out-up' : 'out-down'}`; setTimeout(() => b.remove(), 420) })

@@ -200,7 +200,15 @@ export class UI {
     const total = this._order.length
     const pad   = n => String(n).padStart(2, '0')
     this._icon.innerHTML      = svgIcon(island.iconKey, 14, 2)
-    this._eyebrow.textContent = pos >= 0 ? `${pad(pos + 1)} / ${pad(total)} · ${island.name}` : island.name
+    // the "02 / 06 ·" counter is its own span, so narrow phones can drop it and keep the island's name whole
+    this._eyebrow.textContent = ''
+    if (pos >= 0) {
+      const count = document.createElement('span')
+      count.className = 'wp-count'
+      count.textContent = `${pad(pos + 1)} / ${pad(total)} · `
+      this._eyebrow.append(count)
+    }
+    this._eyebrow.append(island.name)
     this._title.textContent   = island.section
     this._panel.style.setProperty('--ic', island.color)
     this._panel.classList.toggle('no-hop', total < 2 || pos < 0)

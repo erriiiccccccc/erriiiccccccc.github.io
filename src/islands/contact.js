@@ -4,11 +4,11 @@
 // What makes it more than a form:
 //   - a strip of sky over the form shows the real time in London: the sun or
 //     the moon where it actually is, stars at night, and an honest line about
-//     when a reply is likely. The photo takes on the same light.
+//     when a reply is likely. Drag the sky and the day goes by (the sun stays
+//     under your finger); "Now in London" brings it back to the real hour.
 //   - "What's this about?" comes first. One tap reshapes the form: hiring adds
 //     Company and Role, a project adds Timeline, and the prompt changes.
-//   - the email row copies instead of opening a mail app; LinkedIn is the big
-//     button for anyone who wants the full work history
+//   - the email row copies instead of opening a mail app
 //   - drafts survive closing the panel; Ctrl/Cmd + Enter sends; errors show
 //     beside the field once you leave it
 //   - on send, a paper plane lifts off the button and flies into the sky
@@ -31,6 +31,8 @@ const svg = (d, s = 16) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" 
 const ICON = {
   copy: svg('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   check: svg('<path d="M20 6 9 17l-5-5"/>'),
+  drag: svg('<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="M3 12h18"/>', 13),
+  back: svg('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>', 12),
   plane: '<svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor" aria-hidden="true"><path d="M22 2 2 10.5l7.2 2.4L19 6l-7.6 8.2.2 6.8 3.5-4.6 3.9 2.6z"/></svg>',
 }
 
@@ -111,7 +113,6 @@ export const CONTACT_HTML = `
     <aside class="contact-aside">
       <div class="ca-stage">
       <div class="ca-photo" style="background-image:url('${BASE}islandphoto/travelislandphoto.jpeg')" role="img" aria-label="Eric and three friends on the walls of a kasbah in Morocco"></div>
-      <div class="ca-tint" aria-hidden="true"></div>
       <div class="ca-scrim" aria-hidden="true"></div>
       <div class="ca-body">
         <span class="ca-eyebrow">Say hey</span>
@@ -126,11 +127,6 @@ export const CONTACT_HTML = `
       </div>
       </div>
       <div class="ca-socials">
-        <a class="ca-li" href="${LINKEDIN}" target="_blank" rel="noopener noreferrer">
-          <span class="ca-li-ic">${svgIcon('linkedin', 20)}</span>
-          <span class="ca-li-text"><b>LinkedIn</b><small>My full work history</small></span>
-          ${svgIcon('external', 16)}
-        </a>
         <button type="button" class="contact-row contact-row--copy" data-copy="${EMAIL}" aria-label="Copy my email address, ${EMAIL}">
           <span class="contact-ic">${svgIcon('mail', 18)}</span>
           <span class="contact-meta">
@@ -139,20 +135,36 @@ export const CONTACT_HTML = `
           </span>
           <span class="contact-go contact-go--copy">${ICON.copy}</span>
         </button>
+        <a class="contact-row" href="${LINKEDIN}" target="_blank" rel="noopener noreferrer">
+          <span class="contact-ic">${svgIcon('linkedin', 18)}</span>
+          <span class="contact-meta">
+            <span class="contact-label">LinkedIn</span>
+            <span class="contact-text">in/erriiiccccccc</span>
+          </span>
+          <span class="contact-go">${svgIcon('arrowRight', 16)}</span>
+        </a>
         ${socialRows}
       </div>
     </aside>
 
     <div class="contact-main">
-      <div class="sky" role="img" aria-label="The sky over London right now">
-        <div class="sky-stars" aria-hidden="true"></div>
-        <i class="sky-sun" aria-hidden="true"></i><i class="sky-moon" aria-hidden="true"></i>
-        <svg class="sky-dunes" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true">
-          <path class="sky-dune sky-dune--3" d="M0 22 Q 90 6 190 18 T 400 12 V40 H0 Z"/>
-          <path class="sky-dune sky-dune--2" d="M0 30 Q 120 14 250 26 T 400 22 V40 H0 Z"/>
-          <path class="sky-dune sky-dune--1" d="M0 37 Q 140 26 270 34 T 400 32 V40 H0 Z"/>
-        </svg>
-        <p class="sky-text"><b class="sky-time">London</b><span class="sky-line"></span></p>
+      <div class="sky" data-live="1">
+        <div class="sky-view" role="slider" tabindex="0" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="24" aria-valuenow="12"
+             aria-label="The sky over London. Drag it, or use the arrow keys, to see another time of day.">
+          <div class="sky-stars" aria-hidden="true"></div>
+          <i class="sky-sun" aria-hidden="true"></i><i class="sky-moon" aria-hidden="true"></i>
+          <svg class="sky-dunes" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true">
+            <path class="sky-dune sky-dune--3" d="M0 22 Q 90 6 190 18 T 400 12 V40 H0 Z"/>
+            <path class="sky-dune sky-dune--2" d="M0 30 Q 120 14 250 26 T 400 22 V40 H0 Z"/>
+            <path class="sky-dune sky-dune--1" d="M0 37 Q 140 26 270 34 T 400 32 V40 H0 Z"/>
+          </svg>
+          <p class="sky-text"><b class="sky-time">London</b><span class="sky-line"></span></p>
+          <span class="sky-hint" aria-hidden="true">${ICON.drag}Drag the sky</span>
+        </div>
+        <button type="button" class="sky-now" aria-pressed="true" aria-label="Show the sky over London as it is right now">
+          <span class="sky-now-on" aria-hidden="true"><i></i>Now in London</span>
+          <span class="sky-now-off" aria-hidden="true">${ICON.back}Back to now</span>
+        </button>
       </div>
       ${formHTML}
     </div>
@@ -180,20 +192,46 @@ function londonNow() {
 const hex = (c) => { const n = parseInt(c.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255] }
 const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})` }
 
-function startSky(wrap) {
-  const sky = wrap.querySelector('.sky'), sun = sky.querySelector('.sky-sun'), moon = sky.querySelector('.sky-moon')
-  const timeEl = sky.querySelector('.sky-time'), lineEl = sky.querySelector('.sky-line'), tint = wrap.querySelector('.ca-tint')
+let skyUsed = false          // the "Drag the sky" hint is only for people who haven't dragged it yet
+
+function startSky(wrap, signal) {
+  const sky = wrap.querySelector('.sky'), view = sky.querySelector('.sky-view'), sun = sky.querySelector('.sky-sun'), moon = sky.querySelector('.sky-moon')
+  const timeEl = sky.querySelector('.sky-time'), lineEl = sky.querySelector('.sky-line'), nowBtn = sky.querySelector('.sky-now')
   // stars: fixed, scattered once
   let dots = ''
   for (let i = 0; i < 40; i++) dots += `<i style="left:${((i * 97.3) % 100).toFixed(1)}%;top:${((i * 53.7) % 70).toFixed(1)}%;--o:${(0.4 + (i % 3) * 0.25).toFixed(2)};--s:${i % 5 === 0 ? 2 : 1}px"></i>`
   sky.querySelector('.sky-stars').innerHTML = dots
+  if (skyUsed) sky.classList.add('is-used')
 
-  function paint() {
-    const now = londonNow(), h = now.h
-    // sunrise and sunset for London, near enough, from the day of the year
+  let live = true            // following London's clock; false once someone drags the sky to another hour
+  let shown = 0              // the hour on screen
+  let raf = 0
+
+  const wrap24 = (h) => ((h % 24) + 24) % 24
+  const clock = (h) => {
+    const hh = Math.floor(h), mm = Math.min(59, Math.floor((h - hh) * 60))
+    return new Date(2000, 0, 1, hh, mm).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
+  }
+  /** Sunrise, noon and sunset for London today, near enough, from the day of the year. */
+  const sunTimes = (now) => {
     const dayLen = 12.2 + 4.4 * Math.sin(2 * Math.PI * (now.doy - 80) / 365)
     const noon = 12.05 + now.offset
-    const RISE = noon - dayLen / 2, SET = noon + dayLen / 2
+    return { noon, rise: noon - dayLen / 2, set: noon + dayLen / 2 }
+  }
+  const weekday = (now) => now.dow >= 1 && now.dow <= 5
+  /** What's true right now. */
+  const liveLine = (h, wd) => h >= 23 || h < 7 ? "I'm probably asleep. I'll reply after sunrise."
+    : h < 9 ? 'Just waking up. Coffee first, then replies.'
+    : h < 18 ? (wd ? "I'm at work right now. I'll reply this evening." : "I'm around today, so replies are fast.")
+    : "Winding down. I'll reply by tomorrow at the latest."
+  /** What's usually true at an hour someone dragged to. */
+  const usualLine = (h, wd) => h >= 23 || h < 7 ? "At this hour I'm asleep."
+    : h < 9 ? "At this hour I'm waking up. Coffee first."
+    : h < 18 ? (wd ? "At this hour I'm usually at work." : "At this hour I'm usually out and about.")
+    : "At this hour I'm winding down."
+
+  function paint(h, now = londonNow()) {
+    const { noon, rise: RISE, set: SET } = sunTimes(now)
     //      hour        top        middle     horizon    dunes      stars
     const K = [
       [0,          '#05061a', '#0d0f2e', '#1a1840', '#241d44', 1],
@@ -209,45 +247,101 @@ function startSky(wrap) {
     let a = K[0], b = K[K.length - 1]
     for (let k = 0; k < K.length - 1; k++) if (h >= K[k][0] && h <= K[k + 1][0]) { a = K[k]; b = K[k + 1]; break }
     const t = (h - a[0]) / Math.max(0.001, b[0] - a[0])
-    const night = a[5] + (b[5] - a[5]) * t
     sky.style.setProperty('--s0', mix(a[1], b[1], t))
     sky.style.setProperty('--s1', mix(a[2], b[2], t))
     sky.style.setProperty('--s2', mix(a[3], b[3], t))
     sky.style.setProperty('--dune', mix(a[4], b[4], t))
-    sky.style.setProperty('--stars', night.toFixed(2))
+    sky.style.setProperty('--stars', (a[5] + (b[5] - a[5]) * t).toFixed(2))
 
     const day = h > RISE - 0.4 && h < SET + 0.4
     if (day) {
       const st = Math.max(0, Math.min(1, (h - RISE) / (SET - RISE)))
-      sun.style.left = `${(6 + st * 88).toFixed(1)}%`
-      sun.style.top = `${(88 - Math.sin(Math.PI * st) * 70).toFixed(1)}%`
+      sun.style.left = `${(6 + st * 88).toFixed(2)}%`
+      sun.style.top = `${(88 - Math.sin(Math.PI * st) * 70).toFixed(2)}%`
     } else {
       const nt = ((h - SET + 24) % 24) / (24 - (SET - RISE))
-      moon.style.left = `${(6 + nt * 88).toFixed(1)}%`
-      moon.style.top = `${(84 - Math.sin(Math.PI * nt) * 62).toFixed(1)}%`
+      moon.style.left = `${(6 + nt * 88).toFixed(2)}%`
+      moon.style.top = `${(84 - Math.sin(Math.PI * nt) * 62).toFixed(2)}%`
     }
     sun.style.opacity = day ? 1 : 0
     moon.style.opacity = day ? 0 : 1
 
-    // the photo takes the same light: blue at night, warm at each end of the day
-    const golden = Math.max(0, 1 - Math.min(Math.abs(h - RISE), Math.abs(h - SET)) / 1.3)
-    tint.style.setProperty('--night', (night * 0.5).toFixed(2))
-    tint.style.setProperty('--golden', (golden * 0.34).toFixed(2))
-
-    const hh = Math.floor(h), mm = Math.round((h - hh) * 60) % 60
-    const label = new Date(2000, 0, 1, hh, mm).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
-    const weekday = now.dow >= 1 && now.dow <= 5
-    const line = h >= 23 || h < 7 ? "I'm probably asleep. I'll reply after sunrise."
-      : h < 9 ? 'Just waking up. Coffee first, then replies.'
-      : h < 18 ? (weekday ? "I'm at work right now. I'll reply this evening." : "I'm around today, so replies are fast.")
-      : "Winding down. I'll reply by tomorrow at the latest."
-    timeEl.textContent = `${label} in London`
+    shown = h
+    const label = clock(h), line = live ? liveLine(h, weekday(now)) : usualLine(h, weekday(now))
+    timeEl.textContent = live ? `${label} in London` : `London at ${label}`
     lineEl.textContent = line
-    return line
+    sky.dataset.live = live ? '1' : '0'
+    nowBtn.setAttribute('aria-pressed', live ? 'true' : 'false')
+    view.setAttribute('aria-valuenow', h.toFixed(2))
+    view.setAttribute('aria-valuetext', `${timeEl.textContent}. ${line}`)
   }
-  paint()
-  const timer = setInterval(paint, 30000)
-  return { stop: () => clearInterval(timer), line: paint }
+
+  /** Someone moved the sky: stop following the clock and show that hour. */
+  function scrubTo(h) {
+    live = false
+    if (!skyUsed) { skyUsed = true; sky.classList.add('is-used') }
+    paint(wrap24(h))
+  }
+
+  /** Back to the real hour, the short way round the clock. */
+  function goLive() {
+    cancelAnimationFrame(raf)
+    const target = londonNow().h
+    if (live || calm()) { live = true; sky.classList.remove('is-moving'); paint(target); return }
+    const from = shown, d = ((target - from + 36) % 24) - 12, t0 = performance.now()
+    sky.classList.add('is-moving')
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / 750), e = 1 - Math.pow(1 - k, 3)
+      if (k < 1) { paint(wrap24(from + d * e)); raf = requestAnimationFrame(step) }
+      else { live = true; sky.classList.remove('is-moving'); paint(londonNow().h) }
+    }
+    raf = requestAnimationFrame(step)
+  }
+  nowBtn.addEventListener('click', () => { goLive(); sfx.click() }, { signal })
+
+  // Drag: the sun (or the moon) stays under the pointer, so one strip-width is one whole day, or one whole night
+  let drag = null
+  view.addEventListener('pointerdown', (e) => {
+    if (e.button) return
+    drag = { id: e.pointerId, x: e.clientX, moved: false, now: londonNow() }
+    try { view.setPointerCapture(e.pointerId) } catch { /* fine without it */ }
+  }, { signal })
+  view.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return
+    const dx = e.clientX - drag.x
+    if (!drag.moved) {
+      if (Math.abs(dx) < 5) return                  // a small threshold, so a tap is not a drag
+      drag.moved = true
+      cancelAnimationFrame(raf)
+      sky.classList.add('is-moving')
+    }
+    drag.x = e.clientX
+    const { rise, set } = sunTimes(drag.now)
+    const span = shown > rise && shown < set ? set - rise : 24 - (set - rise)
+    scrubTo(shown + dx / (view.clientWidth * 0.88) * span)
+  }, { signal })
+  const drop = (e) => { if (drag && e.pointerId === drag.id) { drag = null; sky.classList.remove('is-moving') } }
+  view.addEventListener('pointerup', drop, { signal })
+  view.addEventListener('pointercancel', drop, { signal })
+
+  // Keys: arrows move a quarter of an hour, Page Up / Down an hour, Home goes back to now
+  view.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return
+    const step = { ArrowRight: 0.25, ArrowUp: 0.25, ArrowLeft: -0.25, ArrowDown: -0.25, PageUp: 1, PageDown: -1 }[e.key]
+    if (step === undefined && e.key !== 'Home') return
+    e.preventDefault(); e.stopPropagation()
+    cancelAnimationFrame(raf)
+    if (e.key === 'Home') goLive()
+    else scrubTo(Math.round((shown + step) * 4) / 4)
+  }, { signal })
+
+  paint(londonNow().h)
+  const timer = setInterval(() => { if (live && !drag) paint(londonNow().h) }, 30000)
+  return {
+    stop: () => { clearInterval(timer); cancelAnimationFrame(raf) },
+    /** the honest line about right now, for the thank-you note */
+    line: () => { const now = londonNow(); return liveLine(now.h, weekday(now)) },
+  }
 }
 
 export function initContact(root) {
@@ -255,7 +349,7 @@ export function initContact(root) {
   if (!wrap) return
   const ac = new AbortController()
   const { signal } = ac
-  const sky = startSky(wrap)
+  const sky = startSky(wrap, signal)
   root._disposeIsland = () => { ac.abort(); sky.stop() }
 
   // ── Toast and copy ────────────────────────────────────────────────────────

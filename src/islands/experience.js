@@ -69,11 +69,13 @@ function layer(r, i) {
         </button>
       </h4>
       <div class="era-body" id="era-b-${i}" role="region" aria-labelledby="era-h-${i}" inert>
-        <span class="era-tile" aria-hidden="true">${logo}<b>${r.mono}</b></span>
-        <div class="era-text">
-          <p class="era-out">${r.out}</p>
-          <p class="era-desc"><span class="era-when">${r.org} · ${r.when}</span>${r.desc}</p>
-        </div>
+        <div class="era-in"><div class="era-grid">
+          <span class="era-tile" aria-hidden="true">${logo}<b>${r.mono}</b></span>
+          <div class="era-text">
+            <p class="era-out">${r.out}</p>
+            <p class="era-desc"><span class="era-when">${r.org} · ${r.when}</span>${r.desc}</p>
+          </div>
+        </div></div>
       </div>
     </li>`
 }
@@ -88,8 +90,9 @@ export const EXPERIENCE_HTML = `
     <ol class="st-stack" aria-label="Experience, newest first">
       ${ROLES.map(layer).join('')}
     </ol>
+    <div class="st-more" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
     <div class="st-foot">
-      <a class="st-li" href="${LINKEDIN}" target="_blank" rel="noopener noreferrer">${svgIcon('linkedin', 18)}<span>Full history on LinkedIn</span>${svgIcon('external', 15)}</a>
+      <a class="st-li" href="${LINKEDIN}" target="_blank" rel="noopener noreferrer">${svgIcon('linkedin', 15)}<span>Full history on LinkedIn</span>${svgIcon('external', 13)}</a>
       <p class="st-keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd><span>through time</span></p>
     </div>
   </div>
@@ -111,6 +114,8 @@ export function initExperience(root) {
   // The gauge's dot rides beside the open layer. It's re-placed whenever a layer changes size, so it
   // keeps up while the layers are still moving, however fast or slow the device draws.
   function place() {
+    // on a short screen the stack scrolls: say so when there are layers below the edge
+    st.classList.toggle('has-more', stack.scrollHeight - stack.scrollTop - stack.clientHeight > 6)
     const el = eras[cur]
     if (!el) return
     const g = line.getBoundingClientRect(), r = el.getBoundingClientRect()
