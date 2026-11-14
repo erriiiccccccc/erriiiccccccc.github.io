@@ -26,7 +26,6 @@ import { AboutOverlay } from './ui/AboutOverlay.js'
 import { CloseUp } from './ui/CloseUp.js'
 import { audio } from './jukebox/AudioEngine.js'
 import { sfx } from './audio/sfx.js'
-import { AsciiScreen } from './fx/AsciiScreen.js'
 import { QuestMarker } from './scene/QuestMarker.js'
 import { Gramophone } from './scene/Gramophone.js'
 import { WorldJukebox } from './jukebox/worldPlayer.js'
@@ -192,6 +191,7 @@ let closeUpWhich  = null       // 'jukebox' | 'studio' | 'board'
 aboutOverlay.onStartClose = () => {
   sfx.close('card', 'meadow_island')
   gsap.killTweensOf(modelGroup.position)                       // a hop in progress
+  endAboutEmote()
   if (audio.isPlaying(ABOUT_OWNER)) { audio.stop(ABOUT_OWNER); audio.setLevel(audio.fullLevel) }
   // 1. Lights snap off first (quick) — character goes dark while still zoomed in.
   aboutLightsOn = false
@@ -1519,8 +1519,6 @@ scene.add(character.group)
 const modelGroup = new THREE.Group()
 modelGroup.position.set(0, PLANET_RADIUS + 0.9, 0)
 scene.add(modelGroup)
-// About screen: an ASCII lens follows the pointer anywhere (fx/AsciiScreen)
-const asciiFx = new AsciiScreen(renderer)
 let fbxInScene = false
 
 // ─── Animation controller ────────────────────────────────────────────────────
@@ -1589,7 +1587,8 @@ gltfCharLoader.load(LOCO_BASE + 'ericlowpolyskeleton.glb', gltf => {
     const emotes = [clipOf(a), clipOf(c), clipOf(g)].filter(Boolean)
 
     // idle is the static bind pose (built by the controller); walk/run animate
-    animCtrl.loadGlbClips(root, { idle: null, walk: walkClip, run: runClip, emotes, named: { nod: clipOf(a), call: clipOf(c), wave: clipOf(g) } })
+    animCtrl.loadGlbClips(root, { idle: null, walk: walkClip, run: runClip, emotes })
+    captureEmoteRig(root)                // the bones the About emotes pose, in their rest pose
     modelLoaded = true
 
     _footBones.L = root.getObjectByName('L_Foot')
@@ -1889,42 +1888,106 @@ function hopFrom(from, dir) {
 }
 
 // ── About: Character Select ─────────────────────────────────────────────────
-// Emotes: wave, nod and call are clips on his rig. Jump is a small hop, since About holds him in the air.
-let _aboutBaseY     = 0          // his height while About holds him (set as it opens)
-let _aboutTrackHold = 0          // until then, head tracking yields to an emote clip
-let _aboutTrackHeld = false
+// Emotes, posed in code. The clips that came with the rig are long idle variations (one runs 17
+// seconds before anything happens), not gestures, so a wave, a nod, a jump and a cheer are done here:
+// each one aims a few bones along a direction in the world, so nothing depends on the rig's own axes,
+// and eases in and out of his rest pose.
+let _aboutBaseY = 0          // his height while About holds him (set as it opens)
+const _emoRest = new Map()   // bone -> its rest quaternion
+let _emoBones = null
+const _emo = { key: null, t: 0 }
+const EMOTE_LEN = { wave: 1.9, nod: 1.1, jump: 0.75, cheer: 1.7 }
+function captureEmoteRig(root) {
+  const g = (n) => root.getObjectByName(n)
+  const b = { rUp: g('R_Upperarm'), rFore: g('R_Forearm'), rHand: g('R_Hand'), lUp: g('L_Upperarm'), lFore: g('L_Forearm'), lHand: g('L_Hand'), head: g('Head') }
+  if (Object.values(b).some(x => !x)) { if (import.meta.env.DEV) console.warn('[about] emote bones not found on this rig'); return }
+  for (const bone of [b.rUp, b.rFore, b.lUp, b.lFore]) _emoRest.set(bone, bone.quaternion.clone())
+  _emoBones = b
+}
 function aboutEmote(name) {
-  if (!aboutOverlay.isOpen() || !presentationMode || !modelLoaded) return
-  if (name === 'jump') {
+  if (!aboutOverlay.isOpen() || !presentationMode || !modelLoaded || !_emoBones) return
+  endAboutEmote()
+  _emo.key = name
+  _emo.t = 0
+  if (name === 'jump' || name === 'cheer') {
+    const h = name === 'jump' ? 0.5 : 0.22
     gsap.killTweensOf(modelGroup.position)
     modelGroup.position.y = _aboutBaseY
     sfx.jump()
-    gsap.timeline()
-      .to(modelGroup.position, { y: _aboutBaseY + 0.5, duration: 0.24, ease: 'power2.out' })
+    gsap.timeline({ delay: name === 'cheer' ? 0.18 : 0 })
+      .to(modelGroup.position, { y: _aboutBaseY + h, duration: 0.24, ease: 'power2.out' })
       .to(modelGroup.position, { y: _aboutBaseY, duration: 0.3, ease: 'power2.in', onComplete: () => sfx.land('meadow_island') })
-      .to(modelGroup.position, { y: _aboutBaseY + 0.07, duration: 0.09, ease: 'power1.out' })
+      .to(modelGroup.position, { y: _aboutBaseY + h * 0.14, duration: 0.09, ease: 'power1.out' })
       .to(modelGroup.position, { y: _aboutBaseY, duration: 0.1, ease: 'power1.in' })
-    return
   }
-  const dur = animCtrl.playEmote(name)
-  if (dur) { _aboutTrackHold = performance.now() + (dur + 0.4) * 1000; _aboutTrackHeld = true }
 }
-/** His head follows the pointer, except while an emote is using it (a nod is all head). */
-function aboutTrackingTick() {
-  if (performance.now() < _aboutTrackHold) return
-  if (_aboutTrackHeld) {
-    _aboutTrackHeld = false
-    // pick the tracking up from wherever the clip left his head, so nothing snaps
-    for (const key of ['head', 'neck', 'spine']) {
-      const bone = _aboutBones[key], base = _aboutBase[key], cfg = _ABOUT_TRACK_CFG[key]
-      if (!bone || !base) continue
-      _aboutOffsets[key].y = THREE.MathUtils.clamp(bone.rotation.y - base.y, -cfg.yc, cfg.yc)
-      _aboutOffsets[key].x = THREE.MathUtils.clamp(bone.rotation.x - base.x, -cfg.pc, cfg.pc)
-    }
+/** Arms back to rest, at the end of an emote or when About closes on one. */
+function endAboutEmote() {
+  if (!_emo.key) return
+  _emo.key = null
+  for (const [bone, q] of _emoRest) bone.quaternion.copy(q)
+  if (IS_TOUCH && _emoBones && _aboutBase.head) _emoBones.head.rotation.x = _aboutBase.head.x
+}
+const _eA = new THREE.Vector3(), _eB = new THREE.Vector3(), _eDir = new THREE.Vector3()
+const _eSide = new THREE.Vector3(), _eFwd = new THREE.Vector3()
+const _eQ = new THREE.Quaternion(), _eQ2 = new THREE.Quaternion(), _eQ3 = new THREE.Quaternion()
+/** Turn `bone` so that the line from it to `child` lies along `dir` (a world direction), `w` of the way from its rest pose. */
+function aimBone(bone, child, dir, w) {
+  bone.quaternion.copy(_emoRest.get(bone))
+  bone.updateWorldMatrix(true, true)
+  bone.getWorldPosition(_eA)
+  child.getWorldPosition(_eB)
+  _eB.sub(_eA).normalize()
+  _eQ.setFromUnitVectors(_eB, _eDir.copy(dir).normalize())      // the turn, in the world
+  bone.getWorldQuaternion(_eQ2)
+  _eQ.multiply(_eQ2)                                            // where that leaves the bone, in the world
+  bone.parent.getWorldQuaternion(_eQ3).invert()
+  _eQ3.multiply(_eQ)                                            // and in its parent's space
+  bone.quaternion.slerp(_eQ3, w)
+}
+const _eUp = new THREE.Vector3(0, 1, 0)
+const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+function tickAboutEmote(dt) {
+  if (!_emo.key || !_emoBones) return
+  const b = _emoBones, len = EMOTE_LEN[_emo.key] || 1.5
+  _emo.t += dt
+  const t = _emo.t
+  if (t >= len || !aboutOverlay.isOpen()) { endAboutEmote(); return }
+  const w = smooth(t / 0.22) * smooth((len - t) / 0.3)          // in over 0.22 s, out over 0.3 s
+
+  // his own right and forward, from where his shoulders are right now
+  for (const [bone, q] of _emoRest) bone.quaternion.copy(q)
+  b.rUp.updateWorldMatrix(true, false); b.lUp.updateWorldMatrix(true, false)
+  b.rUp.getWorldPosition(_eA); b.lUp.getWorldPosition(_eB)
+  _eSide.subVectors(_eA, _eB).normalize()                       // towards his right hand
+  _eFwd.crossVectors(_eUp, _eSide).normalize()                  // the way he's facing
+  const dir = (s, u, f) => new THREE.Vector3().addScaledVector(_eSide, s).addScaledVector(_eUp, u).addScaledVector(_eFwd, f)
+
+  if (_emo.key === 'wave') {
+    // right arm up and out, the forearm swinging side to side from the elbow
+    aimBone(b.rUp, b.rFore, dir(0.85, 0.5, 0.25), w)
+    aimBone(b.rFore, b.rHand, dir(0.12 + Math.sin(t * 15) * 0.5, 1, 0.2), w)
+  } else if (_emo.key === 'cheer') {
+    // both arms up in a V, pumping
+    const pump = Math.sin(t * 13) * 0.1
+    aimBone(b.rUp, b.rFore, dir(0.6, 0.8 + pump, 0.12), w)
+    aimBone(b.rFore, b.rHand, dir(0.28, 1, 0.08), w)
+    aimBone(b.lUp, b.lFore, dir(-0.6, 0.8 + pump, 0.12), w)
+    aimBone(b.lFore, b.lHand, dir(-0.28, 1, 0.08), w)
+  } else if (_emo.key === 'jump') {
+    // arms swing out and up with the hop
+    aimBone(b.rUp, b.rFore, dir(0.8, 0.5, 0.25), w)
+    aimBone(b.rFore, b.rHand, dir(0.55, 0.85, 0.2), w)
+    aimBone(b.lUp, b.lFore, dir(-0.8, 0.5, 0.25), w)
+    aimBone(b.lFore, b.lHand, dir(-0.55, 0.85, 0.2), w)
+  } else if (_emo.key === 'nod') {
+    // two nods, on top of wherever the pointer has his head (the tracking set it just before this)
+    const nod = Math.max(0, Math.sin(t / len * Math.PI * 4)) * 0.34 * w      // down is negative on this rig (the same way the pointer tips his head)
+    if (IS_TOUCH && _aboutBase.head) b.head.rotation.x = _aboutBase.head.x - nod
+    else b.head.rotation.x -= nod
   }
-  _applyAboutTracking()
 }
-/** Where his head is on screen: the speech bubble hangs off it. */
+/** Where his head is on screen: the little "talking" dots sit beside it. */
 const _aboutHeadV = new THREE.Vector3()
 function tickAboutAnchor() {
   if (_aboutBones.head) { _aboutBones.head.getWorldPosition(_aboutHeadV); _aboutHeadV.y += 0.14 }
@@ -2140,7 +2203,7 @@ aboutOverlay.onHop = hopFromAbout
 aboutOverlay.onEmote = aboutEmote
 aboutOverlay.onWarp  = warpFromAbout
 aboutOverlay.onMusic = aboutMusic
-aboutOverlay.onBlip  = () => sfx.talk()
+aboutOverlay.onBlip  = (ch) => sfx.talk(ch)
 ui.onShell      = shellWorldFx
 
 // ─── Island interaction keys + global ESC + M for map ────────────────────────
@@ -2160,8 +2223,9 @@ document.addEventListener('keydown', e => {
     hopFromAbout(e.key === 'ArrowLeft' ? -1 : 1)
     return
   }
-  // About: keys 1 to 4 are his emotes
+  // About: keys 1 to 4 are his emotes, Space or Enter makes him talk (unless a button has the focus)
   if (!e.ctrlKey && !e.metaKey && !e.altKey && aboutOverlay.key(e.key)) { e.preventDefault(); return }
+  if (aboutOverlay.isOpen() && (e.key === ' ' || e.key === 'Enter') && !t?.closest?.('button, a')) { e.preventDefault(); aboutOverlay.talk(); return }
 
   if (isAnyOverlayOpen()) return  // suppress gameplay keys while a modal is up
 
@@ -2739,7 +2803,8 @@ function animate() {
     animCtrl.update(dt, moving, sprint, !isGrounded)
     // Mouse tracking for About overlay: applied AFTER mixer so offsets sit on
     // top of the animation pose rather than fighting it
-    if (aboutOverlay.isOpen() && !IS_TOUCH) aboutTrackingTick()
+    if (aboutOverlay.isOpen() && !IS_TOUCH) _applyAboutTracking()
+    tickAboutEmote(dt)
   } else {
     // Procedural fallback while GLB/FBX loads
     character.update(dt, moving, time, !isGrounded)
@@ -3110,9 +3175,6 @@ function animate() {
   tickHop()
   applyViewShift()
   if (aboutOverlay.isOpen()) tickAboutAnchor()
-  // On the About screen an ASCII lens follows the pointer (fx/AsciiScreen)
-  if (!asciiFx.render(scene, camSystem.camera, dt, aboutOverlay.isOpen() && fbxInScene)) {
-    renderer.render(scene, camSystem.camera)
-  }
+  renderer.render(scene, camSystem.camera)
 }
 animate()

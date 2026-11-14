@@ -4,9 +4,11 @@
 //           1 to 4 that make him move)
 //   right   Quest log (the six islands, a tick on the ones found, press one
 //           to warp there) and Now playing (a record from the Jukebox)
-//   centre  click or tap Eric and he talks: a speech bubble by his head types
-//           the line out, with a little gesture to go with it
-//   bottom  the nameplate dock: name, role, the ways to reach him
+//   centre  click or tap Eric and he talks, with a little gesture to go with it
+//   bottom  the nameplate dock: name, role, the ways to reach him. When he
+//           talks it turns into a game's dialogue box: his name on the tab, the
+//           line typing out with a beep per letter, a ▼ when there's more.
+//           Nothing is laid over him; three small dots by his head show who's talking.
 //
 // Pure CSS/DOM. The 3D character stays in the main scene: there is no second
 // renderer here. main.js owns the camera, the animation and the sound, and
@@ -25,17 +27,17 @@ const EMOTES = [
   { key: 'wave', label: 'Wave', icon: svg('<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>') },
   { key: 'nod',  label: 'Nod',  icon: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>') },
   { key: 'jump', label: 'Jump', icon: svg('<path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/>') },
-  { key: 'call', label: 'Call', icon: svg('<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>') },
+  { key: 'cheer', label: 'Cheer', icon: svg('<path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/>') },
 ]
 
 /** What he says when clicked, in order, in Eric's own words. `emote` plays with the line; `warp` puts a button in the bubble. */
 const LINES = [
   { text: "Hey, I'm Eric. Welcome to my world!", emote: 'wave' },
   { text: 'I built this whole planet. Every island is a part of me.', emote: 'nod' },
-  { text: "Start with Mountain if you want to see what I've made.", emote: 'call', warp: 'mountain_island', warpLabel: 'Take me to Mountain' },
+  { text: "Start with Mountain if you want to see what I've made.", emote: 'cheer', warp: 'mountain_island', warpLabel: 'Take me to Mountain' },
 ]
-const TYPE_MS = 26           // per letter
-const BUBBLE_STAYS = 7000    // after the line has finished
+const TYPE_MS = 34           // per letter
+const BOX_STAYS = 8000       // after the line has finished, before the nameplate comes back
 
 export class AboutOverlay {
   constructor() {
@@ -51,13 +53,13 @@ export class AboutOverlay {
     this.shouldCloseFromBackdrop = null
     /** (dir: -1 | 1) => void, the ‹ › buttons; main.js closes it and flies on. */
     this.onHop = null
-    /** (key: 'wave' | 'nod' | 'jump' | 'call') => void. An emote button, a key, or a line he says. */
+    /** (key: 'wave' | 'nod' | 'jump' | 'cheer') => void. An emote button, a key, or a line he says. */
     this.onEmote = null
     /** (islandName) => void. A quest was pressed: close and warp there. */
     this.onWarp = null
     /** ('toggle' | 'next') => void. The Now playing card. */
     this.onMusic = null
-    /** () => void. One blip of his talking sound, every few letters. */
+    /** (letter) => void. One beep of his talking sound, for the letter just typed. */
     this.onBlip = null
 
     this._line = 0
@@ -97,11 +99,8 @@ export class AboutOverlay {
         ${TOUCH ? 'tap him to talk' : 'click him to talk · keys 1 to 4 make him move'}
       </div>
 
-      <!-- What he says, by his head (main.js keeps --ax / --ay on his head) -->
-      <div class="about-say" role="status" aria-live="polite">
-        <p class="about-say-text"></p>
-        <button type="button" class="about-say-go" hidden></button>
-      </div>
+      <!-- Who's talking: three dots by his head while a line types (main.js keeps --ax / --at on his head) -->
+      <div class="about-speak" aria-hidden="true"><i></i><i></i><i></i></div>
 
       <div class="about-cards">
         <!-- Hero nameplate dock -->
@@ -134,6 +133,15 @@ export class AboutOverlay {
               </a>
             </div>
           </div>
+          <!-- The dialogue box: takes the nameplate's place while he talks -->
+          <div class="about-talk" role="status" aria-live="polite">
+            <div class="about-talk-who"><span class="about-talk-name">Eric</span><span class="about-talk-n" aria-hidden="true"></span></div>
+            <p class="about-talk-text"><span class="about-talk-shown"></span><span class="about-talk-rest" aria-hidden="true"></span></p>
+            <div class="about-talk-foot">
+              <button type="button" class="about-talk-go" hidden></button>
+              <span class="about-talk-next" aria-hidden="true">${TOUCH ? 'tap him' : 'click him or press Space'}<i>▼</i></span>
+            </div>
+          </div>
         </div>
         <div class="about-side about-side--l">
           <section class="about-card about-profile" style="--k:0" aria-labelledby="about-h-profile">
@@ -141,7 +149,7 @@ export class AboutOverlay {
             <p class="about-line">I build things for fun.</p>
             <dl class="about-rows">
               <div><dt>Now</dt><dd>AI Audit Technology Analyst at Barclays, London.</dd></div>
-              <div><dt>From</dt><dd>Subang Jaya, Malaysia. Now in London.</dd></div>
+              <div><dt>From</dt><dd>Kuala Pilah, Malaysia. Home there is Subang Jaya.</dd></div>
               <div><dt>Likes</dt><dd>Badminton, basketball, exploring, char kuey teow.</dd></div>
             </dl>
           </section>
@@ -172,7 +180,7 @@ export class AboutOverlay {
     document.body.appendChild(el)
     this._el = el
     const $ = (s) => el.querySelector(s)
-    this._say = $('.about-say'); this._sayText = $('.about-say-text'); this._sayGo = $('.about-say-go')
+    this._dock = $('.about-dock'); this._shown = $('.about-talk-shown'); this._rest = $('.about-talk-rest'); this._go = $('.about-talk-go'); this._count = $('.about-talk-n')
 
     $('.about-close').addEventListener('click', () => this.close())
     el.querySelectorAll('.about-hop').forEach(b => {
@@ -184,6 +192,7 @@ export class AboutOverlay {
       if (emo) { this.emote(emo.dataset.emote); return }
       const quest = e.target.closest('[data-warp]')
       if (quest) { this.onWarp?.(quest.dataset.warp); return }
+      if (e.target.closest('.about-talk')) { this.talk(); return }          // pressing the dialogue box moves it on too
       const music = e.target.closest('[data-music]')
       if (music) { this.onMusic?.(music.dataset.music); return }
       // Only a click on the bare backdrop (not on any chrome) can dismiss, and even then the
@@ -223,14 +232,21 @@ export class AboutOverlay {
   talk() {
     if (!this.isOpen()) return
     if (this._typing) { this._finishLine(); return }
-    const line = LINES[this._line % LINES.length]
+    const i = this._line % LINES.length
+    const line = LINES[i]
     this._line++
     const calm = document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     clearTimeout(this._hideT)
-    this._sayGo.hidden = true
-    this._sayText.textContent = ''
-    this._say.classList.remove('is-on'); void this._say.offsetWidth; this._say.classList.add('is-on')
-    this._el.classList.add('is-talking')
+    this._go.hidden = true
+    this._count.textContent = `${i + 1} / ${LINES.length}`
+    // the whole line is laid out from the start (the part not said yet is invisible), so nothing
+    // jumps to the next row halfway through a word
+    this._shown.textContent = ''
+    this._rest.textContent = line.text
+    this._dock.classList.add('is-talking')
+    this._dock.classList.remove('is-waiting')
+    this._el.classList.add('is-talking', 'is-typing')
+    this._dock.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: calm ? 'auto' : 'smooth' })      // phones: the nameplate is one card of a row
     this.emote(line.emote)
     this._typing = { line, n: 0 }
     if (calm) { this._finishLine(); return }
@@ -238,38 +254,44 @@ export class AboutOverlay {
       const t = this._typing
       if (!t) return
       t.n++
-      this._sayText.textContent = line.text.slice(0, t.n)
-      if (t.n % 3 === 1 && /\S/.test(line.text[t.n - 1] || '')) this.onBlip?.()
+      const ch = line.text[t.n - 1] || ''
+      this._shown.textContent = line.text.slice(0, t.n)
+      this._rest.textContent = line.text.slice(t.n)
+      if (/[a-z0-9]/i.test(ch)) this.onBlip?.(ch)
       if (t.n >= line.text.length) { this._finishLine(); return }
-      // a breath at the end of a sentence
-      this._typeT = setTimeout(tick, /[.!?,]/.test(line.text[t.n - 1]) ? TYPE_MS * 7 : TYPE_MS)
+      // a breath at a comma, a longer one at the end of a sentence
+      this._typeT = setTimeout(tick, /[.!?]/.test(ch) ? TYPE_MS * 9 : ch === ',' ? TYPE_MS * 5 : TYPE_MS)
     }
-    this._typeT = setTimeout(tick, 120)
+    this._typeT = setTimeout(tick, 260)
   }
   _finishLine() {
     const t = this._typing
     if (!t) return
     clearTimeout(this._typeT)
     this._typing = null
-    this._sayText.textContent = t.line.text
+    this._shown.textContent = t.line.text
+    this._rest.textContent = ''
+    this._el.classList.remove('is-typing')
+    this._dock.classList.add('is-waiting')              // the ▼ starts to bob: there's more
     if (t.line.warp) {
-      this._sayGo.textContent = t.line.warpLabel
-      this._sayGo.dataset.warp = t.line.warp
-      this._sayGo.hidden = false
+      this._go.textContent = t.line.warpLabel
+      this._go.dataset.warp = t.line.warp
+      this._go.hidden = false
     }
     clearTimeout(this._hideT)
-    this._hideT = setTimeout(() => this._hush(), t.line.warp ? BUBBLE_STAYS * 1.6 : BUBBLE_STAYS)
+    this._hideT = setTimeout(() => this._hush(), t.line.warp ? BOX_STAYS * 1.6 : BOX_STAYS)
   }
+  /** Back to the nameplate. */
   _hush() {
     clearTimeout(this._typeT); clearTimeout(this._hideT)
     this._typing = null
-    this._say.classList.remove('is-on')
-    this._el.classList.remove('is-talking')
+    this._dock.classList.remove('is-talking', 'is-waiting')
+    this._el.classList.remove('is-talking', 'is-typing')
   }
 
   // ── What main.js tells it ────────────────────────────────────────────
   /** Where his head is on screen, in px: x, his face (y) and the top of his hair (yTop). Called every
-   *  frame while open; the bubble hangs off it (beside his face on wide screens, above his head on phones). */
+   *  frame while open; the "talking" dots sit beside it. */
   setAnchor(x, y, yTop) {
     if (Math.abs(x - this._ax) < 0.5 && Math.abs(y - this._ay) < 0.5) return
     this._ax = x; this._ay = y

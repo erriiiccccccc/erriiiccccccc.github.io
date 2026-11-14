@@ -13,7 +13,7 @@
 
 export const KNOWLEDGE = `
 ABOUT ERIC
-- Eric Ng Min Chern, goes by Eric. From Kuala Pilah in Negeri Sembilan, Malaysia. Now lives and works in London.
+- Eric Ng Min Chern, goes by Eric. His hometown is Kuala Pilah in Negeri Sembilan, Malaysia, and his home in Malaysia is Subang Jaya. Now lives and works in London.
 - Graduated in June 2026 with a First Class BEng (Hons) in Computer Science from the University of Edinburgh (studied there 2022 to 2026). He has finished his degree.
 - Speaks English (native) and Chinese (fluent), plus conversational Malay, Cantonese and Hakka.
 - What he's like, in his words: hardworking, loves creating stuff, loves being hands on, and very into vibe coding (building fast with AI).

@@ -3825,7 +3825,7 @@ body:has(#about-overlay.is-open) #hud-buttons { opacity: 0; pointer-events: none
 .about-emo:hover svg { transform: translateY(-2px) scale(1.08); }
 .about-emo:active { transform: scale(0.94); }
 .about-emo.is-on { color: #fff; background: color-mix(in srgb, var(--ic) 24%, transparent); border-color: var(--ic); transform: translateY(-2px); }
-.about-emo:focus-visible, .about-quest:focus-visible, .about-np-btn:focus-visible, .about-np-next:focus-visible, .about-say-go:focus-visible { outline: 2px solid color-mix(in srgb, var(--ic) 75%, #fff); outline-offset: 2px; }
+.about-emo:focus-visible, .about-quest:focus-visible, .about-np-btn:focus-visible, .about-np-next:focus-visible { outline: 2px solid color-mix(in srgb, var(--ic) 75%, #fff); outline-offset: 2px; }
 
 /* Quest log: a tick (not just a colour) on the islands found; press one to warp */
 .about-quest-list { list-style: none; margin: 0 -6px; padding: 0; display: grid; gap: 1px; }
@@ -3858,18 +3858,41 @@ button.about-quest:hover .about-q-go, button.about-quest:focus-visible .about-q-
 .about-music.is-playing .about-np-main small { color: color-mix(in srgb, var(--ic) 78%, #fff); }
 .about-card-h .about-np-off { color: #fbbf24; }
 
-/* What he says: a speech bubble by his head, its tail toward him */
-.about-say { position: absolute; left: 0; top: 0; z-index: 3; width: max-content; max-width: min(270px, 62vw); padding: 10px 14px 11px; border-radius: 16px 16px 16px 5px; pointer-events: none;
-  font-size: 0.9rem; line-height: 1.4; color: #17122b; background: #fff; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-  transform: translate(calc(var(--ax, 50vw) + 34px), calc(var(--ay, 30vh) - 100% + 6px)) scale(0.6); transform-origin: 0 100%; opacity: 0;
-  transition: opacity 0.18s, transform 0.34s cubic-bezier(0.2, 1.3, 0.3, 1); }
-.about-say.is-on { opacity: 1; pointer-events: auto; transform: translate(calc(var(--ax, 50vw) + 34px), calc(var(--ay, 30vh) - 100% + 6px)); }
-.about-say-text { margin: 0; min-height: 1.4em; }
-.about-say-go { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; min-height: 34px; margin-top: 8px; padding: 0 0.85rem; border-radius: 999px; cursor: pointer;
-  font-size: 0.8rem; font-weight: 700; color: #fff; background: #17122b; animation: about-card-up 0.35s var(--ease-out) both; transition: transform 0.2s var(--ease-out); }
-.about-say-go[hidden] { display: none; }
-.about-say-go:hover { transform: translateY(-1px); }
-#about-overlay.is-talking .about-hint { opacity: 0 !important; transition: opacity 0.2s; }
+/* What he says. The nameplate turns into a game's dialogue box: nothing is laid over him.
+   The nameplate's own rows fade out and this layer fades in over the same box, so its size never changes. */
+.about-talk { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; gap: 4px; padding: 0.95rem 1.4rem 0.8rem; border-radius: inherit; cursor: pointer;
+  opacity: 0; visibility: hidden; transform: translateY(6px); transition: opacity 0.2s, transform 0.3s var(--ease-out), visibility 0s 0.2s; }
+.about-dock.is-talking .about-talk { opacity: 1; visibility: visible; transform: none; transition: opacity 0.22s 0.08s, transform 0.34s var(--ease-out) 0.08s, visibility 0s; }
+.about-dock .about-dock-row { transition: opacity 0.18s; }
+.about-dock.is-talking .about-dock-row { opacity: 0; pointer-events: none; }
+.about-talk-who { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.about-talk-name { display: inline-flex; align-items: center; height: 22px; padding: 0 0.6rem; border-radius: 6px; font: 700 0.66rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  color: #0c1a10; background: var(--ic); box-shadow: 0 0 16px color-mix(in srgb, var(--ic) 45%, transparent); }
+.about-talk-n { font: 600 0.62rem/1 var(--font-mono); letter-spacing: 0.1em; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
+.about-talk-text { margin: 0; align-self: center; font-size: clamp(1.02rem, 1.5vw, 1.22rem); line-height: 1.42; font-weight: 500; color: #fff; text-wrap: pretty; }
+.about-talk-rest { visibility: hidden; }
+.about-talk-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
+.about-talk-go { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; min-height: 30px; padding: 0 0.85rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.78rem; font-weight: 700; color: #0c1a10; background: var(--ic); animation: about-card-up 0.35s var(--ease-out) both; transition: transform 0.2s var(--ease-out), filter 0.2s; }
+.about-talk-go[hidden] { display: none; }
+.about-talk-go:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.about-talk-go:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.about-talk-next { margin-left: auto; display: inline-flex; align-items: center; gap: 0.45rem; font: 500 0.6rem/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--txt-faint); opacity: 0; transition: opacity 0.25s; }
+.about-talk-next i { font-style: normal; font-size: 0.72rem; color: var(--ic); }
+.about-dock.is-waiting .about-talk-next { opacity: 1; }
+.about-dock.is-waiting .about-talk-next i { animation: about-next 0.9s ease-in-out infinite; }
+@keyframes about-next { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(2px); } }
+
+/* who's talking: three small dots beside his head while the line types */
+.about-speak { position: absolute; left: 0; top: 0; z-index: 3; display: flex; gap: 4px; padding: 7px 9px; border-radius: 999px 999px 999px 4px; pointer-events: none;
+  background: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); opacity: 0; transform: translate(calc(var(--ax, 50vw) + 30px), calc(var(--at, 20vh) + 4px)) scale(0.5); transform-origin: 0 100%;
+  transition: opacity 0.16s, transform 0.3s cubic-bezier(0.2, 1.3, 0.3, 1); }
+.about-speak i { width: 5px; height: 5px; border-radius: 50%; background: #17122b; }
+#about-overlay.is-typing .about-speak { opacity: 1; transform: translate(calc(var(--ax, 50vw) + 30px), calc(var(--at, 20vh) + 4px)); }
+#about-overlay.is-typing .about-speak i { animation: about-speak 0.7s ease-in-out infinite; }
+#about-overlay.is-typing .about-speak i:nth-child(2) { animation-delay: 0.12s; }
+#about-overlay.is-typing .about-speak i:nth-child(3) { animation-delay: 0.24s; }
+@keyframes about-speak { 0%, 100% { transform: translateY(0); opacity: 0.45; } 50% { transform: translateY(-3px); opacity: 1; } }
 
 /* the dock under Character Select: just the nameplate, narrower so the cards have the sides.
    (It sits inside .about-cards, which lets the pointer through: the dock itself takes it.) */
@@ -3892,6 +3915,8 @@ button.about-quest:hover .about-q-go, button.about-quest:focus-visible .about-q-
   .about-side { width: clamp(200px, 23vw, 240px); }
   .about-line { font-size: 1.25rem; }
   .about-emo span { font-size: 0.62rem; }
+  .about-q-where { display: none; }                      /* narrow cards: the section and whether it's found, nothing shortened */
+  .about-np-title { font-size: 1rem; white-space: normal; }
 }
 
 /* Phones: the nameplate and the four cards are one row to swipe along the bottom, so he keeps the screen above it */
@@ -3915,14 +3940,10 @@ button.about-quest:hover .about-q-go, button.about-quest:focus-visible .about-q-
   .about-np { grid-template-columns: 48px minmax(0, 1fr) 44px; }
   .about-np-btn { width: 48px; height: 48px; }
   .about-np-next { width: 44px; height: 44px; }
-  /* the bubble sits above his head, centred, tail down */
-  .about-say { max-width: 80vw; border-radius: 16px; transform-origin: 50% 100%;
-    transform: translate(clamp(8px, calc(var(--ax, 50vw) - 50%), calc(100vw - 100% - 8px)), calc(var(--at, 20vh) - 100% - 12px)) scale(0.6); }
-  .about-say.is-on { transform: translate(clamp(8px, calc(var(--ax, 50vw) - 50%), calc(100vw - 100% - 8px)), calc(var(--at, 20vh) - 100% - 12px)); }
-  .about-say::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 14px; height: 14px; margin-left: -7px; background: #fff; transform: rotate(45deg); border-radius: 2px; }
+  .about-talk { padding: 0.85rem 1rem 0.7rem; }
 }
-@media (prefers-reduced-motion: reduce) { .about-card, .about-say, .about-emo, .about-emo svg { animation-duration: 0.01s !important; transition: none !important; } }
-body.reduced-motion :is(.about-card, .about-say, .about-emo, .about-emo svg) { animation-duration: 0.01s !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .about-card, .about-talk, .about-speak, .about-speak i, .about-talk-next i, .about-emo, .about-emo svg { animation: none !important; transition: none !important; } }
+body.reduced-motion :is(.about-card, .about-talk, .about-speak, .about-speak i, .about-talk-next i, .about-emo, .about-emo svg) { animation: none !important; transition: none !important; }
 
 /* Mobile: stack the dock vertically ────────────────────────────────────────── */
 @media (max-width: 640px) {

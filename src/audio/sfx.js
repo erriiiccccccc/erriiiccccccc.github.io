@@ -446,11 +446,16 @@ export class Sfx {
     this._bell(1760, { at: 0.08, gain: 0.026, d: 0.55, verb: 0.3 })
   }
 
-  /** Eric talking: one soft, low blip per few letters, each at a slightly different pitch, like a game's speech. */
-  talk() {
-    if (!this._ok() || this._throttle('talk', 50)) return
-    const f = 165 + Math.random() * 75
-    this.tone(f, { type: 'triangle', a: 0.004, d: 0.06, gain: 0.034, to: f * 1.07, verb: 0.06 })
+  /**
+   * Eric talking, the way old games do it: one short beep per letter as the line types out. Each
+   * letter has its own pitch (the vowels sit higher), so a sentence has a little melody and the same
+   * sentence always sounds the same.
+   */
+  talk(ch = 'a') {
+    if (!this._ok() || this._throttle('talk', 30)) return
+    const c = String(ch).toLowerCase()
+    const step = [0, 2, 3, 5, 7][c.charCodeAt(0) % 5] + ('aeiou'.includes(c) ? 5 : 0)
+    this.tone(233 * Math.pow(2, step / 12), { type: 'square', a: 0.002, d: 0.042, gain: 0.013, verb: 0 })
   }
 
   /** Pip, caught: a tiny squeak (two quick rising chirps and a sparkle). */
