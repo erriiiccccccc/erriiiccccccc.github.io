@@ -11,8 +11,11 @@
 // The gauge on the left is a thermometer and a depth mark in one: its dot
 // rides beside whichever layer is open.
 //
-// Logos live in public/experience/<file>. Official marks on file: Barclays,
-// BlackRock, University of Edinburgh; the rest get a monogram tile.
+// Logos live in public/experience/<file>, each the organisation's own mark as it
+// shows at a glance: Barclays, BlackRock, the University of Edinburgh roundel
+// (from its corporate logo, not the heraldic arms), Outlier, Finexus (its app
+// icon, `pad: 0` so it fills the tile) and AMEU (its globe). Freelance gets a
+// monogram tile. `pad` = the logo's inset in the tile, in px (default 7).
 import { svgIcon } from '../ui/icons.js'
 import { sfx } from '../audio/sfx.js'
 
@@ -27,25 +30,25 @@ const ROLES = [
   { role: 'Full-Stack Developer', org: 'Freelance', when: 'Since 2024, still going', yr: 'Since 2024', mono: 'F',
     out: 'Sites for real clients, from design to deploy: FoundTech, Petaling Utama Motor and more.',
     desc: 'React, Next.js, Node.js and PostgreSQL, shipped on Vercel. Open to new projects.' },
-  { role: 'Teaching Assistant', org: 'University of Edinburgh', when: 'Jan to May 2026', yr: '2026', mono: 'UoE', logo: 'uoe.svg',
+  { role: 'Teaching Assistant', org: 'University of Edinburgh', when: 'Jan to May 2026', yr: '2026', mono: 'UoE', logo: 'uoe.svg', pad: 3,
     out: 'A hands-on technician role: ran the labs for third-year courses on robots, embedded systems and 3D prototyping.',
     desc: 'System Design Project and Mobile Robotics. Made the course materials and mentored student teams until they shipped.' },
-  { role: 'Exam Marker', org: 'University of Edinburgh', when: 'Sep 2025 to Jan 2026', yr: '2025 to 26', mono: 'UoE', logo: 'uoe.svg',
+  { role: 'Exam Marker', org: 'University of Edinburgh', when: 'Sep 2025 to Jan 2026', yr: '2025 to 26', mono: 'UoE', logo: 'uoe.svg', pad: 3,
     out: 'Marked third-year Informatics Large Practical coursework for the University of Edinburgh.',
     desc: 'Checked every submission for functionality, code quality and correctness.' },
   { role: 'Credit Risk Technology Analyst Intern', org: 'Barclays', when: 'Jun to Sep 2025', yr: '2025', mono: 'B', logo: 'barclays.svg',
     out: '45 minutes to near instant: about 99% of the time saved.',
     desc: 'Built a React and Flask tool on production MSSQL for Wholesale Credit Risk, in Glasgow.' },
-  { role: 'AI Coding Trainer', org: 'Outlier', when: 'Nov 2024 to May 2025', yr: '2024 to 25', mono: 'O',
+  { role: 'AI Coding Trainer', org: 'Outlier', when: 'Nov 2024 to May 2025', yr: '2024 to 25', mono: 'O', logo: 'outlier.svg', pad: 6,
     out: 'Trained AI models to write better code by judging their answers.',
     desc: 'Scored LLM coding answers for correctness, efficiency and reasoning.' },
   { role: 'Technology Spring Intern', org: 'BlackRock', when: 'Apr 2024', yr: '2024', mono: 'BR', logo: 'blackrock.svg',
     out: 'Inside Aladdin, the platform BlackRock runs on.',
     desc: 'A spring internship in Edinburgh: engineering operations, and how very large financial systems are kept running.' },
-  { role: 'Marketing Executive', org: 'AMEU', when: '2023 to 2024', yr: '2023 to 24', mono: 'A',
+  { role: 'Marketing Executive', org: 'AMEU', when: '2023 to 2024', yr: '2023 to 24', mono: 'A', logo: 'ameu.png', pad: 5,
     out: '6,000+ accounts, 120% more engagement, events with major Malaysian banks.',
     desc: 'Media and marketing for the Association of Malaysian Economics Undergraduates.' },
-  { role: 'Software Engineer Intern', org: 'Finexus Group', when: 'Jun to Sep 2023', yr: '2023', mono: 'F',
+  { role: 'Software Engineer Intern', org: 'Finexus Group', when: 'Jun to Sep 2023', yr: '2023', mono: 'F', logo: 'finexus.svg', pad: 0,
     out: 'Fixed a sanction-screening system and built its log search.',
     desc: 'Java EE and JSP debugging, plus an Elasticsearch pipeline on Oracle Linux. My first company job, in Kuala Lumpur.' },
 ]
@@ -58,7 +61,8 @@ const glow = (i) => (1 - (i / (N - 1)) * 0.72).toFixed(2)
 
 function layer(r, i) {
   // Real logo when on file; if it 404s the <img> removes itself and the monogram shows.
-  const logo = r.logo ? `<img src="${BASE}experience/${r.logo}" alt="" loading="lazy" onerror="this.remove()">` : ''
+  const pad = r.pad != null ? ` style="padding:${r.pad}px"` : ''
+  const logo = r.logo ? `<img src="${BASE}experience/${r.logo}" alt="" loading="lazy"${pad} onerror="this.remove()">` : ''
   return `
     <li class="era" data-i="${i}" style="--temp:${TEMP[i]};--glow:${glow(i)};--k:${i}">
       <h4 class="era-h">
