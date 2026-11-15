@@ -42,7 +42,7 @@ One word, one concept. Apply these across all UI, overlays, tooltips, and copy.
 | Loading screen tips | Loading messages | Flavour text, loading tips |
 | Action: open an island | dive in | explore, open, visit |
 | Arctic's guide | Hui Sin | Mochi, chatbot, assistant, AI |
-| What Eric does on the About screen | Emotes (wave, nod, jump, call) | animations, actions |
+| What Eric does on the About screen | Emotes (Greet, Agree, Call: his own animations) | animations, actions |
 | The list of islands on the About screen | Quest log | checklist, progress |
 | The snow creature on Arctic | Pip | mascot, NPC, pet |
 | Meadow's music player | the Jukebox | music player, radio |
@@ -78,6 +78,8 @@ Every control takes its colour from the island it's on. No third-party brand col
 ## UI Vocabulary Reference
 
 **Loading screen:**
+- The Approach: the camera flies in toward the planet as the world downloads, past satellites, asteroids, meteors and a comet. Only the wordmark at the top ("Eric's World", Cinzel, its letters inlined so it is right from the first paint). The bar and the stage lines at the bottom.
+- The planet is a picture of itself until the real one can be drawn (`public/loader-planet.webp`, `npm run capture:loader` after any change to world.glb). No island names on the loader.
 - Tag: `◈  WORLD.LOAD`
 - Loading messages: `WARPING SPACETIME`, `SCULPTING ISLANDS`, `PLACING STARS`, `CALIBRATING ORBIT`, `SUMMONING ERIC`, `PAINTING ATMOSPHERE`
 
@@ -98,7 +100,7 @@ Every control takes its colour from the island it's on. No third-party brand col
 - Hop order follows the planet (nearest neighbour from the meadow), so `›` is always a short warp.
 
 **What lives on each island:**
-- Meadow, About Me: Character Select. Profile and Emotes on the left, the Quest log and Now playing on the right, the nameplate along the bottom. Click or tap Eric and he talks: a speech bubble by his head types the line out. On phones the nameplate and the four cards are one row to swipe. The Jukebox and the Doodle Wall stand on the island itself.
+- Meadow, About Me: Character Select. Profile and Emotes on the left, the Quest log and Now playing on the right, the nameplate along the bottom. Click or tap Eric and he talks: a speech bubble beside his head types the line out with a soft, low tick on every second letter. The bubble finds a spot that covers nothing (not his face, not a card). The Emotes are his own three animations. A ribbon of light follows the pointer. On phones the nameplate and the four cards are one row to swipe. The Jukebox and the Doodle Wall stand on the island itself.
 - Mountain, Projects: the Hub, one project at a time with its demo across the whole panel and a rail of tiles; the List is the same projects as rows. Every project leads with one outcome line.
 - Lava, Experience: Strata. Layers of rock, newest on top and molten, the outcome first. An open layer is always as tall as what it says.
 - Desert, Contact: the form asks what it's about first. The sky over it is London's real hour; drag it and the day goes by, "Now in London" brings it back.
