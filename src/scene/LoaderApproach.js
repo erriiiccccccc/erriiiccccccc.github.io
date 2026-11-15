@@ -71,9 +71,10 @@ function glowTexture() {
 
 export class LoaderApproach {
   /**
-   * @param {{ camera: THREE.PerspectiveCamera, skyGroups: THREE.Object3D[], reducedMotion?: boolean, standInUrl: string }} o
+   * @param {{ renderer?: THREE.WebGLRenderer, prepare?: (obj: THREE.Object3D) => Promise<void>, camera: THREE.PerspectiveCamera, skyGroups: THREE.Object3D[], reducedMotion?: boolean, standInUrl: string }} o
+   *   prepare: compile an object's shaders in the background (gpuPrep); the picture waits for it
    */
-  constructor({ camera, skyGroups, reducedMotion = false, standInUrl }) {
+  constructor({ renderer, prepare, camera, skyGroups, reducedMotion = false, standInUrl }) {
     this.cam = camera
     this.reducedMotion = reducedMotion
     this.group = new THREE.Group()                // world space: the stand-in, the traffic, the dust
@@ -91,19 +92,18 @@ export class LoaderApproach {
 
     // ── the stand-in: a picture of the real planet, on a plane at its centre ──
     const size = 2 * LOADER_EYE * Math.tan(THREE.MathUtils.degToRad(STAND_IN_FOV / 2))
-    this._standInMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, opacity: 0 })
+    // A one-pixel stand-in for the picture until it arrives: a material with a texture is a different
+    // shader from one without, so this way the right one is compiled before the first frame, and the
+    // picture only swaps in (compiling it when the picture arrived cost a stall mid-flight).
+    const placeholder = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
+    placeholder.colorSpace = THREE.SRGBColorSpace
+    placeholder.needsUpdate = true
+    this._standInMat = new THREE.MeshBasicMaterial({ map: placeholder, transparent: true, depthWrite: false, toneMapped: false, opacity: 0 })
     this._standIn = new THREE.Mesh(new THREE.PlaneGeometry(size, size), this._standInMat)
     this._standIn.renderOrder = 1                 // over the stars and the sun's glow, which are drawn first
     this._standIn.visible = false
     this.group.add(this._standIn)
-    new THREE.TextureLoader().load(standInUrl, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace
-      tex.anisotropy = 4
-      this._standInTex = tex
-      this._standInMat.map = tex
-      this._standInMat.needsUpdate = true
-      if (!this._handedOver) this._standIn.visible = true
-    }, undefined, () => { /* no picture: the trip still runs, and the real planet appears when it's ready */ })
+    this._loadStandIn(standInUrl, renderer, prepare)
 
     if (reducedMotion) return
 
@@ -164,6 +164,33 @@ export class LoaderApproach {
     this._comet.head.scale.setScalar(7)
   }
 
+  /**
+   * The picture is decoded off the main thread (createImageBitmap) and sent to the GPU at once. As an
+   * <img> it was decoded on the main thread at its first draw: a 75 ms stall in the middle of the flight.
+   */
+  async _loadStandIn(url, renderer, prepare) {
+    try {
+      let tex
+      if (typeof createImageBitmap === 'function') {
+        const blob = await (await fetch(url)).blob()
+        const bmp = await createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+        tex = new THREE.Texture(bmp)
+        tex.flipY = false                                // flipped while decoding: WebGL ignores flipY for bitmaps
+      } else {
+        tex = await new THREE.TextureLoader().loadAsync(url)
+      }
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 4
+      tex.needsUpdate = true
+      renderer?.initTexture(tex)
+      this._standInTex = tex
+      const placeholder = this._standInMat.map
+      this._standInMat.map = tex                         // same shader as the placeholder's: nothing to compile
+      placeholder?.dispose()
+      if (!this._handedOver) this._standIn.visible = true
+    } catch { /* no picture: the trip still runs, and the real planet appears when it's ready */ }
+  }
+
   get parked() { return this._parked }
 
   /** Runs `cb` on the first frame the camera is at the end of the trip (now, if it already is). */
@@ -199,8 +226,9 @@ export class LoaderApproach {
     if (this.reducedMotion) { if (this._u == null) { this._u = 1; this._place(); this._arrive() } return }
     if (this._parked) return
 
-    // where the camera is heading: most of the way while the file downloads, all the way once it has
-    const goal = dl >= 1 ? 1 : 0.9 * (0.4 * dl + 0.6 * dl * dl * (3 - 2 * dl))
+    // where the camera is heading: nearly all the way while the file downloads (the unpacking that
+    // follows has one hitch three.js can't split, and it should land on almost no motion), the rest after
+    const goal = dl >= 1 ? 1 : 0.97 * (0.4 * dl + 0.6 * dl * dl * (3 - 2 * dl))
     if (this._u == null) this._u = clamp(goal - 0.32, 0, 0.85)       // a fast or cached load starts closer in
 
     const u0 = this._u
@@ -218,7 +246,7 @@ export class LoaderApproach {
       // a critically damped spring toward the download, so it never jumps when the download does
       const w = 2.2
       this._v += (w * w * (goal - this._u) - 2 * w * this._v) * dt
-      this._u = Math.min(0.97, this._u + this._v * dt)
+      this._u = Math.min(0.985, this._u + this._v * dt)
     }
     const du = dt > 0 ? (this._u - u0) / dt : 0
     if (this._final) this._v = du

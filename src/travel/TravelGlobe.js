@@ -126,14 +126,16 @@ const additive = { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, bl
 const COUNTRIES = feature(atlas, atlas.objects.countries).features.map(f => f.geometry).filter(Boolean)
 
 export class TravelGlobe {
-  constructor() {
-    this.canvas = document.createElement('canvas')
+  /** @param {{ renderer?: THREE.WebGLRenderer }} [opts] renderer: one made at startup (see main.js), so making a WebGL context doesn't stall the world later */
+  constructor(opts = {}) {
+    this.renderer = opts.renderer || new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+    this.canvas = this.renderer.domElement
     this.canvas.className = 'tl-canvas'
     this.canvas.setAttribute('aria-label', 'Globe of the countries Eric has visited. Drag to spin it.')
     this.canvas.setAttribute('role', 'img')
-
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    if (!opts.renderer) this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    const size = this.renderer.getSize(new THREE.Vector2())
+    this._size = `${size.x}x${size.y}`
     this.renderer.setClearColor(0x000000, 0)
     this.scene  = new THREE.Scene()
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50)
@@ -219,7 +221,8 @@ export class TravelGlobe {
     if (sig !== this._sig) return   // newer data arrived while flags loaded
 
     this.countries = list
-    this._paint(flags)
+    await this._paint(flags)
+    if (sig !== this._sig) return
     const pos = new Float32Array(dots.length * 3), seed = new Float32Array(dots.length)
     dots.forEach(([lon, lat], i) => { ll2v(lon, lat, 1.004).toArray(pos, i * 3); seed[i] = (i * 0.618) % 1 })
     const g = new THREE.BufferGeometry()
@@ -232,19 +235,37 @@ export class TravelGlobe {
     this.select(prev ? this.countries.findIndex(c => c.name === prev) : -1)
   }
 
-  _paint(flags) {
+  /**
+   * Paint the globe's map. Projecting every country's outline (d3 clips each one) took about 50 ms in
+   * one go, which landed during the zoom into the world, so it's done a few countries per frame, at
+   * most 6 ms of a frame: all the land first, then all the borders (so no border is painted over),
+   * then each visited country's flag.
+   */
+  async _paint(flags) {
+    const BUDGET = 6
+    const slices = async (items, draw) => {
+      let i = 0
+      while (i < items.length) {
+        const start = performance.now()
+        draw(() => { while (i < items.length && performance.now() - start < BUDGET) path(items[i++]) })
+        if (i < items.length) await new Promise(r => requestAnimationFrame(() => r()))
+      }
+    }
     const cv = document.createElement('canvas'); cv.width = TEX_W; cv.height = TEX_H
     const ctx = cv.getContext('2d'), path = geoPath(this.proj, ctx)
     const sea = ctx.createLinearGradient(0, 0, 0, TEX_H)
     sea.addColorStop(0, LOOK.ocean[1]); sea.addColorStop(0.5, LOOK.ocean[0]); sea.addColorStop(1, LOOK.ocean[1])
     ctx.fillStyle = sea; ctx.fillRect(0, 0, TEX_W, TEX_H)
     ctx.fillStyle = LOOK.land
-    ctx.beginPath(); for (const g of COUNTRIES) path(g); ctx.fill()
-    ctx.strokeStyle = LOOK.border; ctx.lineWidth = 0.8; ctx.stroke()
+    await slices(COUNTRIES, (some) => { ctx.beginPath(); some(); ctx.fill() })
+    ctx.strokeStyle = LOOK.border; ctx.lineWidth = 0.8
+    await slices(COUNTRIES, (some) => { ctx.beginPath(); some(); ctx.stroke() })
 
     // each visited country: its flag, clipped to its outline. The flag is
     // stretched sideways by 1/cos(latitude) so it looks right once wrapped.
-    this.countries.forEach((c, i) => {
+    let sliceStart = performance.now()
+    for (const [i, c] of this.countries.entries()) {
+      if (performance.now() - sliceStart > BUDGET) { await new Promise(r => requestAnimationFrame(() => r())); sliceStart = performance.now() }
       const im = flags[i]
       ctx.save(); ctx.beginPath(); path(c.geom); ctx.clip()
       if (im) {
@@ -258,7 +279,7 @@ export class TravelGlobe {
       }
       ctx.restore()
       ctx.beginPath(); path(c.geom); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.2; ctx.stroke()
-    })
+    }
     const tex = new THREE.CanvasTexture(cv)
     tex.wrapS = THREE.RepeatWrapping
     tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy())
@@ -275,10 +296,10 @@ export class TravelGlobe {
     this.mat.uniforms.mask.value = new THREE.CanvasTexture(mc)
   }
 
-  /** Paint and compile off-screen so the first opening is instant. */
-  warm() {
+  /** Compile in the background and draw once off-screen, so the first opening is instant. */
+  async warm() {
     this._resize(560, 560)
-    this.renderer.compile(this.scene, this.camera)
+    await this.renderer.compileAsync(this.scene, this.camera)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -305,7 +326,8 @@ export class TravelGlobe {
   _resize(w, h) {
     const box = this.stage?.getBoundingClientRect()
     w = Math.max(1, Math.round(w ?? box?.width ?? 1)); h = Math.max(1, Math.round(h ?? box?.height ?? 1))
-    this.renderer.setSize(w, h, false)
+    // resizing reallocates the drawing buffer (about 0.1 s with antialiasing): only when the size changes
+    if (this._size !== `${w}x${h}`) { this.renderer.setSize(w, h, false); this._size = `${w}x${h}` }
     this.canvas.style.width = w + 'px'; this.canvas.style.height = h + 'px'
     const aspect = w / h
     this.camera.aspect = aspect

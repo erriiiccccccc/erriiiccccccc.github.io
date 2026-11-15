@@ -19,6 +19,8 @@ export class SkyDecor {
     this.flyers = null
     this.comet = null
     this.aurora = null
+    /** (groups) => Promise: get the deferred extras onto the GPU before they appear. */
+    this.prepare = null
 
     this._critical = [this.sun, this.nebula, this.bodies]
     for (const c of this._critical) this.group.add(c.group)
@@ -61,6 +63,8 @@ export class SkyDecor {
       c.group.visible = false
       this.group.add(c.group)
     }
+    // compile their shaders and upload their textures before any of them is drawn (set by main.js)
+    if (this.prepare) await this.prepare([this.asteroids, this.flyers, this.comet, this.aurora].map(c => c.group))
     this._applyTierVisibility()
     this._fadeInDeferred()
   }

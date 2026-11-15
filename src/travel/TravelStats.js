@@ -69,10 +69,14 @@ let _cachedStats = null
 // ── The globe: built once, in idle time, then reused every opening ──────────
 let _globe = null
 let _globeLoad = null
+/** A renderer for the globe made at startup (main.js), when making a WebGL context costs nothing visible. */
+let _bootRenderer = null
+export function adoptGlobeRenderer(renderer) { _bootRenderer = renderer }
+
 function loadGlobe() {
   if (!_globeLoad) {
     _globeLoad = import('./TravelGlobe.js').then(async ({ TravelGlobe }) => {
-      const g = new TravelGlobe()
+      const g = new TravelGlobe({ renderer: _bootRenderer })
       g.reduced = reduced
       _globe = g
       return g
@@ -86,16 +90,23 @@ function loadGlobe() {
  * paint the globe and compile its shaders off-screen, so the first visit to
  * the Pirate Ship opens straight onto a finished planet.
  */
-export async function warmTravel() {
+/**
+ * Get the Pirate Ship's globe ready before anyone opens it.
+ * @param {() => Promise<void>} quiet resolves at a quiet moment: creating the globe's own WebGL context
+ *   (about 0.1 s) and its first draw can't be split, so each waits for one
+ */
+export async function warmTravel(quiet = () => Promise.resolve()) {
   try {
     if (!_cachedStats) {
       const r = await fetch(`${BASE}travel-stats.json`)
       if (r.ok) { const s = await r.json(); if (!s.error) _cachedStats = s }
     }
+    await quiet()
     const g = await loadGlobe()
     if (_cachedStats) await g.setData(_cachedStats)
     await idle()
-    g.warm()
+    await quiet()
+    await g.warm()
     if (!g.stage) g.flyTo(START, true)
   } catch (err) {
     console.warn('[TravelLog] warm-up skipped:', err.message)

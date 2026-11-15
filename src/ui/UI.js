@@ -17,11 +17,15 @@ function letterSpans(text) {
   const chars = [...text], mid = (chars.length - 1) / 2
   return chars.map((ch, i) => `<span class="tc-ch" style="--i:${i};--o:${(i - mid).toFixed(1)}">${escHtml(ch)}</span>`).join('')
 }
-/** Restart a CSS arrival by toggling its class across a reflow. */
+/**
+ * Restart a CSS arrival: the class comes off now and back on next frame. (Reading offsetWidth in
+ * between restarts it at once, but forces a layout of the whole page on the spot, which showed up as a
+ * stall in the first frame of the zoom into the world.)
+ */
 function replay(el, cls) {
   el.classList.remove(cls)
-  void el.offsetWidth
-  el.classList.add(cls)
+  cancelAnimationFrame(el._replayRaf)
+  el._replayRaf = requestAnimationFrame(() => el.classList.add(cls))
 }
 
 export class UI {

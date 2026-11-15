@@ -4,7 +4,7 @@ import { ARCTIC_HTML, initArctic } from '../islands/arctic.js'
 import { PROJECTS_HTML, initProjects } from '../islands/projects.js'
 import { EXPERIENCE_HTML, initExperience } from '../islands/experience.js'
 import { CONTACT_HTML, initContact } from '../islands/contact.js'
-import { TRAVEL_HTML, initTravelStats, warmTravel } from '../travel/TravelStats.js'
+import { TRAVEL_HTML, initTravelStats } from '../travel/TravelStats.js'
 
 export const ISLANDS = {
   meadow_island: {
@@ -120,8 +120,7 @@ export function prebuildIslandPanels() {
     ensurePanelCached(key, island)
   }
   warmPanelImages()
-  // The Pirate globe paints and compiles in idle time, so its first opening is instant
-  ;(window.requestIdleCallback || (fn => setTimeout(fn, 400)))(() => warmTravel(), { timeout: 4000 })
+  // (the Pirate globe is prepared by main.js, at a quiet moment after this)
 }
 
 /**

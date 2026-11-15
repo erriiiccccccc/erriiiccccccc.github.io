@@ -468,6 +468,9 @@ body {
 
 /* each island's keycap */
 #island-popup[data-look="meadow"]   { --cap-bg: linear-gradient(180deg, #fbf1dc, #e6d0a6); --cap-edge: #f6e6c6; --cap-base: #8f6c3e; --cap-ink: #4b3a22; }
+/* the loader's warm-up copy of the keycap (index.html): painted, but at 2% it can't be seen */
+#tc-warm { position: absolute; left: 0; top: 0; opacity: .02; pointer-events: none;
+  --cap-bg: linear-gradient(180deg, #fbf1dc, #e6d0a6); --cap-edge: #f6e6c6; --cap-base: #8f6c3e; --cap-ink: #4b3a22; }
 #island-popup[data-look="lava"]     { --cap-bg: linear-gradient(180deg, #3d2b27, #1b1311); --cap-edge: #54403a; --cap-base: #ff6a1f; --cap-ink: #ffd8b8; }
 #island-popup[data-look="lava"] .tc-cap { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 12px rgba(255,106,31,.35); }
 #island-popup[data-look="desert"]   { --cap-bg: linear-gradient(180deg, #f8dcaa, #ddb273); --cap-edge: #fae4bd; --cap-base: #9f6a33; --cap-ink: #5a3410; }

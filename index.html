@@ -49,7 +49,7 @@
   <link rel="stylesheet" href="./src/styles/overlay.css" />
   <link rel="preload" href="./world.glb" as="fetch" crossorigin />
   <!-- The planet the loading camera flies toward until world.glb is ready (scene/LoaderApproach) -->
-  <link rel="preload" href="./loader-planet.webp" as="image" />
+  <link rel="preload" href="./loader-planet.webp" as="fetch" crossorigin />
 </head>
 <body>
   <!-- Page heading for screen readers / SEO (the visual "title" is the 3D scene) -->
@@ -72,6 +72,10 @@
       </div>
       <div id="ldr-label">Warping spacetime</div>
     </div>
+    <!-- Drawn with the page's first paint, almost invisible: the browser's own GPU rasterizer compiles
+         what it needs for the title card's keycap now, instead of on the first frame of the zoom into
+         the world (where it cost about 0.1 s). Same classes, so the same effects. -->
+    <div id="tc-warm" aria-hidden="true"><div class="tc-key"><span class="tc-cap">E</span><span class="tc-lab">Dive in</span></div></div>
   </div>
 
   <div id="hud">

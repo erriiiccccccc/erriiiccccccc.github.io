@@ -6,6 +6,8 @@ import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh'
 import { Starfield } from './scene/Starfield.js'
 import { LoaderApproach, LOADER_EYE, STAND_IN_FOV } from './scene/LoaderApproach.js'
+import { precompile, precompileSliced, drawablesOf, texturesOf, uploadTextures } from './loading/gpuPrep.js'
+import { buildBoundsTreeOffThread } from './loading/bvhOffThread.js'
 import { Lighting } from './scene/Lighting.js'
 import { Character } from './character/Character.js'
 import { Controls } from './character/Controls.js'
@@ -16,6 +18,7 @@ import { ShootingStars } from './scene/ShootingStars.js'
 import { SkyDecor } from './scene/SkyDecor.js'
 import { IslandParticles } from './scene/IslandParticles.js'
 import { ISLANDS, prefetchAllIslands } from './data/content.js'
+import { warmTravel, adoptGlobeRenderer } from './travel/TravelStats.js'
 import { UI } from './ui/UI.js'
 import { svgIcon } from './ui/icons.js'
 import { MapOverlay } from './ui/MapOverlay.js'
@@ -90,6 +93,9 @@ renderer.shadowMap.type = qualitySettings.shadowType === 'soft'
   : THREE.BasicShadowMap
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.0
+// Reading every shader's error logs on its first use is a development aid (three.js recommends it off
+// in production): those driver calls added to the first frame that showed each new material.
+renderer.debug.checkShaderErrors = !!import.meta.env.DEV
 applyGlassCss(qualitySettings)
 
 function showBootFatal(msg) {
@@ -499,7 +505,7 @@ sfx.onStart = () => {
     sfx.welcome()
   }
 }
-if (settingsOverlay.soundOn) sfx.unlock()
+// (sound is started at the end of this file, alongside the first frame's shader compile)
 
 function setLoaderProgress(p, label) {
   const shown = Math.min(100, Math.max(0, Math.floor(p)))
@@ -554,6 +560,9 @@ window.__PHF_LOAD_OWNED__ = true
 */
 const gltfLoader = new GLTFLoader()
 gltfLoader.setMeshoptDecoder(MeshoptDecoder)
+// (Not MeshoptDecoder.useWorkers(): it builds its worker from its own source text, which minification
+// renames, so in the production build the worker can't find its functions and the world never decodes.
+// It only saved about 30 ms at the end of the download.)
 const ktx2Loader = new KTX2Loader()
 ktx2Loader.setTranscoderPath(ASSET_BASE + 'basis/')
 ktx2Loader.detectSupport(renderer)
@@ -569,22 +578,30 @@ function yieldToMain() {
 /** Meshes that still need BVH after first reveal (non-terrain). */
 const _deferredBvhMeshes = []
 
+let _bvhScheduled = false
 function scheduleDeferredBvh() {
-  if (!_deferredBvhMeshes.length) return
-  const chunk = () => {
-    const start = performance.now()
-    while (_deferredBvhMeshes.length && performance.now() - start < 4) {
-      const mesh = _deferredBvhMeshes.pop()
-      if (!mesh?.geometry || mesh.geometry.boundsTree) continue
-      try { mesh.geometry.computeBoundsTree() } catch { /* ignore */ }
-    }
-    if (_deferredBvhMeshes.length) {
-      if ('requestIdleCallback' in window) requestIdleCallback(chunk, { timeout: 200 })
-      else setTimeout(chunk, 0)
-    }
+  if (_bvhScheduled || !_deferredBvhMeshes.length) return
+  _bvhScheduled = true
+  // Collision trees for the rest of the world, built in a worker (loading/bvhOffThread): about 230
+  // meshes, which on the main thread was up to 70 ms each. Off the main thread they can start as soon
+  // as the world is unpacked, nearest the spawn point first (the list is used from the end): until a
+  // mesh has its tree, the ray under the character tests it triangle by triangle, about 2 ms a frame.
+  // Two in flight, so one is being copied while the other builds. If workers fail, the old way.
+  const spawn = new THREE.Vector3(0, PLANET_RADIUS, 0), p = new THREE.Vector3()
+  const dist = new Map(_deferredBvhMeshes.map(m => [m, m.getWorldPosition(p).distanceToSquared(spawn)]))
+  _deferredBvhMeshes.sort((a, b) => dist.get(b) - dist.get(a))
+  const next = () => {
+    const mesh = _deferredBvhMeshes.pop()
+    if (!mesh) return
+    if (!mesh.geometry || mesh.geometry.boundsTree) { next(); return }
+    buildBoundsTreeOffThread(mesh.geometry)
+      .catch(() => new Promise(r => (window.requestIdleCallback || setTimeout)(() => {
+        try { if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree() } catch { /* ignore */ }
+        r()
+      })))
+      .then(next)
   }
-  if ('requestIdleCallback' in window) requestIdleCallback(chunk, { timeout: 500 })
-  else setTimeout(chunk, 0)
+  next(); next()
 }
 
 perfMark('world_download_start')
@@ -767,6 +784,10 @@ perfMark('world_download_start')
     await yieldToMain()
 
     // ── Meadow points of interest ───────────────────────────────────────────
+    // The props below are built a frame apart, and until they're moved into the (hidden) world at the
+    // end of this block they're loose in planetGroup, where the loading frames would draw them: floating
+    // in space, and compiling their shaders on the spot. So planetGroup sits out those frames.
+    planetGroup.visible = false
     // The doodle wall hangs off a node the GLB carries literally called
     // "telescope". If a future world export renames it we skip that marker
     // rather than break the island.
@@ -821,6 +842,9 @@ perfMark('world_download_start')
       } else if (import.meta.env.DEV) {
         console.warn(`[world] no "${TELESCOPE_NODE}" node — doodle wall marker skipped`)
       }
+      // each prop in its own frame: built together, the Doodle Wall's canvases, the Jukebox and Pip's
+      // ground-finding made one 0.1 s task while the loading camera was still moving
+      await yieldToMain()
 
       // The jukebox is not in the GLB at all, it is assembled from primitives
       // and dropped onto the meadow's surface, opposite the telescope so the
@@ -853,9 +877,11 @@ perfMark('world_download_start')
       } else if (import.meta.env.DEV) {
         console.warn(`[world] could not find a spot on "${MEADOW_ISLAND}" — jukebox skipped`)
       }
+      await yieldToMain()
 
       // Pip, the snow imp hiding on Arctic (an easter egg: no arrow, no marker)
       setupPip()
+      await yieldToMain()
 
       // The props and markers were placed in planetGroup space, but the globe
       // itself (model) stays hidden and then slides in during the loader
@@ -876,6 +902,7 @@ perfMark('world_download_start')
         adopt(poi.marker.anchor)
       }
     }
+    planetGroup.visible = true
     await yieldToMain()
 
     if (_loaderTriggered) return
@@ -903,18 +930,22 @@ perfMark('world_download_start')
     loadDirector?.flush?.()
     await yieldToMain()
 
+    // The world's shaders, compiled for the screen in the background, a few meshes per frame, while
+    // the flight carries on; then its textures, uploaded a few per frame. Nothing of the real world is
+    // drawn before both are done, so its first frame on screen costs nothing extra (gpuPrep.js).
     try {
-      renderer.compile(scene, camSystem.camera)
+      await precompileSliced(renderer, drawablesOf(model), camSystem.camera, scene)
       loadDirector?.markShadersCompiled()
       loadDirector?.flush?.()
+      scheduleDeferredBvh()
+      await uploadTextures(renderer, texturesOf(model))
+      await firstDrawsInSlices(drawablesOf(model))
     } catch (compileErr) {
       console.error('Shader compile failed:', compileErr)
       loadDirector?.fail('Could not prepare graphics. Try reloading.')
       return
     }
-    await yieldToMain()
 
-    renderer.render(scene, camSystem.camera)
     _pendingMeaningfulFrame = true
     triggerArrival(model)
     // BVH for non-terrain meshes waits until after the intro zoom (see animate)
@@ -929,6 +960,10 @@ let planetModel = null
 const surfaceRay  = new THREE.Raycaster()
 const obstacleRay = new THREE.Raycaster()
 obstacleRay.layers.set(2)   // only intersects obstacle-layer meshes
+// Both rays start above the planet and point at its centre. Nothing you can stand on is below the
+// centre, so they stop there: without a limit they went on through the planet and tested every mesh on
+// the far side as well (triangle by triangle, for any mesh still waiting for its collision tree).
+surfaceRay.far = obstacleRay.far = PLANET_RADIUS * 2
 const _rayOrigin = new THREE.Vector3(0, PLANET_RADIUS * 2, 0)
 const _rayDir    = new THREE.Vector3(0, -1, 0)
 let terrainLayerActive = false  // true once ≥1 "(terrain)" mesh is found in the GLB
@@ -1497,6 +1532,7 @@ scene.add(skyDecor.group)
 // Moves the loading camera with the download and takes the sky along. Updated in the !sceneStarted
 // branch; the real planet takes over from its stand-in picture once the camera is parked.
 const loaderApproach = new LoaderApproach({
+  renderer,
   camera: camSystem.camera,
   skyGroups: [stars.points, shootingStars.group, skyDecor.group],
   reducedMotion,
@@ -1567,6 +1603,12 @@ gltfCharLoader.load(LOCO_BASE + 'ericlowpolyskeleton.glb', gltf => {
   })
 
   modelGroup.add(root)
+  // Its shaders compile and its textures upload in the background; it stays hidden until they have,
+  // so the first frame it's drawn in costs nothing extra. The load's warm-up waits for this.
+  root.visible = false
+  _charPrepared = precompile(renderer, root, camSystem.camera, scene)
+    .then(() => uploadTextures(renderer, texturesOf(root)))
+    .then(() => { root.visible = true })
   fbxInScene = true
   character.group.visible = false
 
@@ -2256,11 +2298,33 @@ function easeOutBack(t) {
   return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
 }
 
-/** True while warmPlayView owns the camera/renders (loading animate must not fight it). */
-let _warmingPlay = false
 let _playWarmStarted = false
+/** The character's model being prepared (compiled + uploaded), once it has loaded. */
+let _charPrepared = null
+/** Set by warmPlayView: the next loading frame draws one pixel of the play view first (warmShadowPrograms). */
+let _shadowWarm = null
 /** Bumped to cancel an in-flight warm after a deadline. */
 let _playWarmToken = 0
+/** When someone last walked or turned the camera (for quiet moments, see whenQuiet). */
+let _lastActiveAt = 0
+let _introOpenedAt = 0
+/**
+ * Run `fn` at a quiet moment: while the intro card is up, or once nobody has moved for a second and
+ * nothing is open. For one-off work that can't be split, so its hitch lands where nothing is moving.
+ */
+function whenQuiet(fn) {
+  return new Promise(resolve => {
+    const check = () => {
+      const now = performance.now()
+      const reading = introOverlay.isOpen() && now - _introOpenedAt > 1200        // open, and done animating in
+      const idle = _introOverlayOpened && !introOverlay.isOpen() && now - _lastActiveAt > 1000 && !isAnyOverlayOpen() && !ui.isPanelOpen()
+      const quiet = reading || idle
+      if (quiet) resolve(fn())
+      else setTimeout(check, 250)
+    }
+    check()
+  })
+}
 /** Delay deferred BVH / sky until intro zoom has settled. */
 let _postIntroDeferredDone = false
 let _introOverlayOpened = false
@@ -2285,115 +2349,135 @@ function tryBeginReveal() {
 }
 
 /**
- * Warm character shaders + play-camera shadow maps UNDER the loader so the
- * post-100% zoom is just a camera lerp (no compile/shadow first-hit spike).
- * Renders into an offscreen target so the settled arrival frame stays on screen
- * (no canvas hide / camera jump flash).
- * @param {number} warmToken invalidated if a deadline aborts the warm
+ * Get the play view ready under the loader, so the zoom into the character is only a camera move.
+ * Nothing here blocks a frame: the loading view keeps drawing throughout.
+ *   1. the character's shaders and textures (started when its model loaded), and the island particles'
+ *   2. every texture the scene still hasn't uploaded, a few per frame
+ *   3. the shadow pass's depth programs: the one kind compileAsync can't prepare. One pixel of the
+ *      play view is drawn inside the next frame, before that frame's own drawing (warmShadowPrograms).
+ * The old warm-up drew the play view into an off-screen target, which compiles a different shader
+ * variant from the screen's: a 1.4 s freeze for programs the screen then compiled again.
+ * @param {number} warmToken invalidated if the deadline gives up on it
  */
 async function warmPlayView(warmToken) {
   if (!planetModel || loadDirector?.isFatal) return
-  _warmingPlay = true
   loadDirector?.beginWarmingPlay()
   perfMark('play_warm_start')
-
   const stillActive = () => warmToken === _playWarmToken && !loadDirector?.hasPlayWarmed
 
-  // Let the arrival settle paint before we hitch the main thread
-  await yieldToMain()
-  if (!stillActive()) {
-    _warmingPlay = false
-    return
-  }
+  if (_charPrepared) await _charPrepared
+  if (!stillActive()) return
+  await precompile(renderer, islandParticles.group, camSystem.camera, scene)
+  if (!stillActive()) return
+  await uploadTextures(renderer, texturesOf(scene))
+  if (!stillActive()) return
+  await new Promise(resolve => { _shadowWarm = resolve })
 
-  planetModel.visible = true
-  // Upload every texture of the world inside this pause. The play camera below only sees the top of
-  // the planet, and whatever it misses would otherwise upload on the first frame back on screen, as a
-  // second, separate hitch right before the zoom.
-  const worldTextures = new Set()
+  perfMark('play_warm_end')
+  perfMeasure('play_warm_gpu', 'play_warm_start', 'play_warm_end')
+}
+
+/**
+ * The world's first draws, a slice of meshes per loading frame, one pixel each. Compiling shaders
+ * doesn't cover everything a first draw does: each mesh's vertex buffers go up to the GPU then, and on
+ * Windows the D3D layer compiles one more version of a shader for every vertex format it's first drawn
+ * with (the world's compressed meshes use packed 16-bit positions, not the default). All at once, that
+ * was 115 ms on the frame the world appeared. So each slice holds at most one shader-and-format pair
+ * the GPU hasn't seen, plus any number of meshes it has, within a triangle budget. Culling is off for
+ * the slice, so the far side of the planet is ready too.
+ */
+const _vp = new THREE.Vector4(), _sc = new THREE.Vector4()
+let _firstDraws = null          // { list, seen, resolve } while slices remain
+const TRIS_PER_SLICE = 60000, MESHES_PER_SLICE = 32, NEW_PAIRS_PER_SLICE = 1
+function firstDrawsInSlices(drawables) {
+  if (!drawables.length) return Promise.resolve()
+  // meshes that share a shader-and-format pair go together, so the pairs come one after another
+  const list = [...drawables].sort((a, b) => (drawKey(a) < drawKey(b) ? -1 : 1))
+  return new Promise(resolve => { _firstDraws = { list, seen: new Set(), resolve } })
+}
+/** Which shader a mesh is drawn with, and in which vertex format. */
+function drawKey(o) {
+  if (o._drawKey) return o._drawKey
+  const g = o.geometry, m = Array.isArray(o.material) ? o.material[0] : o.material
+  const prog = m ? renderer.properties.get(m).currentProgram?.id ?? m.type : ''
+  const attrs = g ? Object.entries(g.attributes).map(([n, a]) => {
+    const arr = a.isInterleavedBufferAttribute ? a.data.array : a.array
+    return `${n}:${a.itemSize}${arr?.constructor.name.slice(0, 4)}${a.normalized ? 'n' : ''}${a.isInterleavedBufferAttribute ? 'i' : ''}`
+  }).sort().join(',') : ''
+  o._drawKey = `${prog}|${attrs}|${g?.index ? g.index.array.constructor.name.slice(0, 6) : '-'}`
+  return o._drawKey
+}
+const triangles = (o) => {
+  const g = o.geometry
+  if (!g) return 0
+  return g.index ? g.index.count / 3 : (g.getAttribute('position')?.count || 0) / 3
+}
+function stepFirstDraws() {
+  const fd = _firstDraws
+  if (!fd || !planetModel) return
+  const slice = new Set()
+  for (let tris = 0, fresh = 0; fd.list.length && tris < TRIS_PER_SLICE && slice.size < MESHES_PER_SLICE;) {
+    const key = drawKey(fd.list[0])
+    if (!fd.seen.has(key)) { if (fresh >= NEW_PAIRS_PER_SLICE) break; fresh++; fd.seen.add(key) }
+    const o = fd.list.shift()
+    slice.add(o); tris += triangles(o)
+  }
+  const hidden = [], culled = []
   planetModel.traverse(o => {
-    if (!o.material) return
-    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
-      for (const k in m) { const v = m[k]; if (v && v.isTexture) worldTextures.add(v) }
-    }
+    if (!(o.isMesh || o.isLine || o.isPoints || o.isSprite)) return
+    if (slice.has(o)) { if (o.frustumCulled) { o.frustumCulled = false; culled.push(o) } }
+    else if (o.visible) { o.visible = false; hidden.push(o) }
   })
-  for (const t of worldTextures) renderer.initTexture(t)
-
-  // Approximate play orbit (matches Camera.js DIST / PITCH_DEF / character pivot)
-  const charY = PLANET_RADIUS + 0.9
-  const pitch = 0.38
-  const dist = 16
-  const hDist = Math.cos(pitch) * dist
-  const vDist = Math.sin(pitch) * dist
-  const pivotY = charY + 0.75
-  camSystem.camera.position.set(0, pivotY + vDist, hDist)
-  camSystem.camera.lookAt(0, pivotY, 0)
-  camSystem.camera.updateMatrixWorld(true)
-  planetGroup.updateMatrixWorld(true)
-
-  // Pose character at play height so shadow/compile warm matches gameplay
-  const charWorldY = PLANET_RADIUS + 0.9
-  character.group.position.set(0, charWorldY, 0)
-  modelGroup.position.set(0, charWorldY, 0)
-
-  // Headless/automation: rAF is starved and full shadow compiles can hang —
-  // do a minimal warm so Ready isn't blocked (real browsers take the full path).
-  const lightWarm = reducedMotion || !!navigator.webdriver
-
-  // Keep character visible for shadow-map fills
-  if (fbxInScene) {
-    modelGroup.visible = true
-    character.group.visible = false
-  } else {
-    modelGroup.visible = false
-    character.group.visible = true
-  }
-
-  // Offscreen: shadow maps still update; the on-screen canvas keeps the last
-  // arrival frame (no blank flash from hiding the canvas).
-  const warmRT = new THREE.WebGLRenderTarget(4, 4)
-  renderer.setRenderTarget(warmRT)
-  lighting.sunLight.intensity = 4.0
-
+  const modelWas = planetModel.visible
+  planetModel.visible = true
+  renderer.getViewport(_vp); renderer.getScissor(_sc)
+  const scissorWas = renderer.getScissorTest()
+  renderer.setScissorTest(true); renderer.setScissor(0, 0, 1, 1); renderer.setViewport(0, 0, 1, 1)
   try {
-    if (stillActive() && !lightWarm) {
-      if (fbxInScene && _charGpuPrewarmStage < 2) {
-        prewarmCharacterDraw(true)
-        _charGpuPrewarmStage = 2
-      } else if (!fbxInScene && _charGpuPrewarmStage < 1) {
-        prewarmCharacterDraw(false)
-        _charGpuPrewarmStage = 1
-      }
-      try {
-        renderer.compile(scene, camSystem.camera)
-      } catch (err) {
-        console.warn('Play-view compile warning:', err)
-      }
-    } else if (stillActive() && lightWarm) {
-      _charGpuPrewarmStage = fbxInScene ? 2 : 1
-    }
-
-    const warmPasses = lightWarm ? 1 : 3
-    for (let i = 0; i < warmPasses && stillActive(); i++) {
-      renderer.render(scene, camSystem.camera)
-      await yieldToMain()
-      if (stillActive()) renderer.setRenderTarget(warmRT)
-    }
+    renderer.render(scene, camSystem.camera)
   } finally {
-    renderer.setRenderTarget(null)
-    warmRT.dispose()
-    lighting.sunLight.intensity = 0
-    character.group.visible = false
-    modelGroup.visible = false
-    // Restore loading camera without redrawing — screen still shows settled globe
-    camSystem.setLoadingView()
+    renderer.setViewport(_vp); renderer.setScissor(_sc); renderer.setScissorTest(scissorWas)
+    planetModel.visible = modelWas
+    for (const o of hidden) o.visible = true
+    for (const o of culled) o.frustumCulled = true
   }
+  if (!fd.list.length) { _firstDraws = null; fd.resolve() }
+}
 
-  if (stillActive()) {
-    perfMark('play_warm_end')
-    perfMeasure('play_warm_gpu', 'play_warm_start', 'play_warm_end')
+/**
+ * One pixel of the play view (the world, and him in it), drawn at the start of a loading frame. The
+ * shadow pass runs in full, so its depth programs compile now, on the parked frame; everything else in
+ * it is already compiled. The frame's own drawing that follows covers that pixel.
+ */
+const _warmCam = new THREE.PerspectiveCamera()
+function warmShadowPrograms() {
+  if (!planetModel) return
+  _warmCam.copy(camSystem.camera, false)
+  const charY = PLANET_RADIUS + 0.9, pitch = 0.38, dist = 16, pivotY = charY + 0.75     // the play orbit (Camera.js)
+  _warmCam.position.set(0, pivotY + Math.sin(pitch) * dist, Math.cos(pitch) * dist)
+  _warmCam.lookAt(0, pivotY, 0)
+  _warmCam.updateMatrixWorld(true)
+  const him = fbxInScene ? modelGroup : character.group
+  const was = [planetModel.visible, him.visible]
+  planetModel.visible = true
+  him.visible = true
+  him.position.set(0, charY, 0)
+  // the island particles show from the first moment of play: their first draw happens here too
+  // (they're invisible at zero opacity, and one pixel besides)
+  const sparks = []
+  islandParticles.group.traverse(o => { if (o.isPoints) { sparks.push([o, o.visible]); o.visible = true } })
+  renderer.getViewport(_vp); renderer.getScissor(_sc)
+  const scissorWas = renderer.getScissorTest()
+  renderer.setScissorTest(true)
+  renderer.setScissor(0, 0, 1, 1)
+  renderer.setViewport(0, 0, 1, 1)
+  try {
+    renderer.render(scene, _warmCam)
+  } finally {
+    renderer.setViewport(_vp); renderer.setScissor(_sc); renderer.setScissorTest(scissorWas)
+    planetModel.visible = was[0]; him.visible = was[1]
+    for (const [o, v] of sparks) o.visible = v
   }
-  if (warmToken === _playWarmToken) _warmingPlay = false
 }
 
 /** After planet arrival + first frame: warm play view, then Ready → reveal. */
@@ -2410,33 +2494,18 @@ async function maybeStartPlayWarm() {
   if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('perf')) {
     console.log('[load] play warm start')
   }
-  // Safety net if GPU warm hangs (should be rare outside headless)
-  const warmMs = reducedMotion || navigator.webdriver ? 3000 : 20000
-  const warmDeadline = new Promise(resolve => setTimeout(resolve, warmMs))
+  // Never hold Ready on the warm-up (a driver that never reports a shader as linked, a hidden tab)
+  const deadline = new Promise(resolve => setTimeout(resolve, 15000))
   try {
-    await Promise.race([warmPlayView(warmToken), warmDeadline])
-    if (!loadDirector?.hasPlayWarmed) {
-      console.warn('[load] play warm deadline — continuing')
-      _playWarmToken++
-      _warmingPlay = false
-      lighting.sunLight.intensity = 0
-      renderer.setRenderTarget(null)
-      camSystem.setLoadingView()
-    }
-    loadDirector?.markPlayWarmed()
-    loadDirector?.flush?.()
-    revealRealPlanet()
+    await Promise.race([warmPlayView(warmToken), deadline])
   } catch (err) {
     console.error('Play warm failed:', err)
-    _playWarmToken++
-    _warmingPlay = false
-    lighting.sunLight.intensity = 0
-    renderer.setRenderTarget(null)
-    camSystem.setLoadingView()
-    // Don't block forever — mark warmed so reveal can proceed
-    loadDirector?.markPlayWarmed()
-    revealRealPlanet()
   }
+  _playWarmToken++                 // a warm still running past the deadline stops at its next step
+  _shadowWarm = null
+  loadDirector?.markPlayWarmed()
+  loadDirector?.flush?.()
+  revealRealPlanet()
   tryBeginReveal()
 }
 
@@ -2502,10 +2571,7 @@ function startScene() {
 
   // Intro overlay + deferred sky/BVH wait until zoom settles (see animate)
 
-  // Prefetch island panel modules after reveal (eager modules → no-op today)
-  const prefetch = () => { prefetchAllIslands() }
-  if ('requestIdleCallback' in window) requestIdleCallback(prefetch, { timeout: 1800 })
-  else setTimeout(prefetch, 800)
+  // (the island panels and the travel globe are prepared after the zoom has settled: see animate)
 
   if (isPerfEnabled()) setTimeout(() => perfSummary(), 100)
 }
@@ -2532,31 +2598,6 @@ const STEP_DOWN_SPEED = 9.0   // units/sec when stepping down
 let lastSurfY  = PLANET_RADIUS
 let smoothSurfY = PLANET_RADIUS
 
-/** 0 = none, 1 = procedural mesh, 2 = FBX skinned (avoids shader-compile hitch on reveal) */
-let _charGpuPrewarmStage = 0
-
-function prewarmCharacterDraw(useFbx) {
-  const svM = modelGroup.visible
-  const svC = character.group.visible
-  camSystem.camera.updateMatrixWorld(true)
-  planetGroup.updateMatrixWorld(true)
-  character.group.updateMatrixWorld(true)
-  modelGroup.updateMatrixWorld(true)
-  if (useFbx && fbxInScene && modelGroup.children.length > 0) {
-    renderer.compile(modelGroup, camSystem.camera, scene)
-    modelGroup.visible = true
-    character.group.visible = false
-  } else {
-    renderer.compile(character.group, camSystem.camera, scene)
-    modelGroup.visible = false
-    character.group.visible = true
-  }
-  renderer.render(scene, camSystem.camera)
-  renderer.render(scene, camSystem.camera)
-  modelGroup.visible = svM
-  character.group.visible = svC
-}
-
 let _pageHidden = document.hidden
 document.addEventListener('visibilitychange', () => {
   _pageHidden = document.hidden
@@ -2580,14 +2621,24 @@ function animate() {
     loadDirector?.nudgeDownloadFallback(_loaderElapsed)
     loadDirector?.tick(dt)
 
-    // warmPlayView owns camera + renders — don't overwrite mid-warm
-    if (_warmingPlay) return
+    // Nothing is drawn until the first frame's shaders are ready (see the end of this file): the page's
+    // own background and the HTML loader cover the canvas meanwhile.
+    if (!_skyCompiled) return
 
     if (!(import.meta.env.DEV && window.location.search.includes('screenshot'))) {
       character.group.visible = false
       modelGroup.visible = false
     }
     loaderApproach.update(dt, loadDirector?.downloadFraction ?? 0)
+    if (_firstDraws) {
+      try { stepFirstDraws() } catch (err) { console.warn('[load] first draws skipped:', err); const fd = _firstDraws; _firstDraws = null; fd?.resolve() }
+    }
+    if (_shadowWarm) {
+      const done = _shadowWarm
+      _shadowWarm = null
+      try { warmShadowPrograms() } catch (err) { console.warn('[load] shadow warm skipped:', err) }
+      done()
+    }
     renderer.render(scene, camSystem.camera)
 
     if (_pendingMeaningfulFrame && planetModel && canvas.clientWidth > 0) {
@@ -2674,6 +2725,7 @@ function animate() {
   const lft    = keys.has('a') || keys.has('arrowleft')  || tLft
   const rgt    = keys.has('d') || keys.has('arrowright') || tRgt
   const moving = fwd || bwd || lft || rgt
+  if (moving || camSystem._rmbDown) _lastActiveAt = performance.now()
 
   if (moving || uiLocked) idleTimer = 0; else idleTimer += dt
 
@@ -3116,13 +3168,6 @@ function animate() {
     }
   }
 
-  // Character GPU warm runs under the loader (warmPlayView). Only catch a late
-  // skinned-model load here — never re-compile mid zoom.
-  if (planetModel && fbxInScene && _charGpuPrewarmStage < 2 && scenePlayTime > 2.5) {
-    prewarmCharacterDraw(true)
-    _charGpuPrewarmStage = 2
-  }
-
   // After intro zoom settles: deferred BVH, sky extras, welcome overlay
   const introSettled =
     reducedMotion ||
@@ -3130,15 +3175,20 @@ function animate() {
     scenePlayTime > 2.2
   if (introSettled && !_postIntroDeferredDone) {
     _postIntroDeferredDone = true
+    // Everything that waits for the zoom, one after another and never on top of each other: the sky's
+    // extras (compiled before they appear), then the island panels and the Pirate Ship's globe (painted
+    // in slices, compiled in the background). The collision trees started back during the load.
     scheduleDeferredBvh()
-    const enableSky = () => skyDecor?.enableDeferred?.(qualitySettings.skyTier)
-    if ('requestIdleCallback' in window) requestIdleCallback(enableSky, { timeout: 1500 })
-    else setTimeout(enableSky, 200)
+    const later = (fn, ms) => new Promise(r => setTimeout(() => (window.requestIdleCallback || ((f) => f()))(() => r(fn()), { timeout: 1000 }), ms))
+    later(() => skyDecor?.enableDeferred?.(qualitySettings.skyTier), 300)
+      .then(() => whenQuiet(() => prefetchAllIslands()))
+      .then(() => whenQuiet(() => warmTravel(() => whenQuiet(() => {}))))
   }
   if (introSettled && !_introOverlayOpened) {
     _introOverlayOpened = true
     const returning = !!localStorage.getItem('phf-intro-seen')
     introOverlay.open(returning)
+    _introOpenedAt = performance.now()
   }
 
   if (pip && pipFriend) tickPipFriend(dt, moving)
@@ -3147,4 +3197,33 @@ function animate() {
   if (aboutOverlay.isOpen()) tickAboutAnchor()
   renderer.render(scene, camSystem.camera)
 }
+
+// The first frame. The sky's and the loader's shaders compile on the GPU in the background before
+// anything is drawn (that used to block the page for half a second on the first draw). The sound
+// starts in the same window: creating the audio context blocks the page for about half a second on
+// some machines (the browser starting its audio service), and here that overlaps the GPU's work
+// instead of adding to it.
+// (Not the island particles: one large shader that Windows' D3D compiler is slow with, and only seen
+// once play starts, so the warm-up prepares it, on the parked frame, where its hitch can't be seen.)
+let _skyCompiled = false
+// (Their first use is left to the first frame: it happens before anything 3D is on screen, where a
+// driver still finishing a shader can't be seen waiting.)
+precompileSliced(renderer, scene.children.filter(c => c !== planetGroup), camSystem.camera, scene, { touch: false }).then(() => { _skyCompiled = true })
+if (settingsOverlay.soundOn) sfx.unlock()
+// The Pirate Ship's globe draws in a small WebGL context of its own. Making one blocks the page for
+// 0.1 to 0.35 s, and so does its first resize, so both happen here as well, in the same window.
+try {
+  const globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+  globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  globeRenderer.setSize(560, 560, false)
+  // the first request for each extension is a round trip to the GPU process (later it was 0.1 s, queued
+  // behind the world's own frames): ask for them all now
+  const gl = globeRenderer.getContext()
+  for (const name of gl.getSupportedExtensions() || []) gl.getExtension(name)
+  globeRenderer.capabilities.getMaxAnisotropy()
+  adoptGlobeRenderer(globeRenderer)
+} catch { /* the globe makes its own when it's needed */ }
+// the sky's extras, made after the zoom, are compiled before they appear (SkyDecor.enableDeferred)
+skyDecor.prepare = (groups) => precompileSliced(renderer, groups, camSystem.camera, scene)
+  .then(() => uploadTextures(renderer, groups.reduce((set, g) => texturesOf(g, set), new Set())))
 animate()
