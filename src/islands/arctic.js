@@ -23,6 +23,9 @@ const KEEP = 8         // messages sent with each question (the server keeps the
 const MAX_IN = 400
 const GREETING = "Hello, I'm Hui Sin! I'm someone special to Eric, and I'm here to answer your questions because I know all about him. Ask me anything: his work, his projects, the places he's been."
 const FOGGY = "My snow globe's a bit foggy right now. Try again in a moment, or reach Eric at ericng8766@gmail.com."
+// Too many questions too fast: the server's own limit sends this in the visitor's language; Vercel's
+// firewall limit (20 messages in 10 minutes from one address) sends a bare 429, and then this is shown.
+const BUSY = "Phew, that's a lot of questions! Let me catch my breath. Try again in a little while."
 // Suggested questions, by topic. Five show at a time. After each answer they change: two more on what
 // was just asked, then one from each other topic, so there is always somewhere new to go. Every one of
 // these is answered by a line in api/_huisin/knowledge.mjs. The list itself lives in api/_huisin/suggestions.mjs,
@@ -435,6 +438,11 @@ export function initArctic(root) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ messages: history.slice(-KEEP).map(({ role, content }) => ({ role, content })) }),
       })
+      if (res.status === 429) {
+        const own = res.headers.get('x-hs') === 'busy'
+        const said = own ? (await res.text().catch(() => '')).trim() : ''
+        throw Object.assign(new Error('busy'), { said: said || BUSY })
+      }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
       ok = res.headers.get('x-hs') === 'ok'           // a real answer, not a refusal: only then does she react
       const reader = res.body.getReader(), dec = new TextDecoder()
@@ -467,8 +475,8 @@ export function initArctic(root) {
         toEnd(true)
       }
       text = text.trim() || FOGGY
-    } catch {
-      text = text.trim() || FOGGY
+    } catch (e) {
+      text = text.trim() || e?.said || FOGGY
     }
     history.push({ role: 'assistant', content: text })
     if (history.length > 40) history.splice(0, history.length - 40)

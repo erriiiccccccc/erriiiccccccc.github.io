@@ -371,6 +371,7 @@ export default async function handler(req, res) {
       res.statusCode = status
       res.setHeader('Content-Type', 'text/plain; charset=utf-8')
       res.setHeader('Cache-Control', 'no-store')
+      if (kind === 'busy') res.setHeader('x-hs', 'busy')         // the chat shows this text, not its error line
       if (!isProd()) res.setHeader('x-huisin', kind)
     }
     const text = fixed(kind, lang)
