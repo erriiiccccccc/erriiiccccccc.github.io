@@ -3195,7 +3195,10 @@ function animate() {
   tickHop()
   applyViewShift()
   if (aboutOverlay.isOpen()) tickAboutAnchor()
-  renderer.render(scene, camSystem.camera)
+  // Behind a full-screen panel (Mountain's Game Hub) nothing of the world shows, so it isn't drawn: on a
+  // laptop that GPU time is what the panel's video needs. Everything above still ticks, so the world is
+  // exactly where it should be on the first frame the panel starts to leave.
+  if (!ui.worldCovered) renderer.render(scene, camSystem.camera)
 }
 
 // The first frame. The sky's and the loader's shaders compile on the GPU in the background before

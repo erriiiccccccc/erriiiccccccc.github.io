@@ -4,6 +4,9 @@ import { isPerfEnabled, perfMark, perfMeasure } from '../loading/perfLog.js'
 import { ShellDirector } from './panelShells.js'
 
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+/** Shells whose card fills the screen with an opaque background (see overlay.css): while one is fully
+ *  in, the world behind it isn't drawn (main.js reads ui.worldCovered). */
+const COVERS_WORLD = new Set(['cinema'])
 
 // Which keycap and which arrival each island's title card gets
 const PROMPT_LOOK = {
@@ -30,6 +33,8 @@ function replay(el, cls) {
 
 export class UI {
   constructor() {
+    /** true while a full-screen shell is fully in (see COVERS_WORLD) */
+    this.worldCovered = false
     // ── Island prompt: the title card across the lower third ────────────────
     this._popup = document.createElement('div')
     this._popup.id = 'island-popup'
@@ -195,6 +200,7 @@ export class UI {
   }
 
   openPanel(island, cacheKey) {
+    this.worldCovered = false            // a hop may swap a full-screen shell for one the world shows around
     this._openGen += 1
     const gen = this._openGen
     const key = cacheKey || island.section
@@ -263,7 +269,12 @@ export class UI {
   _show(gen) {
     this._panel.classList.remove('hidden', 'is-closing')
     this._panel.classList.add('is-open')
-    this._shells.enter(this._shell)
+    // Once a full-screen shell has finished coming in, nothing of the world shows behind it.
+    const shell = this._shell
+    this.worldCovered = false
+    this._shells.enter(shell).then(done => {
+      if (done && gen === this._openGen && COVERS_WORLD.has(shell) && this.isPanelOpen()) this.worldCovered = true
+    })
     this.onShell?.('open', this._shell, this._card)
     requestAnimationFrame(() => {
       if (gen === this._openGen) this._card.focus({ preventScroll: true })
@@ -276,6 +287,7 @@ export class UI {
   }
 
   closePanel() {
+    this.worldCovered = false            // the world shows again from the first frame of the exit
     if (!this._panel.classList.contains('is-open')) {
       // Already on its way out: let that exit finish rather than cut it.
       if (!this._panel.classList.contains('is-closing')) this._panel.classList.add('hidden')
