@@ -447,21 +447,25 @@ export class Sfx {
   }
 
   /**
-   * Eric talking: a low, dry tick as the line types out, the way a game character murmurs. One note,
-   * not a tune. It leans up a little on vowels, falls a touch inside each tick like a syllable does,
-   * and drifts a hair from one to the next, so it reads as a voice and not a keyboard. Only every
-   * second letter sounds: about fifteen a second, the pace of speech (every letter is a machine gun).
+   * Eric talking: a short, round blip per syllable, the way game characters murmur. Mostly one note
+   * (around D4, a step up on vowels, a hair of drift), so it reads as a voice and not a tune. Only
+   * every second letter sounds: about fifteen a second, the pace of speech.
+   *
+   * It sits where laptop and phone speakers can play it. The first version was pitched near 130 Hz,
+   * which small speakers drop, so all that came through was a click (measured: audible for 19 ms of
+   * each tick). This one carries for about 50 ms and peaks about 3 dB above the chat's send blip.
    * @param {string} ch the letter just typed
    * @param {number} n  which letter of the line it is, from 0
    */
   talk(ch = 'a', n = 0) {
     if (n % 2 || !this._ok() || this._throttle('talk', 40)) return
     const vowel = 'aeiou'.includes(String(ch).toLowerCase())
-    const f = 132 * (vowel ? 1.12 : 1) * (1 + (Math.random() - 0.5) * 0.05)
-    // the body: a rounded low note
-    this.tone(f, { type: 'triangle', a: 0.004, d: 0.07, gain: 0.06, to: f * 0.86, verb: 0.04 })
-    // the front of it: a soft tap an octave up, so each tick is still distinct on small speakers
-    this.tone(f * 2, { type: 'sine', a: 0.002, d: 0.022, gain: 0.02, verb: 0 })
+    const f = 294 * (vowel ? 1.122 : 1) * (1 + (Math.random() - 0.5) * 0.04)
+    // the body: a round blip that falls a little, like a syllable
+    this.tone(f, { type: 'triangle', a: 0.005, d: 0.09, gain: 0.05, to: f * 0.9, verb: 0.06 })
+    // an octave on top and a soft edge, so it carries on small speakers
+    this.tone(f * 2, { type: 'sine', a: 0.004, d: 0.055, gain: 0.02, to: f * 1.8, verb: 0 })
+    this.tone(f, { type: 'square', a: 0.003, d: 0.03, gain: 0.005, to: f * 0.9, verb: 0 })
   }
 
   /** Pip, caught: a tiny squeak (two quick rising chirps and a sparkle). */
