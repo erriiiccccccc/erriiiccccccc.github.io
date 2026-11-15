@@ -7,8 +7,8 @@
 // ────────────────
 // A project with a recorded demo:
 //   run `npm run record <id>` (see scripts/record-demos.mjs) and add the id to
-//   HAS_DEMO. It writes four files to public/projects/, all 16:10:
-//     <id>.webm        1920 wide, the full-panel demo
+//   HAS_DEMO. It writes four files to public/projects/, all 16:10, 60 a second:
+//     <id>.webm        2560 wide (a 1280 x 800 window drawn at 2x), the full-panel demo
 //     <id>-sm.webm     1280 wide, for phones and small windows
 //     <id>.jpg         the poster (the video's own first frame)
 //     <id>-thumb.jpg   480 wide, for the tiles and the list

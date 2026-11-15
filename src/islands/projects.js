@@ -155,7 +155,7 @@ export function initProjects(root) {
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '')
     v.preload = 'auto'
     v.poster = p.poster
-    // The 1920 clip when the stage is big enough to show it; the 1280 one on phones, in small windows,
+    // The 2560 clip when the stage is big enough to show it; the 1280 one on phones, in small windows,
     // and for anyone on data saver. Either way the clip is never stretched far past its own size.
     const lite = navigator.connection?.saveData || stage.clientWidth * Math.min(window.devicePixelRatio || 1, 2) < 1400
     v.src = lite ? p.demoSm : p.demo

@@ -2,7 +2,7 @@
 // "tour" (eased scroll + an animated fake cursor for clicks) and writes the
 // media the Mountain Game Hub plays:
 //
-//   public/projects/<slug>.webm        1920 wide: the full-panel demo
+//   public/projects/<slug>.webm        2560 wide: the full-panel demo
 //   public/projects/<slug>-sm.webm     1280 wide: phones and small windows
 //   public/projects/<slug>.jpg         the poster: the video's own first frame
 //   public/projects/<slug>-thumb.jpg   480 wide: the tiles and the list
@@ -35,8 +35,17 @@ import bundled from '@ffmpeg-installer/ffmpeg'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT = join(__dirname, '..', 'public', 'projects')
-const W = 1920, H = 1200   // 16:10, the shape of the Game Hub's stage
-const FPS = 30
+// The page is laid out in a 1280 x 800 laptop window (16:10, the shape of the Game Hub's stage) and drawn
+// at 2x, the way a high-density laptop screen shows it: 2560 x 1600 frames, so the text in the video is
+// as sharp as on the site itself. (They were 1920 x 1200 at 1x: on a 2x screen that's stretched about
+// 1.4 times and soft, and the text came out smaller than anyone reads it on a laptop.)
+const W = 1280, H = 800, DSF = 2
+// 60 a second: scrolling text at 30 judders on a 60 or 120 Hz screen. FPS=30 to compare.
+const FPS = +process.env.FPS || 60
+// Constant quality per size (lower = sharper, bigger files). CRF=<n> overrides the big one, the small
+// one follows two steps behind. Measured against the raw frames (SSIM), 27 to 33 differ by under 0.001
+// while the file shrinks by 44%; 30 is the middle.
+const CRF = +process.env.CRF || 30
 const FFMPEG = process.env.FFMPEG || (spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0 ? 'ffmpeg' : bundled.path)
 
 // ── Shot list ────────────────────────────────────────────────────────────────
@@ -241,8 +250,10 @@ async function record(shot){
   await mkdir(tmp, { recursive: true })
 
   const gpu = process.platform === 'win32' ? ['--use-angle=d3d11'] : []
-  const browser = await chromium.launch({ args: [...gpu, '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio'] })
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, colorScheme: 'dark' })
+  // Full Chromium, not Playwright's default headless shell: the shell's GPU stalls for a moment about
+  // once a second, and every one of those showed in the old videos as a hitch.
+  const browser = await chromium.launch({ channel: 'chromium', args: [...gpu, '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio'] })
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF, colorScheme: 'dark' })
   if (!shot.plain) await ctx.addInitScript(INIT)
   const page = await ctx.newPage()
 
@@ -266,7 +277,7 @@ async function record(shot){
     writes.push(writeFile(join(tmp, file), Buffer.from(f.data, 'base64')))
     cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {})
   })
-  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 96, maxWidth: W, maxHeight: H, everyNthFrame: 1 })
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 96, maxWidth: W * DSF, maxHeight: H * DSF, everyNthFrame: 1 })
 
   // Let the page finish arriving (hero fades, late images) before the take begins: wait until the picture
   // has held still for a moment. The video, and so the poster, starts on that settled picture.
@@ -292,7 +303,7 @@ async function record(shot){
     return
   }
   // Each frame was on screen from the moment it was drawn until the next one. Lay them out on an exact
-  // 30-a-second grid (a link per tick, no copies), so the pace of the video is the pace of the take.
+  // FPS-a-second grid (a link per tick, no copies), so the pace of the video is the pace of the take.
   const at = (f) => Math.min(tEnd, Math.max(tStart, f.t))
   const ticks = Math.max(2, Math.round((tEnd - tStart) * FPS))
   for (let k = 0, i = 0; k < ticks; k++){
@@ -304,11 +315,12 @@ async function record(shot){
 
   const out = (name) => join(OUT, slug + name)
   const src = ['-framerate', String(FPS), '-i', 'o%05d.jpg']
-  ff([...src, '-vf', fit(1920), ...vp9(31), out('.webm')], tmp)
-  ff([...src, '-vf', fit(1280), ...vp9(33), out('-sm.webm')], tmp)
+  ff([...src, '-vf', fit(W * DSF), ...vp9(CRF), out('.webm')], tmp)
+  ff([...src, '-vf', fit(1280), ...vp9(CRF + 2), out('-sm.webm')], tmp)
   ff(['-i', take[0].file, '-q:v', '3', out('.jpg')], tmp)
   ff(['-i', take[0].file, '-vf', 'scale=480:-2:flags=lanczos', '-q:v', '4', out('-thumb.jpg')], tmp)
-  await rm(tmp, { recursive: true, force: true })
+  if (process.env.KEEP) console.log('   frames kept in ' + tmp + ' (KEEP=1)')     // for measuring an encode against them
+  else await rm(tmp, { recursive: true, force: true })
   console.log(`   ✓ ${slug}.webm ${await kb(out('.webm'))} KB · -sm.webm ${await kb(out('-sm.webm'))} KB · .jpg ${await kb(out('.jpg'))} KB · -thumb.jpg ${await kb(out('-thumb.jpg'))} KB`)
 }
 
