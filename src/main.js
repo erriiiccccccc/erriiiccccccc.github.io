@@ -1189,20 +1189,108 @@ function befriendPip() {
   sfx.pip()
 }
 
-/** Pip the friend: beside him and a step behind, catching up when he moves. */
+/*
+ * Pip the friend: beside him and a step behind, catching up when he moves. It never just blinks out:
+ *   - his jump: it stays on its own ground and does a smaller hop of its own, a beat later
+ *   - About (Meadow, E): he floats up; it stays on the grass, turns to him and looks up (the camera's
+ *     push-in takes it out of the bottom of the shot), then bounces when he's back down
+ *   - a warp: he stands still while the planet turns under him, so it stays beside him, braced
+ *   - the Meadow close-ups: it fades out and back with him
+ *   - the ground: it stands on the real ground under itself, and if its spot is in a rock or up a
+ *     ledge it goes to his other side (or tucks in behind him)
+ */
+let _pipSide = 1                 // 1 his right, -1 his left, 0 tucked in behind him
+let _pipWatching = false         // he's up for About
+let _pipWasGrounded = true, _pipWasWarping = false
+let _pipY = null, _pipCheckIn = 0
+const _pipRay = new THREE.Raycaster()
+_pipRay.far = PLANET_RADIUS * 2
+const _pipFrom = new THREE.Vector3()
+const PIP_RIGHT = 1.15, PIP_BACK = 0.6, PIP_TUCK = 0.95
+
+/** The ground under (x, z) beside him, and whether Pip can stand there (no rock on it, no ledge). */
+function pipGround(x, z) {
+  _pipFrom.set(x, PLANET_RADIUS * 2, z)
+  _pipRay.set(_pipFrom, _rayDir)
+  _pipRay.layers.mask = surfaceRay.layers.mask
+  const g = _pipRay.intersectObject(planetModel, true)[0]
+  if (!g) return { y: null, ok: false }
+  let ok = Math.abs(g.point.y - smoothSurfY) < 0.9                     // not up a wall or down a drop
+  if (ok && terrainLayerActive) {
+    _pipRay.layers.mask = obstacleRay.layers.mask
+    const o = _pipRay.intersectObject(planetModel, true)[0]
+    if (o && o.point.y > g.point.y + 0.25) ok = false                    // a rock, a tree, a prop
+  }
+  return { y: g.point.y, ok }
+}
+/** Where side `s` puts it, from his position and facing. */
+function pipSideSpot(s, ry, out) {
+  const back = s === 0 ? PIP_TUCK : PIP_BACK
+  return out.set(Math.cos(ry) * PIP_RIGHT * s - Math.sin(ry) * back, 0, -Math.sin(ry) * PIP_RIGHT * s - Math.cos(ry) * back).add(modelGroup.position)
+}
+
+/** Called from openIslandPanel when he launches into About. */
+function pipWatchHim() {
+  if (!pip || !pipFriend) return
+  _pipWatching = true
+  pip.watch(true)
+}
+
 function tickPipFriend(dt, moving) {
-  const ry = modelGroup.rotation.y
-  // his own right and back, on the ground at his feet
-  _pipV.set(Math.cos(ry) * 1.15 - Math.sin(ry) * 0.6, 0, -Math.sin(ry) * 1.15 - Math.cos(ry) * 0.6).add(modelGroup.position)
-  const k = 1 - Math.exp(-dt * (moving ? 5 : 8))
-  pip.group.position.x += (_pipV.x - pip.group.position.x) * k
-  pip.group.position.z += (_pipV.z - pip.group.position.z) * k
-  pip.group.position.y = modelGroup.position.y
-  pip.group.rotation.y = ry
+  const me = modelGroup.position
+  // About is over once he's back on the ground: it looks ahead again and bounces
+  if (_pipWatching && !presentationMode && !presentationTurning && isGrounded && !aboutOverlay.isOpen()) {
+    _pipWatching = false
+    pip.watch(false)
+    pip.cheer()
+  }
+  if (_pipWasGrounded && !isGrounded && !_pipWatching && !presentationMode) pip.leap()
+  _pipWasGrounded = isGrounded
+  if (isTeleporting !== _pipWasWarping) {
+    _pipWasWarping = isTeleporting
+    pip.brace(isTeleporting)
+    if (!isTeleporting) pip.land()
+  }
+
+  let groundY = smoothSurfY
+  if (_pipWatching) {
+    // stays where it is, turned to him
+    const g = pipGround(pip.group.position.x, pip.group.position.z)
+    if (g.y != null) groundY = g.y
+    pip.group.rotation.y = Math.atan2(me.x - pip.group.position.x, me.z - pip.group.position.z)
+  } else {
+    const ry = modelGroup.rotation.y
+    // a few times a second, check its spot is somewhere it can stand; if not, his other side, then behind
+    if (!isTeleporting && (_pipCheckIn -= dt) <= 0) {
+      _pipCheckIn = 0.2
+      const here = pipSideSpot(_pipSide, ry, _pipV)
+      if (!pipGround(here.x, here.z).ok) {
+        for (const s of [-_pipSide || 1, 0, _pipSide || -1]) {
+          const at = pipSideSpot(s, ry, _pipV)
+          if (pipGround(at.x, at.z).ok) { _pipSide = s; break }
+        }
+      } else if (_pipSide === 0) {
+        // tucked in behind: back out to a side once there's room
+        for (const s of [1, -1]) { const at = pipSideSpot(s, ry, _pipV); if (pipGround(at.x, at.z).ok) { _pipSide = s; break } }
+      }
+    }
+    pipSideSpot(_pipSide, ry, _pipV)
+    const k = 1 - Math.exp(-dt * (moving ? 5 : 8))
+    pip.group.position.x += (_pipV.x - pip.group.position.x) * k
+    pip.group.position.z += (_pipV.z - pip.group.position.z) * k
+    pip.group.rotation.y = ry
+    // in a warp the ground races past underneath, so it rides at his level; otherwise its own ground
+    if (!isTeleporting) {
+      const g = pipGround(pip.group.position.x, pip.group.position.z)
+      if (g.y != null && Math.abs(g.y - smoothSurfY) < 1.5) groundY = g.y
+    }
+  }
+  _pipY = _pipY == null || isTeleporting ? groundY : _pipY + (groundY - _pipY) * (1 - Math.exp(-dt * 14))
+  pip.group.position.y = _pipY
   pip.group.scale.setScalar(modelGroup.scale.x)
-  // he's the hero of About and of the close-ups: Pip waits out of shot
-  pip.group.visible = modelGroup.visible && (_charRoot ? _charRoot.visible : true) && !presentationMode && !aboutOverlay.isOpen() && !isTeleporting
-  pip.update(dt, { moving: moving && isGrounded, calm: reducedMotion })
+  pip.setFade(charFade)
+  pip.group.visible = modelGroup.visible && charFade > 0.02
+  pip.update(dt, { moving: moving && isGrounded && !_pipWatching, calm: reducedMotion })
 }
 
 /**
@@ -1830,6 +1918,7 @@ function openIslandPanel() {
 
   if (activeIslandName === 'meadow_island') {
     sfx.open('card', 'meadow_island')
+    pipWatchHim()                      // Pip stays on the grass and watches him go up
     // 1. Character jumps up from the planet — the same one the player sees
     if (modelLoaded) {
       animCtrl.triggerJump()
@@ -2193,7 +2282,7 @@ if (import.meta.env.DEV) {
     // Pip, for testing: __ew.pip.goto(1) turns the planet so hiding spot 1 is under you,
     // __ew.pip.here() puts its mound beside you, __ew.pip.forget() starts the hunt over
     pip: {
-      get state() { return { caught: pipCaught, friend: pipFriend, spots: pipSpots.length, spot: pipSpot, near: !!pipPoi?.near, busy: !!pip?.busy } },
+      get state() { return { caught: pipCaught, friend: pipFriend, spots: pipSpots.length, spot: pipSpot, near: !!pipPoi?.near, busy: !!pip?.busy, side: _pipSide, watching: _pipWatching } },
       get group() { return pip?.group },
       goto(i) {
         const w = planetGroup.localToWorld(pipSpots[i].position.clone()).normalize()

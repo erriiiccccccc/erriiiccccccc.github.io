@@ -8,6 +8,12 @@
 // Built from primitives like everything else out here. The group's +Y is the
 // surface normal (main.js places it); as a friend it's re-parented to the scene
 // and main.js moves it along beside Eric each frame.
+//
+// As a friend it never just blinks out. It has its own small moves for the
+// moments Eric does something big: a hop a beat after his jump, a look up while
+// he floats for About (it stays on the grass), a happy bounce when he's back,
+// bracing while the planet turns under them in a warp, and a fade with him for
+// the close-ups. main.js decides when; these are only the moves.
 import * as THREE from 'three'
 
 // The world is seen from well back, so it's drawn about knee-high to Eric: small enough to be a
@@ -18,6 +24,10 @@ const FRIEND_SIZE = 2.1
 const lit = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.9, metalness: 0, ...extra })
 const flat = (color) => new THREE.MeshBasicMaterial({ color })
 const ease = (cur, to, dt, k) => cur + (to - cur) * (1 - Math.exp(-dt * k))
+// its own jump: smaller than his, and a beat after it, so it reads as following, not glued on
+const LEAP_DELAY = 0.09, LEAP_TIME = 0.42, LEAP_HEIGHT = 0.17    // about two thirds of his jump
+const CHEER_TIME = 0.62     // two quick hops when he lands back beside it
+const LAND_TIME  = 0.35     // the squash at the end of a warp
 
 export class Pip {
   constructor() {
@@ -100,6 +110,17 @@ export class Pip {
     this._hop = 0
     this._glint = 1.5 + Math.random() * 2
     this._face = 0
+    // friend moves (see the header): timers run from 0 while a move plays, -1 when idle
+    this._leapT = -1
+    this._cheerT = -1
+    this._landT = -1
+    this._watching = false
+    this._look = 0
+    this._bracing = false
+    this._brace = 0
+    this._fade = 1
+    this._fadeMats = []
+    this.body.traverse(o => { if (o.material) this._fadeMats.push(o.material) })
     this._pose()
   }
 
@@ -121,6 +142,23 @@ export class Pip {
     this.body.visible = true
     this.body.scale.setScalar(1)
   }
+  /** He jumped: a smaller hop of its own, a beat later. */
+  leap() { if (this._leapT < 0) this._leapT = 0 }
+  /** He's back on the ground beside it (after About): two happy hops. */
+  cheer() { this._cheerT = 0 }
+  /** He's gone up for About: it stays put and looks up at him (false: looks ahead again). */
+  watch(on) { this._watching = on }
+  /** The planet is turning under them (a warp): it hunkers down. */
+  brace(on) { this._bracing = on }
+  /** The warp is over: a little squash as it settles. */
+  land() { this._landT = 0 }
+  /** Fade with him (the Meadow close-ups fade him out): 1 shown, 0 gone. */
+  setFade(f) {
+    if (f === this._fade) return
+    this._fade = f
+    for (const m of this._fadeMats) { m.transparent = f < 1; m.opacity = f; m.depthWrite = f > 0.6 }
+  }
+
   /** Three catches: no more mound, it follows Eric from now on. */
   setFriend() {
     this.friend = true
@@ -180,11 +218,29 @@ export class Pip {
       // hop while he walks, breathe while he stands
       this._hop = moving && !calm ? (this._hop + dt * 9) % (Math.PI * 2) : ease(this._hop, 0, dt, 10)
       const hop = moving && !calm ? Math.abs(Math.sin(this._hop)) : 0
-      this.body.position.y = 0.17 + hop * 0.2 + (calm ? 0 : Math.sin(this._t * 2.4) * 0.008)
-      const squash = 1 - hop * 0.12
-      this.body.scale.set(1 + (1 - squash) * 0.6, squash + hop * 0.2, 1 + (1 - squash) * 0.6)
-      this.body.rotation.set(0, 0, calm ? 0 : Math.sin(this._t * 1.3) * 0.05)      // as a friend it faces the way he walks (main.js turns the group)
-      for (const ear of this.ears) ear.rotation.x = calm ? 0 : -hop * 0.5
+      // the moves: each one a 0..1 curve while it plays (reduced motion: none of them)
+      const play = (key, len, curve) => {
+        if (this[key] < 0) return 0
+        if (calm) { this[key] = -1; return 0 }
+        this[key] += dt
+        const k = this[key] / len
+        if (k >= 1) { this[key] = -1; return 0 }
+        return curve(k)
+      }
+      const leap  = play('_leapT', LEAP_DELAY + LEAP_TIME, k => { const u = (k * (LEAP_DELAY + LEAP_TIME) - LEAP_DELAY) / LEAP_TIME; return u > 0 ? Math.sin(u * Math.PI) : 0 })
+      const cheer = play('_cheerT', CHEER_TIME, k => Math.abs(Math.sin(k * Math.PI * 2)) * (1 - k * 0.4))
+      const land  = play('_landT', LAND_TIME, k => Math.sin(k * Math.PI) * (1 - k))
+      this._look  = calm ? (this._watching ? 1 : 0) : ease(this._look, this._watching ? 1 : 0, dt, 6)
+      this._brace = calm ? 0 : ease(this._brace, this._bracing ? 1 : 0, dt, 10)
+      const air = hop * 0.2 + leap * LEAP_HEIGHT + cheer * 0.16
+      this.body.position.y = 0.17 + air + (calm ? 0 : Math.sin(this._t * 2.4) * 0.008) - this._brace * 0.03
+      const squash = 1 - hop * 0.12 - land * 0.28 - this._brace * 0.14
+      const stretch = (hop + leap + cheer) * 0.2
+      this.body.scale.set(1 + (1 - squash) * 0.6, squash + stretch, 1 + (1 - squash) * 0.6)
+      // as a friend it faces the way he walks (main.js turns the group); looking up tips it back
+      this.body.rotation.set(-this._look * 0.5, 0, calm ? 0 : Math.sin(this._t * 1.3) * 0.05)
+      for (const ear of this.ears) ear.rotation.x = calm ? 0 : -(hop * 0.5 + leap * 0.6 + this._brace * 0.8) + this._look * 0.25
+      this.body.visible = this._fade > 0.02
       return
     }
 
