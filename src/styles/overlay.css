@@ -162,16 +162,6 @@ body {
   color: #fff;
   filter: drop-shadow(0 2px 22px rgba(251,184,107,0.35));
 }
-#ldr-tagline {
-  margin-top: 0.7rem;
-  font-family: var(--font-body, 'Inter', sans-serif);
-  font-weight: 300;
-  font-size: clamp(0.72rem, 1.7vw, 0.92rem);
-  letter-spacing: 0.32em;
-  text-transform: lowercase;
-  color: rgba(255,255,255,0.62);
-}
-
 /* Progress — bottom-centre */
 #ldr-progress {
   position: absolute;
@@ -227,13 +217,21 @@ body {
   transform: translateX(-100%);
 }
 #ldr-bar-track.is-sweeping::after { animation: ldr-sweep var(--sweep, 600ms) linear forwards; }
+/* the last second, while the browser is busy and nothing else can move: a slow light keeps going */
+#ldr-bar-track.is-working::after { will-change: transform; animation: ldr-working 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes ldr-working {
+  0%   { opacity: 0;   transform: translateX(-100%); }
+  15%  { opacity: 0.7; }
+  85%  { opacity: 0.7; }
+  100% { opacity: 0;   transform: translateX(340%); }
+}
 @keyframes ldr-sweep {
   0%   { opacity: 1; transform: translateX(-100%); }
   95%  { opacity: 1; }
   100% { opacity: 0; transform: translateX(340%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  #ldr-bar-track.is-sweeping::after { animation: none; }
+  #ldr-bar-track.is-sweeping::after, #ldr-bar-track.is-working::after { animation: none; }
 }
 
 #ldr-label {

@@ -181,6 +181,11 @@ export class LoadDirector {
     this._maybeReady()
   }
 
+  /** How much of world.glb has arrived, 0 to 1 (the loading camera's flight follows it). */
+  get downloadFraction() {
+    return this._flags.criticalAssets ? 1 : this._downloadFrac
+  }
+
   get hasFirstFrame() {
     return this._flags.firstMeaningfulFrame
   }

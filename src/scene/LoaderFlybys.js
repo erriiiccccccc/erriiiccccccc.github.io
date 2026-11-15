@@ -1,18 +1,12 @@
 import * as THREE from 'three'
 
-// ─── Loader flybys ────────────────────────────────────────────────────────────
+// ─── Space junk for the loading screen ───────────────────────────────────────
 //
-// Cheap, fully procedural space junk that drifts across the screen WHILE world.glb
-// streams in — a satellite, a UFO, a stray little planet, a clump of asteroids.
-// Because it's code (no assets), it costs nothing to load: on a fast machine you
-// catch the start of one; on a slow machine several cycle past while you wait.
-//
-// Spawned in front of the loading-view camera (at +z, looking at the origin) and
-// flown right → left. Styles deliberately mirror the in-game decor (CelestialBodies
-// / Asteroids) so it reads as the same universe. Cleared the moment the real
-// planet arrives (see LoaderFlybys.clear / triggerArrival in main.js).
+// Cheap, fully procedural things to fly past on the way in: a satellite, a UFO, a stray little
+// planet, a clump of asteroids. Code only (no assets), so they cost nothing to load. Styles mirror
+// the in-game decor (CelestialBodies / Asteroids) so they read as the same universe.
+// LoaderApproach places them along the camera's path; each builder returns { obj, radius }.
 
-const MAX_CONCURRENT = 2
 const ROCK_COLORS = [0x6E6258, 0x7A6A5C, 0x5C5650, 0x83705F]
 
 // A few "stray world" palettes [base, dark] — red (matches the in-game accent
@@ -51,7 +45,7 @@ function lumpGeo(radius) {
 }
 
 // ── Builders: each returns { obj, radius } ──
-function buildSatellite() {
+export function buildSatellite() {
   const g = new THREE.Group()
   const bodyMat = new THREE.MeshStandardMaterial({
     color: 0xC9CDD6, flatShading: true, roughness: 0.55, metalness: 0.35,
@@ -77,7 +71,7 @@ function buildSatellite() {
   return { obj: g, radius: 3.6 }
 }
 
-function buildUFO() {
+export function buildUFO() {
   const g = new THREE.Group()
   const hullMat = new THREE.MeshStandardMaterial({
     color: 0x9AA3B2, flatShading: true, roughness: 0.45, metalness: 0.45,
@@ -105,7 +99,7 @@ function buildUFO() {
   return { obj: g, radius: 2.9 }
 }
 
-function buildStrayWorld() {
+export function buildStrayWorld() {
   const radius = 3.4 + Math.random() * 3
   const [base, dark] = pick(WORLD_PALETTES)
   const geo = new THREE.IcosahedronGeometry(radius, 2)
@@ -117,7 +111,7 @@ function buildStrayWorld() {
   return { obj: mesh, radius }
 }
 
-function buildAsteroidCluster() {
+export function buildAsteroidCluster() {
   const g = new THREE.Group()
   const n = 4 + ((Math.random() * 3) | 0)
   for (let i = 0; i < n; i++) {
@@ -130,101 +124,4 @@ function buildAsteroidCluster() {
     g.add(m)
   }
   return { obj: g, radius: 5.5 }
-}
-
-const BUILDERS = [buildSatellite, buildUFO, buildStrayWorld, buildAsteroidCluster]
-
-export class LoaderFlybys {
-  constructor(camera) {
-    this.cam      = camera
-    this.group    = new THREE.Group()
-    this._active   = []
-    this._cooldown = 0        // spawn the first one immediately
-    this._spawning = true     // false once we start flushing for the planet's arrival
-  }
-
-  // Half-extents of the visible frustum at a given world-z (camera looks down -z).
-  _visibleHalf(z) {
-    const dist  = this.cam.position.z - z
-    const halfH = Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * dist
-    return { halfH, halfW: halfH * (window.innerWidth / window.innerHeight) }
-  }
-
-  _spawn() {
-    const { obj, radius } = pick(BUILDERS)()
-    const z = -6 + Math.random() * 28
-    const { halfW, halfH } = this._visibleHalf(z)
-    const baseY = (Math.random() - 0.5) * 0.7 * halfH   // mid band — clear of title/progress
-    obj.position.set(halfW + radius + 1, baseY, z)
-    obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-    this.group.add(obj)
-    this._active.push({
-      obj, radius, baseY,
-      vx:   -(9 + Math.random() * 13),
-      spin: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.7,
-        (Math.random() - 0.5) * 0.7,
-        (Math.random() - 0.5) * 0.7
-      ),
-      bobF: 0.6 + Math.random() * 1.1,
-      bobA: 0.3 + Math.random() * 0.9,
-      age:  Math.random() * 10,
-      deathX: -(halfW + radius + 4),
-    })
-  }
-
-  update(dt, reducedMotion = false) {
-    if (reducedMotion) return
-
-    for (let i = this._active.length - 1; i >= 0; i--) {
-      const f = this._active[i]
-      f.age += dt
-      f.obj.position.x += f.vx * dt
-      f.obj.position.y  = f.baseY + Math.sin(f.age * f.bobF) * f.bobA
-      f.obj.rotation.x += f.spin.x * dt
-      f.obj.rotation.y += f.spin.y * dt
-      f.obj.rotation.z += f.spin.z * dt
-      if (f.obj.position.x < f.deathX) {
-        this._disposeObj(f.obj)
-        this._active.splice(i, 1)
-      }
-    }
-
-    if (!this._spawning) return
-    this._cooldown -= dt
-    if (this._cooldown <= 0 && this._active.length < MAX_CONCURRENT) {
-      this._spawn()
-      this._cooldown = 0.45 + Math.random() * 1.2
-    }
-  }
-
-  // The planet's about to arrive: stop spawning and send everything currently on
-  // screen zipping off to the LEFT so they exit naturally (update() keeps moving
-  // them and disposes each as it leaves the frame). Returns true if any were
-  // still on screen, so the caller can give them a brief head start.
-  flushOut() {
-    this._spawning = false
-    for (const f of this._active) {
-      f.vx   = -Math.max(55, Math.abs(f.vx) * 2.6)  // bail leftward, fast
-      f.bobA *= 0.35
-      f.spin.multiplyScalar(1.5)                    // a little tumble as they go
-    }
-    return this._active.length > 0
-  }
-
-  // Hard clear (dispose everything) — safety net once the scene takes over.
-  clear() {
-    this._spawning = false
-    for (const f of this._active) this._disposeObj(f.obj)
-    this._active.length = 0
-    this.group.clear?.()
-  }
-
-  _disposeObj(obj) {
-    this.group.remove(obj)
-    obj.traverse(o => {
-      if (o.geometry) o.geometry.dispose()
-      if (o.material) o.material.dispose()
-    })
-  }
 }

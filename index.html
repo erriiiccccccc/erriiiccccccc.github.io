@@ -36,13 +36,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- display=optional: never block readiness on webfonts; system fallbacks are fine -->
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400&display=optional" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=optional" rel="stylesheet" />
+  <!-- The wordmark is the first thing anyone sees, so its font is in the page itself: Cinzel 600, only
+       the eleven letters of "Eric's World" (2 KB), there on the very first paint. A font fetched from
+       elsewhere would arrive after the page's script has started, and either show late or show the
+       wrong font first. Cinzel by Natanael Gama, SIL Open Font License 1.1 (subset from Google Fonts). -->
+  <style>@font-face{font-family:'Cinzel';font-style:normal;font-weight:600;font-display:block;unicode-range:U+20,U+27,U+45,U+57,U+63-64,U+69,U+6C,U+6F,U+72-73;src:url(data:font/woff2;base64,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) format('woff2')}</style>
   <!-- The title face. display=swap, because titles only appear once the world has loaded (panels, the
        title card), so it has seconds to arrive and nothing visible ever shifts. With "optional" a
        first-time visitor would get the fallback serif for their whole visit. -->
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./src/styles/overlay.css" />
   <link rel="preload" href="./world.glb" as="fetch" crossorigin />
+  <!-- The planet the loading camera flies toward until world.glb is ready (scene/LoaderApproach) -->
+  <link rel="preload" href="./loader-planet.webp" as="image" />
 </head>
 <body>
   <!-- Page heading for screen readers / SEO (the visual "title" is the 3D scene) -->
@@ -56,7 +63,6 @@
     <!-- Title (top-centre) -->
     <div id="ldr-title">
       <div id="ldr-name">Eric's World</div>
-      <div id="ldr-tagline">a tiny handcrafted world</div>
     </div>
     <!-- Progress (bottom-centre) -->
     <div id="ldr-progress">

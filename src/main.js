@@ -5,7 +5,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh'
 import { Starfield } from './scene/Starfield.js'
-import { LoaderFlybys } from './scene/LoaderFlybys.js'
+import { LoaderApproach, LOADER_EYE, STAND_IN_FOV } from './scene/LoaderApproach.js'
 import { Lighting } from './scene/Lighting.js'
 import { Character } from './character/Character.js'
 import { Controls } from './character/Controls.js'
@@ -1485,13 +1485,6 @@ function faceTowards(spot, target) {
 const stars = new Starfield()
 scene.add(stars.points)
 
-// --- Loader flybys ---
-// Procedural space junk (satellite / UFO / stray world / asteroids) drifting past
-// while world.glb streams in. Updated in the !sceneStarted branch; cleared the
-// moment the real planet arrives.
-const loaderFlybys = new LoaderFlybys(camSystem.camera)
-scene.add(loaderFlybys.group)
-
 // --- Shooting Stars ---
 const shootingStars = new ShootingStars()
 scene.add(shootingStars.group)
@@ -1499,6 +1492,17 @@ scene.add(shootingStars.group)
 // --- Sky decor (critical atmosphere first; extras deferred after reveal) ---
 const skyDecor = new SkyDecor(qualitySettings.skyTier)
 scene.add(skyDecor.group)
+
+// --- The loading screen: a flight in toward the planet (scene/LoaderApproach) ---
+// Moves the loading camera with the download and takes the sky along. Updated in the !sceneStarted
+// branch; the real planet takes over from its stand-in picture once the camera is parked.
+const loaderApproach = new LoaderApproach({
+  camera: camSystem.camera,
+  skyGroups: [stars.points, shootingStars.group, skyDecor.group],
+  reducedMotion,
+  standInUrl: ASSET_BASE + 'loader-planet.webp',
+})
+scene.add(loaderApproach.group)
 
 // --- Island Particles ---
 const islandParticles = new IslandParticles()
@@ -2065,6 +2069,43 @@ function openPoi(poi = activePoi) {
 ui.onPopupTap    = openIslandPanel
 ui.onSubPopupTap = () => openPoi()
 
+/**
+ * Dev only (scripts/capture-loader-planet.mjs): the loader's stand-in picture. The planet exactly as
+ * the loading view shows it (its pose, its lights, the islands not yet found), from where the loading
+ * camera parks, on a transparent background. A second renderer, so the page's canvas is untouched.
+ * @returns {string} a PNG data URL
+ */
+function shootLoaderPlanet(size = 1536) {
+  if (!import.meta.env.DEV) return ''
+  const r2 = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true })
+  r2.setPixelRatio(1)
+  r2.setSize(size, size, false)
+  r2.toneMapping = renderer.toneMapping
+  r2.toneMappingExposure = renderer.toneMappingExposure
+  r2.outputColorSpace = renderer.outputColorSpace
+  r2.shadowMap.enabled = renderer.shadowMap.enabled
+  r2.shadowMap.type = renderer.shadowMap.type
+  r2.setClearColor(0x000000, 0)
+  const cam = new THREE.PerspectiveCamera(STAND_IN_FOV, 1, 0.1, 2000)
+  cam.position.set(0, 0, LOADER_EYE)
+  cam.lookAt(0, 0, 0)
+  const bg = scene.background
+  scene.background = null
+  const hidden = []
+  for (const c of scene.children) {
+    if (c === planetGroup || c.isLight || c.isCamera || c === lighting.sceneGroup || !c.visible) continue
+    c.visible = false
+    hidden.push(c)
+  }
+  r2.render(scene, cam)
+  const url = r2.domElement.toDataURL('image/png')
+  for (const c of hidden) c.visible = true
+  scene.background = bg
+  r2.dispose()
+  r2.forceContextLoss()
+  return url
+}
+
 if (import.meta.env.DEV) {
   // Dev-only probe for tuning the poi triggers. Stripped from the build.
   window.__ew = {
@@ -2105,6 +2146,7 @@ if (import.meta.env.DEV) {
     get char() { return _charRoot },
     get cam() { return camSystem },
     get about() { return aboutOverlay },
+    get approach() { return loaderApproach },
     get THREE() { return THREE },
     // Pip, for testing: __ew.pip.goto(1) turns the planet so hiding spot 1 is under you,
     // __ew.pip.here() puts its mound beside you, __ew.pip.forget() starts the hunt over
@@ -2214,8 +2256,6 @@ function easeOutBack(t) {
   return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
 }
 
-const LDR_ARRIVE_SPEED = 55
-
 /** True while warmPlayView owns the camera/renders (loading animate must not fight it). */
 let _warmingPlay = false
 let _playWarmStarted = false
@@ -2267,6 +2307,17 @@ async function warmPlayView(warmToken) {
   }
 
   planetModel.visible = true
+  // Upload every texture of the world inside this pause. The play camera below only sees the top of
+  // the planet, and whatever it misses would otherwise upload on the first frame back on screen, as a
+  // second, separate hitch right before the zoom.
+  const worldTextures = new Set()
+  planetModel.traverse(o => {
+    if (!o.material) return
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      for (const k in m) { const v = m[k]; if (v && v.isTexture) worldTextures.add(v) }
+    }
+  })
+  for (const t of worldTextures) renderer.initTexture(t)
 
   // Approximate play orbit (matches Camera.js DIST / PITCH_DEF / character pivot)
   const charY = PLANET_RADIUS + 0.9
@@ -2374,6 +2425,7 @@ async function maybeStartPlayWarm() {
     }
     loadDirector?.markPlayWarmed()
     loadDirector?.flush?.()
+    revealRealPlanet()
   } catch (err) {
     console.error('Play warm failed:', err)
     _playWarmToken++
@@ -2383,67 +2435,55 @@ async function maybeStartPlayWarm() {
     camSystem.setLoadingView()
     // Don't block forever — mark warmed so reveal can proceed
     loadDirector?.markPlayWarmed()
+    revealRealPlanet()
   }
   tryBeginReveal()
 }
 
-// Called when world.glb finishes compile. Planet eases in from off-screen right.
+// Called when world.glb has compiled. The planet doesn't fly in any more: the loading camera has been
+// flying toward a picture of it (LoaderApproach). Once the camera is parked where the picture was
+// taken, the play view warms up (warmPlayView, off screen, which also draws the real planet for the
+// first time: its textures upload in that same pause rather than in a second one), and then the real
+// planet takes the picture's place (revealRealPlanet). Same spot, same pose, same pixels.
 function triggerArrival(model) {
-  const hadFlybys = loaderFlybys.flushOut()
-  const baseX = model.position.x
-
   const finishArrival = () => {
     if (_arrivalDone) return
     _arrivalDone = true
     if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('perf')) {
       console.log('[load] arrival done → play warm')
     }
-    // Next frame: let the centered globe paint before GPU warm hitches the thread
+    // Next frame: let the real globe paint before GPU warm hitches the thread
     requestAnimationFrame(() => maybeStartPlayWarm())
   }
-
-  if (reducedMotion) {
-    loaderFlybys.clear()
-    model.position.x = baseX
-    model.rotation.y = 0
-    model.visible = true
-    finishArrival()
-    return
-  }
-
-  const viewH = Math.max(1, window.innerHeight || 1)
-  const viewW = Math.max(1, window.innerWidth || 1)
-  const halfH = Math.tan(THREE.MathUtils.degToRad(camSystem.camera.fov) / 2) * camSystem.camera.position.z
-  const halfW = halfH * (viewW / viewH)
-  const startX = baseX + (Number.isFinite(halfW) ? halfW : 40) + 30
-  // Park off-screen BEFORE making visible — never show a centered pop-in.
-  model.position.x = startX
-  model.rotation.y = -0.45
-  model.visible = true
-
-  const dist       = Math.max(0.01, startX - baseX)
-  const settleDist = dist * 0.18
-  const dLinear    = Math.min(8, Math.max(0.05, (dist - settleDist) / LDR_ARRIVE_SPEED))
-  const dSettle    = Math.min(4, Math.max(0.05, (2 * settleDist) / LDR_ARRIVE_SPEED))
-
-  const delay = hadFlybys ? 0.25 : 0
-  const tl = gsap.timeline({ delay, onComplete: finishArrival })
-  tl.to(model.position, { x: baseX + settleDist, duration: dLinear, ease: 'none' }, 0)
-    .to(model.position, { x: baseX,              duration: dSettle, ease: 'power2.out' })
-  tl.to(model.rotation, { y: 0, duration: dLinear + dSettle, ease: 'sine.out' }, 0)
-  // Failsafe outside GSAP — never block Ready if the tween stalls
-  setTimeout(() => {
-    if (!_arrivalDone) {
-      console.warn('[load] arrival failsafe')
-      model.position.x = baseX
-      model.rotation.y = 0
-      finishArrival()
+  model.rotation.y = 0
+  const parked = () => {
+    if (_arrivalDone) return
+    if (import.meta.env.DEV && window.location.search.includes('loaderShot')) {
+      // scripts/capture-loader-planet.mjs: the picture is taken now, then the world carries on
+      model.visible = true
+      requestAnimationFrame(() => { window.__loaderShot = shootLoaderPlanet(); finishArrival() })
+      return
     }
-  }, Math.ceil((delay + dLinear + dSettle + 1.25) * 1000))
+    finishArrival()
+  }
+  loaderApproach.whenParked(parked)
+  // Failsafe: never hold Ready on the flight (a backgrounded tab, a stalled frame loop)
+  setTimeout(() => {
+    if (_arrivalDone) return
+    console.warn('[load] arrival failsafe')
+    loaderApproach.park()
+    parked()
+  }, 6000)
+}
+
+/** After the warm-up: the real planet in, its picture out. Both line up exactly, so nothing changes on screen. */
+function revealRealPlanet() {
+  if (planetModel) planetModel.visible = true
+  loaderApproach.handOver()
 }
 
 function startScene() {
-  loaderFlybys.clear()
+  loaderApproach.clear()
   sceneStarted = true
   loadDirector?.markLive()
   perfMark('loader_dismiss')
@@ -2547,7 +2587,7 @@ function animate() {
       character.group.visible = false
       modelGroup.visible = false
     }
-    loaderFlybys.update(dt, reducedMotion)
+    loaderApproach.update(dt, loadDirector?.downloadFraction ?? 0)
     renderer.render(scene, camSystem.camera)
 
     if (_pendingMeaningfulFrame && planetModel && canvas.clientWidth > 0) {
