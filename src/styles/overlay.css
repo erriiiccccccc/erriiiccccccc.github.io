@@ -3815,7 +3815,7 @@ body:has(#about-overlay.is-open) #hud-buttons { opacity: 0; pointer-events: none
 .about-rows dd { margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--txt-soft); }
 
 /* Emotes: four buttons, the key that fires each in its corner */
-.about-emo-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.about-emo-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .about-emo { all: unset; box-sizing: border-box; position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 56px; padding: 6px 2px 5px; border-radius: 12px; cursor: pointer;
   font-size: 0.68rem; font-weight: 600; color: var(--txt-soft); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-stroke);
   transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.3s cubic-bezier(0.2, 1.3, 0.3, 1); }
@@ -3858,41 +3858,52 @@ button.about-quest:hover .about-q-go, button.about-quest:focus-visible .about-q-
 .about-music.is-playing .about-np-main small { color: color-mix(in srgb, var(--ic) 78%, #fff); }
 .about-card-h .about-np-off { color: #fbbf24; }
 
-/* What he says. The nameplate turns into a game's dialogue box: nothing is laid over him.
-   The nameplate's own rows fade out and this layer fades in over the same box, so its size never changes. */
-.about-talk { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; gap: 4px; padding: 0.95rem 1.4rem 0.8rem; border-radius: inherit; cursor: pointer;
-  opacity: 0; visibility: hidden; transform: translateY(6px); transition: opacity 0.2s, transform 0.3s var(--ease-out), visibility 0s 0.2s; }
-.about-dock.is-talking .about-talk { opacity: 1; visibility: visible; transform: none; transition: opacity 0.22s 0.08s, transform 0.34s var(--ease-out) 0.08s, visibility 0s; }
-.about-dock .about-dock-row { transition: opacity 0.18s; }
-.about-dock.is-talking .about-dock-row { opacity: 0; pointer-events: none; }
-.about-talk-who { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.about-talk-name { display: inline-flex; align-items: center; height: 22px; padding: 0 0.6rem; border-radius: 6px; font: 700 0.66rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
-  color: #0c1a10; background: var(--ic); box-shadow: 0 0 16px color-mix(in srgb, var(--ic) 45%, transparent); }
-.about-talk-n { font: 600 0.62rem/1 var(--font-mono); letter-spacing: 0.1em; color: var(--txt-faint); font-variant-numeric: tabular-nums; }
-.about-talk-text { margin: 0; align-self: center; font-size: clamp(1.02rem, 1.5vw, 1.22rem); line-height: 1.42; font-weight: 500; color: #fff; text-wrap: pretty; }
+/* What he says: a speech bubble beside his head. AboutOverlay._place() sets left, top, the width and which side
+   the tail is on, so it never covers his face, a card, the nameplate or the logo. */
+.about-bubble { position: absolute; left: 0; top: 0; z-index: 4; box-sizing: border-box; width: max-content; max-width: 300px; padding: 0.68rem 0.95rem 0.74rem; border-radius: 18px;
+  background: #fff; color: #17122b; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42); cursor: pointer; pointer-events: none;
+  opacity: 0; visibility: hidden; transition: opacity 0.16s, visibility 0s 0.16s; }
+#about-overlay.is-talking .about-bubble { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity 0.14s, visibility 0s; }
+.about-bubble[data-side^="right"] { transform-origin: 0 100%; }
+.about-bubble[data-side^="left"]  { transform-origin: 100% 100%; }
+.about-bubble[data-side="above"] { transform-origin: var(--tx, 50%) 100%; }
+.about-bubble.is-pop { animation: about-bubble-pop 0.34s cubic-bezier(0.2, 1.4, 0.3, 1); }
+@keyframes about-bubble-pop { from { transform: scale(0.72); } to { transform: none; } }
+/* the tail, pointing at him */
+.about-bubble::after { content: ""; position: absolute; width: 15px; height: 15px; background: inherit; border-radius: 3px; transform: rotate(45deg); }
+.about-bubble[data-side="right"]::after { left: -6px; bottom: 15px; }
+.about-bubble[data-side="left"]::after  { right: -6px; bottom: 15px; }
+.about-bubble[data-side="above"]::after { left: calc(var(--tx, 50%) - 7.5px); bottom: -6px; }
+.about-bubble[data-side="right-up"]::after { left: 16px; bottom: -6px; }      /* up over his shoulder: the tail drops from the near corner */
+.about-bubble[data-side="left-up"]::after  { right: 16px; bottom: -6px; }
+.about-bubble-text { position: relative; z-index: 1; margin: 0; font-size: clamp(0.98rem, 1.22vw, 1.1rem); line-height: 1.36; font-weight: 600; text-wrap: pretty; }
 .about-talk-rest { visibility: hidden; }
-.about-talk-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
-.about-talk-go { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; min-height: 30px; padding: 0 0.85rem; border-radius: 999px; cursor: pointer;
-  font-size: 0.78rem; font-weight: 700; color: #0c1a10; background: var(--ic); animation: about-card-up 0.35s var(--ease-out) both; transition: transform 0.2s var(--ease-out), filter 0.2s; }
+.about-talk-go { all: unset; box-sizing: border-box; position: relative; z-index: 1; display: flex; align-items: center; width: max-content; max-width: 100%; min-height: 36px; margin-top: 8px; padding: 0 0.9rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.8rem; font-weight: 700; color: #0c1a10; background: var(--ic); visibility: hidden; transition: transform 0.2s var(--ease-out), filter 0.2s; }
 .about-talk-go[hidden] { display: none; }
+.about-talk-go.is-ready { visibility: visible; animation: about-card-up 0.3s var(--ease-out) both; }
 .about-talk-go:hover { transform: translateY(-1px); filter: brightness(1.08); }
-.about-talk-go:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.about-talk-next { margin-left: auto; display: inline-flex; align-items: center; gap: 0.45rem; font: 500 0.6rem/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--txt-faint); opacity: 0; transition: opacity 0.25s; }
-.about-talk-next i { font-style: normal; font-size: 0.72rem; color: var(--ic); }
-.about-dock.is-waiting .about-talk-next { opacity: 1; }
-.about-dock.is-waiting .about-talk-next i { animation: about-next 0.9s ease-in-out infinite; }
-@keyframes about-next { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(2px); } }
+.about-talk-go:focus-visible { outline: 2px solid #17122b; outline-offset: 2px; }
+.about-bubble-next { position: absolute; z-index: 1; right: 11px; bottom: 6px; width: 10px; height: 7px; background: #7c3aed; clip-path: polygon(0 0, 100% 0, 50% 100%); opacity: 0; transition: opacity 0.2s; }
+#about-overlay.is-waiting .about-bubble-next { opacity: 1; animation: about-next 0.9s ease-in-out infinite; }
+@keyframes about-next { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(1px); } }
+/* while he talks the "click him to talk" hint has nothing to say, and its spot is the bubble's */
+#about-overlay.is-talking .about-hint { visibility: hidden; }
+/* phones: the only room for the bubble is where the logo is, so the logo steps aside for as long as he talks */
+#about-overlay.is-talking.is-over-brand .about-brand { visibility: hidden; }
+@media (max-width: 760px), (max-height: 480px) {
+  .about-bubble { padding: 0.55rem 0.85rem 0.62rem; border-radius: 16px; }
+  .about-bubble-text { font-size: 0.95rem; }
+  .about-talk-go { min-height: 40px; margin-top: 5px; }
+}
+/* a phone on its side: no height to stack a button under the words, so it sits beside them */
+@media (max-height: 480px) {
+  .about-bubble:has(.about-talk-go:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding-right: 1.5rem; }
+  .about-bubble .about-talk-go { margin-top: 0; }
+}
 
-/* who's talking: three small dots beside his head while the line types */
-.about-speak { position: absolute; left: 0; top: 0; z-index: 3; display: flex; gap: 4px; padding: 7px 9px; border-radius: 999px 999px 999px 4px; pointer-events: none;
-  background: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); opacity: 0; transform: translate(calc(var(--ax, 50vw) + 30px), calc(var(--at, 20vh) + 4px)) scale(0.5); transform-origin: 0 100%;
-  transition: opacity 0.16s, transform 0.3s cubic-bezier(0.2, 1.3, 0.3, 1); }
-.about-speak i { width: 5px; height: 5px; border-radius: 50%; background: #17122b; }
-#about-overlay.is-typing .about-speak { opacity: 1; transform: translate(calc(var(--ax, 50vw) + 30px), calc(var(--at, 20vh) + 4px)); }
-#about-overlay.is-typing .about-speak i { animation: about-speak 0.7s ease-in-out infinite; }
-#about-overlay.is-typing .about-speak i:nth-child(2) { animation-delay: 0.12s; }
-#about-overlay.is-typing .about-speak i:nth-child(3) { animation-delay: 0.24s; }
-@keyframes about-speak { 0%, 100% { transform: translateY(0); opacity: 0.45; } 50% { transform: translateY(-3px); opacity: 1; } }
+/* a ribbon of light trails the pointer (fx/CursorRibbon): over the scene, under every card */
+.about-ribbon { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 /* the dock under Character Select: just the nameplate, narrower so the cards have the sides.
    (It sits inside .about-cards, which lets the pointer through: the dock itself takes it.) */
@@ -3940,10 +3951,9 @@ button.about-quest:hover .about-q-go, button.about-quest:focus-visible .about-q-
   .about-np { grid-template-columns: 48px minmax(0, 1fr) 44px; }
   .about-np-btn { width: 48px; height: 48px; }
   .about-np-next { width: 44px; height: 44px; }
-  .about-talk { padding: 0.85rem 1rem 0.7rem; }
 }
-@media (prefers-reduced-motion: reduce) { .about-card, .about-talk, .about-speak, .about-speak i, .about-talk-next i, .about-emo, .about-emo svg { animation: none !important; transition: none !important; } }
-body.reduced-motion :is(.about-card, .about-talk, .about-speak, .about-speak i, .about-talk-next i, .about-emo, .about-emo svg) { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .about-card, .about-bubble, .about-bubble-next, .about-talk-go, .about-emo, .about-emo svg { animation: none !important; transition: none !important; } }
+body.reduced-motion :is(.about-card, .about-bubble, .about-bubble-next, .about-talk-go, .about-emo, .about-emo svg) { animation: none !important; transition: none !important; }
 
 /* Mobile: stack the dock vertically ────────────────────────────────────────── */
 @media (max-width: 640px) {

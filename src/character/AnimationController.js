@@ -170,6 +170,16 @@ export class AnimationController {
       this._stripRootMotion(clips.emotes)
       this._emotes = clips.emotes.map(c => this.mixer.clipAction(c))
     }
+    // The same clips by name, for the About screen's emote buttons. Each of Eric's clips opens with a
+    // few seconds of standing still before the gesture, which is right for an idle variation and
+    // wrong for a button, so a named emote is the stretch of the clip where the gesture is.
+    this._named = {}
+    for (const [name, e] of Object.entries(clips.named || {})) {
+      if (!e?.clip) continue
+      const cut = THREE.AnimationUtils.subclip(e.clip, name, Math.round(e.from * 30), Math.round(e.to * 30), 30)
+      this._stripRootMotion([cut])
+      this._named[name] = this.mixer.clipAction(cut)
+    }
 
     this._anims.idle.setLoop(THREE.LoopRepeat)
     this._anims.idle.play()
@@ -314,6 +324,20 @@ export class AnimationController {
       }
     }
     this.mixer.addEventListener('finished', this._finishCb)
+  }
+
+  /**
+   * Play a named emote once (greet, agree, call), then settle back to idle. Only while standing: it
+   * never cuts into a walk or a jump. Asking again mid-emote restarts it.
+   * @returns {number} how long it runs in seconds, or 0 if it can't play right now
+   */
+  playEmote(name) {
+    const action = this._named?.[name]
+    if (!this.ready || !action) return 0
+    if (this._state !== ANIM_STATE.IDLE && this._state !== ANIM_STATE.EMOTE) return 0
+    this._clearFinishCb()
+    this._runEmote(action)
+    return action.getClip().duration
   }
 
   // Pick a random idle emote and play it once, then return to idle.

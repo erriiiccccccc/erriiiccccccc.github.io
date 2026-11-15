@@ -1,20 +1,22 @@
 // About Me: Character Select. A game's character screen around Eric himself.
 //
 //   left    Profile (who he is, in his words) and Emotes (buttons and keys
-//           1 to 4 that make him move)
+//           1 to 3 that play the gestures he animated)
 //   right   Quest log (the six islands, a tick on the ones found, press one
 //           to warp there) and Now playing (a record from the Jukebox)
-//   centre  click or tap Eric and he talks, with a little gesture to go with it
-//   bottom  the nameplate dock: name, role, the ways to reach him. When he
-//           talks it turns into a game's dialogue box: his name on the tab, the
-//           line typing out with a beep per letter, a ▼ when there's more.
-//           Nothing is laid over him; three small dots by his head show who's talking.
+//   centre  click or tap Eric and he talks: a speech bubble beside his head,
+//           the line typing out with a soft tick per letter. The bubble finds
+//           its own spot so it never covers his face, a card, the nameplate
+//           or the logo.
+//   bottom  the nameplate dock: name, role, the ways to reach him
+//   pointer a ribbon of light trails it (fx/CursorRibbon)
 //
 // Pure CSS/DOM. The 3D character stays in the main scene: there is no second
 // renderer here. main.js owns the camera, the animation and the sound, and
 // feeds this the things only it knows (which islands are found, where his head
 // is on screen, what's playing) through the set* methods and on* hooks below.
 import { svgIcon } from './icons.js'
+import { CursorRibbon } from '../fx/CursorRibbon.js'
 
 const BASE = import.meta.env.BASE_URL || '/'
 const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(hover: none)').matches
@@ -22,22 +24,23 @@ const TOUCH = typeof window !== 'undefined' && window.matchMedia?.('(hover: none
 const svg = (d, s = 18) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
-/** The four emotes, in key order (1 to 4). */
+/** The emotes, in key order (1 to 3): the three gestures Eric animated for this rig. Greet reaches a hand out to
+ *  the side, Agree is a small open-handed lean, Call is a phone to his ear. */
 const EMOTES = [
-  { key: 'wave', label: 'Wave', icon: svg('<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>') },
-  { key: 'nod',  label: 'Nod',  icon: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>') },
-  { key: 'jump', label: 'Jump', icon: svg('<path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/>') },
-  { key: 'cheer', label: 'Cheer', icon: svg('<path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/>') },
+  { key: 'greet', label: 'Greet', icon: svg('<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>') },
+  { key: 'agree', label: 'Agree', icon: svg('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>') },
+  { key: 'call',  label: 'Call',  icon: svg('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>') },
 ]
 
 /** What he says when clicked, in order, in Eric's own words. `emote` plays with the line; `warp` puts a button in the bubble. */
 const LINES = [
-  { text: "Hey, I'm Eric. Welcome to my world!", emote: 'wave' },
-  { text: 'I built this whole planet. Every island is a part of me.', emote: 'nod' },
-  { text: "Start with Mountain if you want to see what I've made.", emote: 'cheer', warp: 'mountain_island', warpLabel: 'Take me to Mountain' },
+  { text: "Hey, I'm Eric. Welcome to my world!", emote: 'greet' },
+  { text: 'I built this whole planet. Every island is a part of me.', emote: 'agree' },
+  { text: "Start with Mountain if you want to see what I've made.", warp: 'mountain_island', warpLabel: 'Take me to Mountain' },
 ]
 const TYPE_MS = 34           // per letter
-const BOX_STAYS = 8000       // after the line has finished, before the nameplate comes back
+const BUBBLE_STAYS = 8000    // after the line has finished, before the bubble goes
+const HEAD_HALF = 0.48       // half his head's width on screen, as a share of the drop from above his hair (yTop) to his chin (y)
 
 export class AboutOverlay {
   constructor() {
@@ -53,16 +56,17 @@ export class AboutOverlay {
     this.shouldCloseFromBackdrop = null
     /** (dir: -1 | 1) => void, the ‹ › buttons; main.js closes it and flies on. */
     this.onHop = null
-    /** (key: 'wave' | 'nod' | 'jump' | 'cheer') => void. An emote button, a key, or a line he says. */
+    /** (key: 'greet' | 'agree' | 'call') => seconds it runs. An emote button, a key, or a line he says. */
     this.onEmote = null
     /** (islandName) => void. A quest was pressed: close and warp there. */
     this.onWarp = null
     /** ('toggle' | 'next') => void. The Now playing card. */
     this.onMusic = null
-    /** (letter) => void. One beep of his talking sound, for the letter just typed. */
+    /** (letter, n) => void. One tick of his talking sound, for the n-th letter of the line. */
     this.onBlip = null
 
     this._line = 0
+    this._swayUntil = 0         // while one of his gestures plays, his head swings: the bubble doesn't chase it
     this._typeT = 0
     this._hideT = 0
     this._typing = null
@@ -96,11 +100,16 @@ export class AboutOverlay {
       <!-- What to do with him -->
       <div class="about-hint" aria-hidden="true">
         <span class="about-hint-dot"></span>
-        ${TOUCH ? 'tap him to talk' : 'click him to talk · keys 1 to 4 make him move'}
+        ${TOUCH ? 'tap him to talk' : 'click him to talk · keys 1 to 3 make him move'}
       </div>
 
-      <!-- Who's talking: three dots by his head while a line types (main.js keeps --ax / --at on his head) -->
-      <div class="about-speak" aria-hidden="true"><i></i><i></i><i></i></div>
+      <!-- What he says: a speech bubble beside his head (placed by _place) -->
+      <div class="about-bubble" data-side="right">
+        <p class="about-bubble-text" aria-hidden="true"><span class="about-talk-shown"></span><span class="about-talk-rest"></span></p>
+        <button type="button" class="about-talk-go" hidden></button>
+        <i class="about-bubble-next" aria-hidden="true"></i>
+      </div>
+      <p class="sr-only about-said" role="status" aria-live="polite"></p>
 
       <div class="about-cards">
         <!-- Hero nameplate dock -->
@@ -131,15 +140,6 @@ export class AboutOverlay {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 View Source
               </a>
-            </div>
-          </div>
-          <!-- The dialogue box: takes the nameplate's place while he talks -->
-          <div class="about-talk" role="status" aria-live="polite">
-            <div class="about-talk-who"><span class="about-talk-name">Eric</span><span class="about-talk-n" aria-hidden="true"></span></div>
-            <p class="about-talk-text"><span class="about-talk-shown"></span><span class="about-talk-rest" aria-hidden="true"></span></p>
-            <div class="about-talk-foot">
-              <button type="button" class="about-talk-go" hidden></button>
-              <span class="about-talk-next" aria-hidden="true">${TOUCH ? 'tap him' : 'click him or press Space'}<i>▼</i></span>
             </div>
           </div>
         </div>
@@ -180,7 +180,9 @@ export class AboutOverlay {
     document.body.appendChild(el)
     this._el = el
     const $ = (s) => el.querySelector(s)
-    this._dock = $('.about-dock'); this._shown = $('.about-talk-shown'); this._rest = $('.about-talk-rest'); this._go = $('.about-talk-go'); this._count = $('.about-talk-n')
+    this._dock = $('.about-dock'); this._bubble = $('.about-bubble'); this._shown = $('.about-talk-shown'); this._rest = $('.about-talk-rest'); this._go = $('.about-talk-go'); this._said = $('.about-said')
+    this._ribbon = new CursorRibbon(el)
+    window.addEventListener('resize', () => { if (this._talking()) this._place() })
 
     $('.about-close').addEventListener('click', () => this.close())
     el.querySelectorAll('.about-hop').forEach(b => {
@@ -192,7 +194,7 @@ export class AboutOverlay {
       if (emo) { this.emote(emo.dataset.emote); return }
       const quest = e.target.closest('[data-warp]')
       if (quest) { this.onWarp?.(quest.dataset.warp); return }
-      if (e.target.closest('.about-talk')) { this.talk(); return }          // pressing the dialogue box moves it on too
+      if (e.target.closest('.about-bubble')) { this.talk(); return }        // pressing the bubble moves it on too
       const music = e.target.closest('[data-music]')
       if (music) { this.onMusic?.(music.dataset.music); return }
       // Only a click on the bare backdrop (not on any chrome) can dismiss, and even then the
@@ -217,9 +219,10 @@ export class AboutOverlay {
     const btn = this._el.querySelector(`[data-emote="${key}"]`)
     btn.classList.remove('is-on'); void btn.offsetWidth; btn.classList.add('is-on')
     clearTimeout(btn._t); btn._t = setTimeout(() => btn.classList.remove('is-on'), 900)
-    this.onEmote?.(key)
+    const secs = this.onEmote?.(key)
+    if (secs) this._swayUntil = performance.now() + (secs + 0.7) * 1000
   }
-  /** Keys 1 to 4. Returns true if the key was one of ours. */
+  /** Keys 1 to 3. Returns true if the key was one of ours. */
   key(k) {
     const e = EMOTES[Number(k) - 1]
     if (!e || !this.isOpen()) return false
@@ -228,6 +231,7 @@ export class AboutOverlay {
   }
 
   // ── Talking ──────────────────────────────────────────────────────────
+  _talking() { return this._el.classList.contains('is-talking') }
   /** He says his next line. A click while he's still typing finishes the line instead. */
   talk() {
     if (!this.isOpen()) return
@@ -237,18 +241,20 @@ export class AboutOverlay {
     this._line++
     const calm = document.body.classList.contains('reduced-motion') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     clearTimeout(this._hideT)
-    this._go.hidden = true
-    this._count.textContent = `${i + 1} / ${LINES.length}`
-    // the whole line is laid out from the start (the part not said yet is invisible), so nothing
-    // jumps to the next row halfway through a word
+    // the whole line is laid out from the start (the part not said yet is invisible), and so is the
+    // button his last line ends with: the bubble is its final size before the first letter
     this._shown.textContent = ''
     this._rest.textContent = line.text
-    this._dock.classList.add('is-talking')
-    this._dock.classList.remove('is-waiting')
+    this._said.textContent = line.text
+    this._go.hidden = !line.warp
+    this._go.classList.remove('is-ready')
+    if (line.warp) { this._go.textContent = line.warpLabel; this._go.dataset.warp = line.warp }
+    this._place()
+    this._el.classList.remove('is-waiting')
     this._el.classList.add('is-talking', 'is-typing')
-    this._dock.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: calm ? 'auto' : 'smooth' })      // phones: the nameplate is one card of a row
-    this.emote(line.emote)
-    this._typing = { line, n: 0 }
+    if (!calm) { this._bubble.classList.remove('is-pop'); void this._bubble.offsetWidth; this._bubble.classList.add('is-pop') }
+    if (line.emote) this.emote(line.emote)
+    this._typing = { line, n: 0, said: 0 }
     if (calm) { this._finishLine(); return }
     const tick = () => {
       const t = this._typing
@@ -257,12 +263,12 @@ export class AboutOverlay {
       const ch = line.text[t.n - 1] || ''
       this._shown.textContent = line.text.slice(0, t.n)
       this._rest.textContent = line.text.slice(t.n)
-      if (/[a-z0-9]/i.test(ch)) this.onBlip?.(ch)
+      if (/[a-z0-9]/i.test(ch)) this.onBlip?.(ch, t.said++)
       if (t.n >= line.text.length) { this._finishLine(); return }
       // a breath at a comma, a longer one at the end of a sentence
       this._typeT = setTimeout(tick, /[.!?]/.test(ch) ? TYPE_MS * 9 : ch === ',' ? TYPE_MS * 5 : TYPE_MS)
     }
-    this._typeT = setTimeout(tick, 260)
+    this._typeT = setTimeout(tick, 220)
   }
   _finishLine() {
     const t = this._typing
@@ -272,32 +278,105 @@ export class AboutOverlay {
     this._shown.textContent = t.line.text
     this._rest.textContent = ''
     this._el.classList.remove('is-typing')
-    this._dock.classList.add('is-waiting')              // the ▼ starts to bob: there's more
-    if (t.line.warp) {
-      this._go.textContent = t.line.warpLabel
-      this._go.dataset.warp = t.line.warp
-      this._go.hidden = false
-    }
+    this._el.classList.add('is-waiting')                // the ▼ starts to bob: there's more
+    if (t.line.warp) this._go.classList.add('is-ready')
     clearTimeout(this._hideT)
-    this._hideT = setTimeout(() => this._hush(), t.line.warp ? BOX_STAYS * 1.6 : BOX_STAYS)
+    this._hideT = setTimeout(() => this._hush(), t.line.warp ? BUBBLE_STAYS * 1.6 : BUBBLE_STAYS)
   }
-  /** Back to the nameplate. */
+  /** The bubble goes. */
   _hush() {
     clearTimeout(this._typeT); clearTimeout(this._hideT)
     this._typing = null
-    this._dock.classList.remove('is-talking', 'is-waiting')
-    this._el.classList.remove('is-talking', 'is-typing')
+    this._el.classList.remove('is-talking', 'is-typing', 'is-waiting')
+  }
+
+  /**
+   * Put the bubble where it covers nothing. In order, it tries: beside his head on the right, on the
+   * left, above him, then up and to either side of him (over his shoulder, clear of the cards), each
+   * at a few widths, and takes the first spot that touches none of his face, his body, the logo, the
+   * buttons, the cards or the nameplate. Where a small window leaves no clean spot it takes the one
+   * that overlaps least, and his face counts far the heaviest, so it is the last thing ever covered.
+   * On a phone the only room is above him, where the logo is: there the logo steps aside while he
+   * talks (it is hidden, not covered) and comes back after.
+   */
+  _place() {
+    const b = this._bubble, vw = window.innerWidth, vh = window.innerHeight
+    // where his head rests (not where a gesture has swung it to)
+    const ax = this._hx ?? vw / 2, ay = this._hy ?? vh * 0.4, at = this._ht ?? vh * 0.24
+    const r = Math.max(26, (ay - at) * HEAD_HALF)                  // half the width of his head, on screen
+    const face = { l: ax - r * 1.05, r: ax + r * 1.05, t: at - 2, b: ay + r * 0.3, w: 40 }
+    const sway = { l: ax - r * 1.5, r: ax + r * 1.5, t: at - 2, b: ay + r * 0.3, w: 2 }      // how far his gestures carry his head
+    const body = { l: ax - r * 1.7, r: ax + r * 1.7, t: face.b, b: vh, w: 4 }
+    const box = (sel, w = 6, pad = 6) => {
+      const el = this._el.querySelector(sel); if (!el) return null
+      const q = el.getBoundingClientRect(); if (q.width < 2 || q.height < 2) return null
+      return { l: q.left - pad, r: q.right + pad, t: q.top - pad, b: q.bottom + pad, w }
+    }
+    const phone = vw <= 760, tight = phone || vh <= 480
+    const brand = box('.about-brand', tight ? 1 : 6, 4)
+    const blocks = [face, sway, body, brand, box('.about-nav', 20),
+      ...(phone ? [box('.about-cards', 6, 2)] : [box('.about-side--l'), box('.about-side--r'), box('.about-dock')])].filter(Boolean)
+    const cost = (q) => {
+      let c = 0
+      for (const o of blocks) {
+        const w = Math.min(q.r, o.r) - Math.max(q.l, o.l), h = Math.min(q.b, o.b) - Math.max(q.t, o.t)
+        if (w > 0 && h > 0) c += w * h * o.w
+      }
+      // off the screen is as bad as on his face
+      const off = Math.max(0, 8 - q.l) + Math.max(0, q.r - (vw - 8)) + Math.max(0, 8 - q.t) + Math.max(0, q.b - (vh - 8))
+      return c + off * 6000
+    }
+    const gap = 12
+    // (a phone on its side has width to spare and no height: there the bubble may run wide, its button beside the words)
+    const sizes = [...(vh <= 480 ? [460, 380] : []), 300, 260, 224, 190, 160].filter(m => m <= vw - 16).map(maxW => { b.style.maxWidth = maxW + 'px'; return { maxW, w: b.offsetWidth, h: b.offsetHeight } })
+    const spots = []
+    const beside = (side, reach, level) => {
+      for (const z of sizes) {
+        const x = side === 'right' ? ax + r * reach + gap : ax - r * reach - gap - z.w
+        // its foot level with his eyes (the tail points across at his face), or up by his hair, or clear above it
+        const y = level === 'eye' ? Math.max(10, ay - r * 0.25 - z.h) : level === 'hair' ? at + r * 0.35 - z.h : at - r * 0.4 - z.h
+        spots.push({ ...z, side: level === 'eye' ? side : side + '-up', x, y })
+      }
+    }
+    for (const reach of [1.5, 1.15]) {
+      beside('right', reach, 'eye'); beside('left', reach, 'eye')
+      if (reach === 1.5) {
+        // above him: centred on his head, and on a small screen also tucked to one side (clear of the buttons) or down onto his hair
+        for (const lift of tight ? [gap + 6, 2] : [gap + 6]) for (const z of sizes) {
+          const mid = Math.min(Math.max(ax - z.w / 2, 10), vw - 10 - z.w)
+          for (const x of tight ? [mid, 10, vw - 10 - z.w] : [mid]) spots.push({ ...z, side: 'above', x, y: at - lift - z.h })
+        }
+      }
+      for (const level of ['hair', 'high']) { beside('right', reach, level); beside('left', reach, level) }
+    }
+    let best = null
+    for (const q of spots) {
+      q.c = cost({ l: q.x, r: q.x + q.w, t: q.y, b: q.y + q.h })
+      if (!best || q.c < best.c - 1) best = q
+      if (q.c === 0) break
+    }
+    b.style.maxWidth = best.maxW + 'px'
+    b.dataset.side = best.side
+    b.style.left = `${Math.round(best.x)}px`
+    b.style.top = `${Math.round(best.y)}px`
+    // the tail (and the point the bubble pops out from) aims at his head
+    b.style.setProperty('--tx', `${Math.round(Math.min(Math.max(ax - best.x, 18), best.w - 18))}px`)
+    this._placed = { x: ax, y: ay }
+    // on the logo's spot: the logo steps aside while he talks
+    const over = !!brand && best.x < brand.r && best.x + best.w > brand.l && best.y < brand.b && best.y + best.h > brand.t
+    this._el.classList.toggle('is-over-brand', over)
   }
 
   // ── What main.js tells it ────────────────────────────────────────────
   /** Where his head is on screen, in px: x, his face (y) and the top of his hair (yTop). Called every
-   *  frame while open; the "talking" dots sit beside it. */
+   *  frame while open; his speech bubble is placed against it. */
   setAnchor(x, y, yTop) {
     if (Math.abs(x - this._ax) < 0.5 && Math.abs(y - this._ay) < 0.5) return
-    this._ax = x; this._ay = y
-    this._el.style.setProperty('--ax', `${x.toFixed(1)}px`)
-    this._el.style.setProperty('--ay', `${y.toFixed(1)}px`)
-    this._el.style.setProperty('--at', `${yTop.toFixed(1)}px`)
+    this._ax = x; this._ay = y; this._at = yTop
+    if (this._hx == null || performance.now() > this._swayUntil) { this._hx = x; this._hy = y; this._ht = yTop }
+    // his resting spot moved a good way while he talks (the camera still settling): follow it
+    const p = this._placed
+    if (p && this._talking() && Math.hypot(this._hx - p.x, this._hy - p.y) > 14) this._place()
   }
 
   /** @param {Array<{name, title, where, color, found, here}>} list the islands, in hop order */
@@ -333,12 +412,14 @@ export class AboutOverlay {
     this._hush()
     this._el.classList.remove('is-closing', 'on-char')
     this._el.classList.add('is-open')
+    this._ribbon.start()
   }
 
   // ── Close: fire onStartClose immediately, then fade out and call onClose ─────
   close() {
     if (!this.isOpen() || this._el.classList.contains('is-closing')) return
     this._hush()
+    this._ribbon.stop()
     this.onStartClose?.()
     this._el.classList.add('is-closing')
     setTimeout(() => {

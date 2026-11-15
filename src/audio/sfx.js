@@ -447,15 +447,21 @@ export class Sfx {
   }
 
   /**
-   * Eric talking, the way old games do it: one short beep per letter as the line types out. Each
-   * letter has its own pitch (the vowels sit higher), so a sentence has a little melody and the same
-   * sentence always sounds the same.
+   * Eric talking: a low, dry tick as the line types out, the way a game character murmurs. One note,
+   * not a tune. It leans up a little on vowels, falls a touch inside each tick like a syllable does,
+   * and drifts a hair from one to the next, so it reads as a voice and not a keyboard. Only every
+   * second letter sounds: about fifteen a second, the pace of speech (every letter is a machine gun).
+   * @param {string} ch the letter just typed
+   * @param {number} n  which letter of the line it is, from 0
    */
-  talk(ch = 'a') {
-    if (!this._ok() || this._throttle('talk', 30)) return
-    const c = String(ch).toLowerCase()
-    const step = [0, 2, 3, 5, 7][c.charCodeAt(0) % 5] + ('aeiou'.includes(c) ? 5 : 0)
-    this.tone(233 * Math.pow(2, step / 12), { type: 'square', a: 0.002, d: 0.042, gain: 0.013, verb: 0 })
+  talk(ch = 'a', n = 0) {
+    if (n % 2 || !this._ok() || this._throttle('talk', 40)) return
+    const vowel = 'aeiou'.includes(String(ch).toLowerCase())
+    const f = 132 * (vowel ? 1.12 : 1) * (1 + (Math.random() - 0.5) * 0.05)
+    // the body: a rounded low note
+    this.tone(f, { type: 'triangle', a: 0.004, d: 0.07, gain: 0.06, to: f * 0.86, verb: 0.04 })
+    // the front of it: a soft tap an octave up, so each tick is still distinct on small speakers
+    this.tone(f * 2, { type: 'sine', a: 0.002, d: 0.022, gain: 0.02, verb: 0 })
   }
 
   /** Pip, caught: a tiny squeak (two quick rising chirps and a sparkle). */
