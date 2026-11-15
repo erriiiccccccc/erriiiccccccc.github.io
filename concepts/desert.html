@@ -302,7 +302,7 @@
     return label
   }
   function localLine(h, label) {
-    var msg = h >= 23 || h < 7 ? 'probably asleep, he\'ll reply after sunrise.' : h < 9 ? 'just waking up, coffee first.' : h < 18 ? 'around and replying fast.' : 'winding down, replies tomorrow at the latest.'
+    var msg = h >= 23 || h < 7 ? 'probably asleep, he\'ll reply after sunrise.' : h < 9 ? 'just waking up, replies in a bit.' : h < 18 ? 'around and replying fast.' : 'winding down, replies tomorrow at the latest.'
     $('ca-local').innerHTML = 'It\'s <b>' + label + '</b> for Eric, ' + msg
   }
   var live = true

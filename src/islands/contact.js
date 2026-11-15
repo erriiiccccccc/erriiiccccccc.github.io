@@ -221,12 +221,12 @@ function startSky(wrap, signal) {
   const weekday = (now) => now.dow >= 1 && now.dow <= 5
   /** What's true right now. */
   const liveLine = (h, wd) => h >= 23 || h < 7 ? "I'm probably asleep. I'll reply after sunrise."
-    : h < 9 ? 'Just waking up. Coffee first, then replies.'
+    : h < 9 ? "Just waking up. I'll reply in a bit."
     : h < 18 ? (wd ? "I'm at work right now. I'll reply this evening." : "I'm around today, so replies are fast.")
     : "Winding down. I'll reply by tomorrow at the latest."
   /** What's usually true at an hour someone dragged to. */
   const usualLine = (h, wd) => h >= 23 || h < 7 ? "At this hour I'm asleep."
-    : h < 9 ? "At this hour I'm waking up. Coffee first."
+    : h < 9 ? "At this hour I'm waking up."
     : h < 18 ? (wd ? "At this hour I'm usually at work." : "At this hour I'm usually out and about.")
     : "At this hour I'm winding down."
 
