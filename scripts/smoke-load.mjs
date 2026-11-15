@@ -5,7 +5,7 @@
  * Expects a prior `npm run build` (uses vite preview of dist/).
  */
 import { chromium } from 'playwright'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -104,7 +104,12 @@ try {
   console.error(err)
   failed = true
 } finally {
-  try { preview.kill('SIGTERM') } catch { /* */ }
+  // On Windows the server runs under a shell and npx, and killing the shell leaves it running (and this
+  // script waiting on it), so the whole process tree goes.
+  try {
+    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(preview.pid), '/T', '/F'], { stdio: 'ignore' })
+    else preview.kill('SIGTERM')
+  } catch { /* */ }
 }
 
 if (failed) {
