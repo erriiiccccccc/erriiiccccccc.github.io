@@ -18,7 +18,10 @@
 const BASE = import.meta.env.BASE_URL || '/'
 
 /** Projects with a recorded demo under public/projects/ */
-const HAS_DEMO = new Set(['erics-world', 'medmatch', 'sotwds', 'petaling-utama', 'foundtech', 'ygo'])
+// 'blender' isn't a recording: it's Eric's own render (donut.mp4, 1080 x 1440, 30 fps), made 16:10 for the
+// stage by keeping the render whole in the middle and widening its plain pink backdrop to the sides with
+// a soft feathered seam (ffmpeg, 2560 x 1600 at CRF 30 and 1280 x 800 at CRF 32; 10.5 MB -> 3.4 / 1.3 MB).
+const HAS_DEMO = new Set(['erics-world', 'medmatch', 'sotwds', 'petaling-utama', 'foundtech', 'ygo', 'blender'])
 
 const RAW = [
   {
