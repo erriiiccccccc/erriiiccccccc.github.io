@@ -98,8 +98,11 @@ export class ShellDirector {
    */
   _freeze() {
     this._token++
+    // Only the panel's own layers are frozen. Particles (embers, streaks) just
+    // stop: a frozen one would be left sitting on screen the next time it opens.
+    const layers = new Set(this._layers())
     for (const a of this._anims) {
-      try { if (a.playState !== 'finished') a.commitStyles() } catch { /* detached */ }
+      try { if (a.playState !== 'finished' && layers.has(a.effect?.target)) a.commitStyles() } catch { /* detached */ }
       a.cancel()
     }
     this._anims = []
@@ -376,12 +379,30 @@ const EXIT = {
     ])
   },
 
+  // Dropping out of hyperspace: the entrance played backwards. The log lets
+  // go, the night sky clears early (so the planet is seen rushing back up as
+  // main.js brings the camera home), and the stars streak inward and slow to
+  // points. Each streak is flipped (negative scaleX) so its bright end leads.
   night() {
+    const M = Math.hypot(window.innerWidth, window.innerHeight) / 2
+    const n = isPhone() ? 36 : this.streaks.length
     return Promise.all([
-      this._a(this.head,    [{ opacity: this._cur(this.head, 'opacity', '1') }, { opacity: 0 }], 200, { easing: EASE.in }),
-      this._a(this.content, [{ opacity: this._cur(this.content, 'opacity', '1') }, { opacity: 0 }], 200, { easing: EASE.in }),
-      this._a(this.card,    [{ opacity: this._cur(this.card, 'opacity', '1') }, { opacity: 0 }], 300, { delay: 80, easing: EASE.in }),
-      this._a(this.scrim,   [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 560, { delay: 180, easing: 'ease-in-out' }),
+      this._a(this.head,    [{ opacity: this._cur(this.head, 'opacity', '1') }, { opacity: 0 }], 160, { easing: EASE.in }),
+      this._a(this.content, [{ opacity: this._cur(this.content, 'opacity', '1') }, { opacity: 0 }], 160, { easing: EASE.in }),
+      this._a(this.card,    [{ opacity: this._cur(this.card, 'opacity', '1') }, { opacity: 0 }], 220, { easing: EASE.in }),
+      this._a(this.scrim,   [{ opacity: this._cur(this.scrim, 'opacity', '1') }, { opacity: 0 }], 400, { delay: 60, easing: 'ease-out' }),
+      ...this.streaks.slice(0, n).map((el, i) => {
+        const a = (i / n) * 360 + ((i * 47) % 11) - 5
+        const d = 0.1 + ((i * 29) % 23) / 23 * 0.5                 // where it comes to rest, 0..1 of the way out
+        const L = M * (0.22 + ((i * 13) % 7) / 7 * 0.2)
+        el.style.width = `${L.toFixed(0)}px`
+        el.style.height = `${(1 + (i % 3) * 0.5).toFixed(1)}px`
+        return this._a(el, [
+          { opacity: 0,    transform: `rotate(${a}deg) translateX(${(M * 1.3).toFixed(0)}px) scaleX(-1)` },
+          { opacity: 0.85, transform: `rotate(${a}deg) translateX(${(M * 0.8).toFixed(0)}px) scaleX(-0.6)`, offset: 0.3 },
+          { opacity: 0,    transform: `rotate(${a}deg) translateX(${(d * M).toFixed(0)}px) scaleX(-0.03)` },
+        ], 440 + (i * 37) % 160, { delay: 40 + (i * 53) % 140, easing: 'cubic-bezier(0.15, 0.6, 0.3, 1)' })
+      }),
     ])
   },
 }

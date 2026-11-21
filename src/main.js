@@ -2166,7 +2166,9 @@ function shellWorldFx(phase, shell, card) {
     } else if (_nightSavedDist != null) {
       _distRestoreTo = _nightSavedDist
       gsap.to(camSystem, {
-        _distTarget: _nightSavedDist, duration: reducedMotion ? 0 : 0.9, ease: 'power2.out', overwrite: true,
+        // eases in as well as out, so the planet is still far off when the night sky clears
+        // and you see it come back up to meet you (it used to be home before the sky had faded)
+        _distTarget: _nightSavedDist, duration: reducedMotion ? 0 : 0.95, ease: 'power2.inOut', overwrite: true,
         onComplete: () => { _distRestoreTo = null },
       })
       _nightSavedDist = null
