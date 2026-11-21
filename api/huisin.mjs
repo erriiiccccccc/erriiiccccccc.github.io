@@ -38,8 +38,8 @@
 // Env:
 //   ELM_API_KEY (or HUISIN_API_KEY)   the key. Server-side only.
 //   HUISIN_BASE_URL     default https://elm.edina.ac.uk/api/v1
-//   HUISIN_MODEL        default gpt-5.4-mini        (the answer)
-//   HUISIN_GATE_MODEL   default gpt-5.4-nano        (the gatekeeper)
+//   HUISIN_MODEL        default gpt-6-luna          (the answer)
+//   HUISIN_GATE_MODEL   default gpt-6-luna          (the gatekeeper)
 //   HUISIN_DENY         comma-separated words she must never say (kept out of this public repo)
 //   HUISIN_CANARY       optional; otherwise a random one per instance
 //   HUISIN_OFF=1        kill switch: she naps, no model is called
@@ -52,8 +52,8 @@ import { SUGGEST } from './_huisin/suggestions.mjs'
 export const config = { maxDuration: 30 }
 
 const BASE       = (process.env.HUISIN_BASE_URL || 'https://elm.edina.ac.uk/api/v1').replace(/\/+$/, '')
-const MODEL      = process.env.HUISIN_MODEL || 'gpt-5.4-mini'
-const GATE_MODEL = process.env.HUISIN_GATE_MODEL || 'gpt-5.4-nano'
+const MODEL      = process.env.HUISIN_MODEL || 'gpt-6-luna'
+const GATE_MODEL = process.env.HUISIN_GATE_MODEL || 'gpt-6-luna'
 const MOD_MODEL  = 'omni-moderation-latest'
 const REASONING  = process.env.HUISIN_REASONING ?? 'none'      // '' leaves it out, for models without the option
 const CANARY     = process.env.HUISIN_CANARY || `HS-${randomBytes(6).toString('hex')}`
